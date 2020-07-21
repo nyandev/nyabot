@@ -1,0 +1,36 @@
+{
+  "name": "nyabot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noorus/nyabot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noorus/nyabot/issues"
+  },
+  "homepage": "https://github.com/noorus/nyabot#readme",
+  "dependencies": {
+    "@discordjs/opus": "^0.3.2",
+    "bufferutil": "^4.0.1",
+    "canvas": "^2.6.1",
+    "discord.js": "^12.2.0",
+    "erlpack": "github:discord/erlpack",
+    "ffmpeg": "0.0.4",
+    "minimist": "^1.2.5",
+    "moment": "^2.27.0",
+    "node-graceful": "^3.0.0",
+    "sodium": "^3.0.2",
+    "sprintf-js": "^1.1.2",
+    "utf-8-validate": "^5.0.2",
+    "ytdl-core": "^3.1.2",
+    "zlib-sync": "^0.1.7"
+  }
+}
