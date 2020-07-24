@@ -1,5 +1,7 @@
-const moment = require( "moment" );
-const sprintf = require( "sprintf-js" ).sprintf;
+'use strict'
+
+const moment = require( 'moment' );
+const sprintf = require( 'sprintf-js' ).sprintf;
 
 global.logSprintf = ( from, ...args ) =>
 {

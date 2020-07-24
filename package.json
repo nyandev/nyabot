@@ -19,18 +19,26 @@
   "homepage": "https://github.com/noorus/nyabot#readme",
   "dependencies": {
     "@discordjs/opus": "^0.3.2",
+    "anchorme": "^2.1.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
     "erlpack": "github:discord/erlpack",
     "ffmpeg": "0.0.4",
+    "gemoji": "^5.0.1",
+    "mariadb": "^2.4.1",
     "minimist": "^1.2.5",
     "moment": "^2.27.0",
+    "mysql2": "^2.1.0",
     "node-graceful": "^3.0.0",
-    "sodium": "^3.0.2",
+    "redis": "^3.0.2",
+    "sequelize": "^6.3.3",
     "sprintf-js": "^1.1.2",
     "utf-8-validate": "^5.0.2",
     "ytdl-core": "^3.1.2",
     "zlib-sync": "^0.1.7"
+  },
+  "devDependencies": {
+    "unicode-13.0.0": "^0.8.0"
   }
 }

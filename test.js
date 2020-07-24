@@ -1,4 +1,28 @@
-const fs = require( 'fs' )
+require( './globals.js' )
+
+function xpTable()
+{
+  let fn = x =>
+  {
+    const curveCoefficient = 0.15
+    const base = 1200
+    const multiplier = 1000
+    return ( ( base + multiplier + ( x * ( x * curveCoefficient ) * multiplier ) ) - ( Math.log( x + 2 ) * ( multiplier * 1.176 ) ) )
+    //const x = ( v * 0.04 )
+    //const y = ( x * x * ( 3 - 2 * x ) )
+    //const y = ( x * x * x * ( x * ( x * 6 - 15 ) + 10 ) )
+    //return ( 100 + ( y * 1000 ) ) + ( v * 10 )
+    //return ( ( x * ( x * 0.15 ) ) * 10.0 )
+  }
+  for ( let i = 1; i <= 250; ++i )
+  {
+    logSprintf( 'xp', 'Level %i: %i', i, fn( i ) )
+  }
+}
+
+xpTable()
+
+/*const fs = require( 'fs' )
 const Canvas = require( 'canvas' );
 const Renderer = require( './lib/renderer.js' );
 
@@ -37,3 +61,4 @@ console.log(fuk);
 }
 
 tryit();
+*/
