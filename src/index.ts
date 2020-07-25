@@ -1,5 +1,3 @@
-'use strict'
-
 // to debug, pass --inspect --inspect-brk
 if ( global.v8debug )
 {
@@ -7,15 +5,15 @@ if ( global.v8debug )
   global.v8debug.Debug.setBreakOnUncaughtException()
 }
 
-const Graceful = require( 'node-graceful' )
-const minimist = require( 'minimist' )
-const fs = require( 'fs' )
+import Graceful from 'node-graceful'
+import minimist = require( 'minimist' )
+import fs = require( 'fs' )
 
-require( './globals.js' )
+import { logSprintf } from './globals'
 const Backend = require( './lib/backend.js' )
 const Nya = require( './lib/nya.js' )
 
-async function run( configuration )
+async function run( configuration: any )
 {
   let backend = new Backend( configuration.backend )
   await backend.initialize()
@@ -32,9 +30,9 @@ async function run( configuration )
     {
       nya.stop()
       await backend.destroy()
-      return bot.stoppedPromise
-    }, true )
-  }).catch( error =>
+      return nya.stoppedPromise
+    })
+  }).catch( ( error: Error ) =>
   {
     throw error
   })
@@ -42,8 +40,8 @@ async function run( configuration )
 
 try
 {
-  const argv = minimist( process.argv.slice( 2 ) )
-  const cfgname = ( 'c' in argv ) ? argv.c
+  const argv: any = minimist( process.argv.slice( 2 ) )
+  const cfgname: string = ( 'c' in argv ) ? argv.c
     : ( 'config' in argv ) ? argv.config
     : ( 'configuration' in argv ) ? argv.configuration
     : null

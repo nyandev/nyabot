@@ -2,6 +2,7 @@
 
 const sprintf = require( 'sprintf-js' ).sprintf
 const moment = require( 'moment' )
+const logSprintf = require( '../globals.js' ).logSprintf
 
 const unicode_generalCategory = require( 'unicode-13.0.0/General_Category' )
 

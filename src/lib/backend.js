@@ -3,6 +3,7 @@
 const sprintf = require( 'sprintf-js' ).sprintf
 const moment = require( 'moment' )
 
+const logSprintf = require( '../globals.js' ).logSprintf
 const { Sequelize, Model, DataType, DataTypes } = require( 'sequelize' )
 const Redis = require( 'redis' )
 

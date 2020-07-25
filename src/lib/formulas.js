@@ -1,5 +1,5 @@
 'use strict'
-
+const logSprintf = require( '../globals.js' ).logSprintf
 module.exports =
 {
   getXPRequiredForLevel: function( level )

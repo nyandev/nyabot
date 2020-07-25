@@ -1,5 +1,5 @@
 'use strict'
-
+const logSprintf = require( '../globals.js' ).logSprintf
 const EventEmitter = require( 'events' )
 const Discord = require( 'discord.js' )
 
