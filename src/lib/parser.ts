@@ -1,90 +1,105 @@
-'use strict'
-
-const sprintf = require( 'sprintf-js' ).sprintf
-const moment = require( 'moment' )
-const logSprintf = require( '../globals.js' ).logSprintf
+import { logSprintf } from '../globals'
 
 const unicode_generalCategory = require( 'unicode-13.0.0/General_Category' )
 
-const charCategoryMultipliers = [
+const charCategoryMultipliers: number[] = [
   0, // none
   1, // latin letters
   2  // other letters (japanese etc.)
 ]
 
-const baseXPPerLetter = 0.11
-const perMessageBaseXP = 0.65
-const minLettersInMsg = 5
+const baseXPPerLetter: number = 0.11
+const perMessageBaseXP: number = 0.65
+const minLettersInMsg: number = 5
 
-class ParsedText
+export class ParsedBase
 {
-  get type() { return 'text' }
-  get text() { return this._text }
-  constructor( text )
+  protected _type: string
+  get type(): string { return this._type }
+  constructor( type: string )
   {
+    this._type = type
+  }
+}
+
+export class ParsedText extends ParsedBase
+{
+  protected _text: string
+  get text(): string { return this._text }
+  constructor( text: string )
+  {
+    super( 'text' )
     this._text = text
   }
 }
 
-class ParsedMention
+export class ParsedMention extends ParsedBase
 {
-  get type() { return 'mention' }
-  get targetType() { return this._type }
-  get target() { return this._target }
-  constructor( type, target )
+  protected _targetType: string
+  protected _target: string
+  get targetType(): string { return this._targetType }
+  get target(): string { return this._target }
+  constructor( type: string, target: string )
   {
-    this._type = type
+    super( 'mention' )
+    this._targetType = type
     this._target = target
   }
 }
 
-class ParsedEmote
+export class ParsedStruct
 {
-  get type() { return 'emote' }
-  get name() { return this._name }
-  get code() { return this._code }
-  constructor( name, code )
+  xp: any
+  parts: ParsedBase[]
+}
+
+export class ParsedEmote extends ParsedBase
+{
+  protected _name: string
+  protected _code: string
+  get name(): string { return this._name }
+  get code(): string { return this._code }
+  constructor( name: string, code: string )
   {
+    super( 'emote' )
     this._name = name
     this._code = code
   }
 }
 
-module.exports = class Parser
+export class Parser
 {
+  protected _prefix: string
   constructor( prefix = '.' )
   {
     this.setPrefix( prefix )
   }
-  setPrefix( prefix )
+  setPrefix( prefix: string ): void
   {
     this._prefix = prefix
   }
-  parseCommand( parsed )
+  parseCommand( parsed: ParsedStruct ): any
   {
-    let parts = ( parsed ? ( parsed.parts ? parsed.parts : parsed ) : null )
-    if ( !Array.isArray( parts ) || parts.length < 1 || parts[0].type !== 'text' )
+    if ( parsed.parts.length < 1 || parsed.parts[0].type !== 'text' )
       return null
-    if ( parts[0].text.indexOf( this._prefix ) === 0 )
+    const cmd = parsed.parts[0] as ParsedText
+    if ( cmd.text.indexOf( this._prefix ) === 0 )
     {
       let ret = {
-        command: parts[0].text.substr( this._prefix.length ).toLowerCase(),
-        args: parts.slice( 1 )
+        command: cmd.text.substr( this._prefix.length ).toLowerCase(),
+        args: parsed.parts.slice( 1 )
       }
       return ret
     }
     return null
   }
-  parseMessage( fulltext )
+  parseMessage( fulltext: string ): ParsedStruct
   {
     logSprintf( 'parse', 'Parsing:' )
     console.log( fulltext )
     let i = 0
     let letters = 0
-    let parsed = {
-      xp: 0,
-      parts: []
-    }
+    let parsed = new ParsedStruct
     let buffer = ''
     let skipNext = false
     while ( i < fulltext.length )

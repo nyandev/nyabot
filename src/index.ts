@@ -10,8 +10,8 @@ import minimist = require( 'minimist' )
 import fs = require( 'fs' )
 
 import { logSprintf } from './globals'
-const Backend = require( './lib/backend.js' )
-const Nya = require( './lib/nya.js' )
+import { Backend } from './lib/backend'
+import { Nya } from './lib/nya'
 
 async function run( configuration: any )
 {

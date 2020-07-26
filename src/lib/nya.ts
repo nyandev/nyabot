@@ -1,20 +1,31 @@
-'use strict'
-const logSprintf = require( '../globals.js' ).logSprintf
-const EventEmitter = require( 'events' )
-const Discord = require( 'discord.js' )
+import { logSprintf } from '../globals'
+import fs = require( 'fs' )
+import { EventEmitter } from 'events'
+import Discord = require( 'discord.js' )
 
-const sprintf = require( 'sprintf-js' ).sprintf
-const moment = require( 'moment' )
+import * as moment from 'moment'
+import sprintfjs = require( 'sprintf-js' )
+const sprintf = sprintfjs.sprintf
 
-const Parser = require( './parser.js' )
+import { Backend } from './backend'
+import { Parser } from './parser'
 
-class NyaEmitter extends EventEmitter
+export class NyaEmitter extends EventEmitter
 {
 }
 
-module.exports = class Nya
+export class Nya
 {
-	makePresence()
+	_config: any
+	_backend: Backend
+	_emitter: NyaEmitter
+	_parser: Parser
+	_inviteLink: string
+	_opts: Discord.ClientOptions
+	_client: Discord.Client
+	stoppedPromise: any
+	_stoppedResolve: any
+	makePresence(): Discord.PresenceData
 	{
 		return {
 			status: 'online',
@@ -23,7 +34,7 @@ module.exports = class Nya
 			shardID: 0
 		}
 	}
-	constructor( config, backend )
+	constructor( config: any, backend: Backend )
 	{
 		this._config = {
 			token: config.discord.token
@@ -32,15 +43,15 @@ module.exports = class Nya
 		this._emitter = new NyaEmitter()
 		this._parser = new Parser( '.' )
 	}
-	async onDebug( info )
+	async onDebug( info: string )
 	{
 		logSprintf( 'debug', info )
 	}
-	async onWarning( info )
+	async onWarning( info: string )
 	{
 		logSprintf( 'nya', 'onWarning: %s', info )
 	}
-	async onError( error )
+	async onError( error: any )
 	{
 		logSprintf( 'nya', 'onError:' )
 		console.log( error )
@@ -53,16 +64,16 @@ module.exports = class Nya
 	{
 		logSprintf( 'nya', 'onReady' )
 	}
-	async onRateLimit( rateLimitInfo )
+	async onRateLimit( rateLimitInfo: any )
 	{
 		logSprintf( 'nya', 'onRateLimit:' )
 		console.log( rateLimitInfo )
 	}
-	async onShardReady( id, unavailableGuilds )
+	async onShardReady( id: number )
 	{
 		logSprintf( 'nya', 'onShardReady: %i', id )
 	}
-	async onGuildCreate( dsGuild )
+	async onGuildCreate( dsGuild: Discord.Guild )
 	{
 		let guild = await this._backend.upsertGuild( dsGuild )
 		let dsChannels = dsGuild.channels.cache
@@ -81,42 +92,42 @@ module.exports = class Nya
 			}, this )
 		this._emitter.emit( 'guildCreated', guild )
 	}
-	async onGuildUpdate( dsOldGuild, dsNewGuild )
+	async onGuildUpdate( dsOldGuild: any, dsNewGuild: any )
 	{
 		let guild = await this._backend.upsertGuild( dsNewGuild )
 		this._emitter.emit( 'guildUpdated', guild )
 	}
-	async onGuildDelete( dsGuild )
+	async onGuildDelete( dsGuild: Discord.Guild )
 	{
 		let guild = await this._backend.upsertGuild( dsGuild )
 		this._emitter.emit( 'guildDeleted', guild )
 	}
-	async onChannelCreate( dsChannel )
+	async onChannelCreate( dsChannel: Discord.Channel )
 	{
 		let channel = await this._backend.upsertChannel( dsChannel )
 		this._emitter.emit( 'channelCreated', channel )
 	}
-	async onChannelUpdate( dsOldChannel, dsNewChannel )
+	async onChannelUpdate( dsOldChannel: any, dsNewChannel: any )
 	{
 		let channel = await this._backend.upsertChannel( dsNewChannel )
 		this._emitter.emit( 'channelUpdated', channel )
 	}
-	async onChannelDelete( dsChannel )
+	async onChannelDelete( dsChannel: Discord.Channel )
 	{
 		let channel = await this._backend.upsertChannel( dsChannel )
 		this._emitter.emit( 'channelDeleted', channel )
 	}
-	async onUserUpdate( dsOldUser, dsNewUser )
+	async onUserUpdate( dsOldUser: any, dsNewUser: any )
 	{
 		let user = await this._backend.upsertUser( dsNewUser )
 		this._emitter.emit( 'userUpdated', user )
 	}
-	shouldCareAbout( user )
+	shouldCareAbout( user: any )
 	{
 		// currently we care about everyone that's not a bot
 		return ( !user.bot )
 	}
-	async onMessage( message )
+	async onMessage( message: Discord.Message )
 	{
 		if ( !this.shouldCareAbout( message.author ) )
 			return
@@ -138,7 +149,7 @@ module.exports = class Nya
 			logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
 		}
 	}
-	async onGuildUnavailable( guild )
+	async onGuildUnavailable( guild: Discord.Guild )
 	{
 		logSprintf( 'nya', 'onGuildUnavailable' )
 	}

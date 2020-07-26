@@ -47,6 +47,8 @@
     "@types/minimist": "^1.2.0",
     "@types/moment": "^2.13.0",
     "@types/node": "^14.0.26",
+    "@types/redis": "^2.8.25",
+    "@types/sequelize": "^4.28.9",
     "@types/sprintf-js": "^1.1.2",
     "@types/validator": "^13.1.0",
     "@types/ws": "^7.2.6",
