@@ -51,6 +51,11 @@ export class ParsedStruct
 {
   xp: any
   parts: ParsedBase[]
+  constructor()
+  {
+    this.parts = []
+    this.xp = 0
+  }
 }
 
 export class ParsedEmote extends ParsedBase

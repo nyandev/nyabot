@@ -28,6 +28,7 @@
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
     "discord.js": "^12.2.0",
+    "discord.js-commando": "git+https://github.com/pantsudev/Commando.git",
     "erlpack": "github:discord/erlpack",
     "ffmpeg": "0.0.4",
     "gemoji": "^5.0.1",

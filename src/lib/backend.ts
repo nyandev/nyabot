@@ -28,7 +28,8 @@ export class Backend
         charset: 'utf8mb4',
         collate: 'utf8mb4_unicode_ci',
         supportBigNumbers: true,
-        bigNumberStrings: true
+        bigNumberStrings: true,
+        timezone: 'Etc/UTC'
       },
       define: {
         charset: 'utf8mb4',
@@ -36,7 +37,7 @@ export class Backend
         freezeTableName: true,
         timestamps: false
       },
-      timezone: '+00:00',
+      timezone: 'Etc/UTC',
       logging: false /*msg => {
         logSprintf( 'db', 'Sequelize: %s', msg )
       }*/
@@ -45,14 +46,52 @@ export class Backend
       Guild: require( '../models/guild' )( this._db, DataTypes ),
       Channel: require( '../models/channel' )( this._db, DataTypes ),
       User: require( '../models/user' )( this._db, DataTypes ),
-      GuildUser: require( '../models/guilduser' )( this._db, DataTypes )
+      GuildUser: require( '../models/guilduser' )( this._db, DataTypes ),
+      GuildSetting: require( '../models/guildsetting' )( this._db, DataTypes )
     }
+  }
+  async getAllGuildsSettings( settingKey: string )
+  {
+    const cond = { key: settingKey }
+    return this._models.GuildSetting.findAll({ where: cond })
+  }
+  async getGuildSettings( guild: number )
+  {
+    const cond = { guildID: guild }
+    return this._models.GuildSetting.findAll({ where: cond })
+  }
+  async getGuildSetting( guild: number, settingKey: string )
+  {
+    const cond = { guildID: guild, key: settingKey }
+    return this._models.GuildSetting.findOne({ where: cond })
+  }
+  async setGuildSetting( guild: number, settingKey: string, settingValue: string )
+  {
+    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
+    let cond = { guildID: guild, key: settingKey }
+    let vals = {
+      guildID: guild,
+      key: settingKey,
+      value: settingValue,
+      lastChanged: now
+    }
+    return this._models.GuildSetting.findOne({ where: cond })
+      .then( ( obj: any ) => {
+        if ( obj )
+          return obj.update( vals )
+        return this._models.GuildSetting.create( vals )
+      })
+  }
+  async removeGuildSetting( guild: number, settingKey: string )
+  {
+    const cond = { guildID: guild, key: settingKey }
+    return this._models.GuildSetting.destroy({ where: cond })
   }
   async upsertUser( user: any )
   {
-    let cond = { snowflake: user.id }
-    const created = ( user.createdTimestamp > 0 ? moment( user.createdTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss' ) : null )
     const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
+    const created = ( user.createdTimestamp > 0 ? moment( user.createdTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss' ) : null )
+    let cond = { snowflake: user.id }
     let vals = {
       snowflake: user.id,
       name: user.username ? user.username : null,
@@ -63,11 +102,11 @@ export class Backend
       updated: now
     }
     return this._models.User.findOne({ where: cond })
-    .then( ( obj: any ) => {
-      if ( obj )
-        return obj.update( vals )
-      return this._models.User.create( vals )
-    })
+      .then( ( obj: any ) => {
+        if ( obj )
+          return obj.update( vals )
+        return this._models.User.create( vals )
+      })
   }
   async getGuildBySnowflake( flake: string )
   {
@@ -99,11 +138,11 @@ export class Backend
         deleted: guildmember.deleted
       }
       return this._models.GuildUser.findOne({ where: cond })
-      .then( ( obj: any ) => {
-        if ( obj )
-          return obj.update( vals )
-        return this._models.GuildUser.create( vals )
-      })
+        .then( ( obj: any ) => {
+          if ( obj )
+            return obj.update( vals )
+          return this._models.GuildUser.create( vals )
+        })
     }
     return null
   }
@@ -207,11 +246,11 @@ export class Backend
         updated: now
       }
       return this._models.Channel.findOne({ where: cond })
-      .then( ( obj: any ) => {
-        if ( obj )
-          return obj.update( vals )
-        return this._models.Channel.create( vals )
-      })
+        .then( ( obj: any ) => {
+          if ( obj )
+            return obj.update( vals )
+          return this._models.Channel.create( vals )
+        })
     }
   }
   async upsertGuild( guild: any )
@@ -228,11 +267,11 @@ export class Backend
       updated: now
     }
     return this._models.Guild.findOne({ where: cond })
-    .then( ( obj: any ) => {
-      if ( obj )
-        return obj.update( vals )
-      return this._models.Guild.create( vals )
-    })
+      .then( ( obj: any ) => {
+        if ( obj )
+          return obj.update( vals )
+        return this._models.Guild.create( vals )
+      })
   }
   async initialize()
   {
