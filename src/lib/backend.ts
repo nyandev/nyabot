@@ -113,6 +113,12 @@ export class Backend
     let cond = { snowflake: flake }
     return this._models.Guild.findOne({ where: cond })
   }
+  async getSnowflakeByGuildID( gid: number )
+  {
+    let cond = { id: gid }
+    const guild = await this._models.Guild.findOne({ where: cond })
+    return ( guild ? guild.snowflake : undefined )
+  }
   async getUserBySnowflake( flake: string )
   {
     let cond = { snowflake: flake }

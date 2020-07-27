@@ -15,6 +15,7 @@ class SettingsProvider extends SettingProvider
     this.listeners = new Map()
 
     this._idCache = new Map()
+    this._flakeCache = new Map()
   }
 
   async init( client )
@@ -33,38 +34,46 @@ class SettingsProvider extends SettingProvider
         client.emit( 'warn', `SettingsProvider couldn't parse the settings stored for guild ${row.guild}.` )
         continue
       }
-      const guild = ( row.guildID !== null && row.guildID !== 0 ) ? row.guildID : 'global'
-      this.settings.set( guild, settings )
-      if ( guild !== 'global' && !client.guilds.cache.has( row.guild ) )
-        continue;
-      this.setupGuild( guild, settings )
+      this.settings.set( row.guildID, settings )
+      const flake = await this.idToSnowflake( ( row.guildID !== null && row.guildID !== 0 ) ? row.guildID : 'global' )
+      if ( row.guildID && !client.guilds.cache.has( flake ) )
+        continue
+      this.setupGuild( flake, settings )
     }
 
     this.listeners
       .set( 'commandPrefixChange', ( guild, prefix ) => this.set( guild, 'prefix', prefix ) )
       .set( 'commandStatusChange', ( guild, command, enabled ) => this.set( guild, `cmd-${command.name}`, enabled ) )
       .set( 'groupStatusChange', ( guild, group, enabled ) => this.set( guild, `grp-${group.id}`, enabled ) )
-      .set( 'guildCreate', guild =>
+      .set( 'guildCreate', async ( guild ) =>
       {
-        const settings = this.settings.get( guild.id )
+        const flake = guild.id
+        const gid = await this.snowflakeToID( flake )
+        const settings = this.settings.get( gid )
         if ( !settings )
           return
-        this.setupGuild( guild.id, settings )
+        this.setupGuild( flake, settings )
       })
-      .set( 'commandRegister', command =>
+      .set( 'commandRegister', async ( command ) =>
       {
-        for ( const [guild, settings] of this.settings ) {
-          if ( guild !== 'global' && !client.guilds.cache.has( guild ) )
+        for ( const [guild, settings] of this.settings )
+        {
+          const gid = guild
+          const flake = await this.idToSnowflake( gid )
+          if ( flake !== undefined && !client.guilds.cache.has( flake ) )
             continue
-          this.setupGuildCommand( client.guilds.cache.get( guild ), command, settings )
+          this.setupGuildCommand( client.guilds.cache.get( flake ), command, settings )
         }
       })
-      .set( 'groupRegister', group =>
+      .set( 'groupRegister', async ( group ) =>
       {
-        for ( const [guild, settings] of this.settings ) {
-          if ( guild !== 'global' && !client.guilds.cache.has( guild ) )
+        for ( const [guild, settings] of this.settings )
+        {
+          const gid = guild
+          const flake = await this.idToSnowflake( gid )
+          if ( flake !== undefined && !client.guilds.cache.has( flake ) )
             continue
-          this.setupGuildGroup( client.guilds.cache.get( guild ), group, settings )
+          this.setupGuildGroup( client.guilds.cache.get( flake ), group, settings )
         }
       })
     for ( const [event, listener] of this.listeners )
@@ -88,6 +97,20 @@ class SettingsProvider extends SettingProvider
     return id
   }
 
+  async idToSnowflake( gid )
+  {
+    if ( gid === null || gid === undefined || gid === 0 || gid === '0' || gid === 'global' )
+      return undefined
+    let flake = this._flakeCache.get( gid )
+    if ( !flake )
+    {
+      flake = await this._backend.getSnowflakeByGuildID( gid )
+      if ( flake )
+        this._flakeCache.set( gid, flake )
+    }
+    return flake
+  }
+
   async destroy()
   {
     for ( const [event, listener] of this.listeners )
@@ -104,29 +127,29 @@ class SettingsProvider extends SettingProvider
 
   async set( guild, key, val )
   {
-    guild = await this.snowflakeToID( this.constructor.getGuildID( guild ) )
-    let settings = this.settings.get( guild )
+    const gid = await this.snowflakeToID( this.constructor.getGuildID( guild ) )
+    let settings = this.settings.get( gid )
     if ( !settings )
     {
       settings = {};
-      this.settings.set( guild, settings )
+      this.settings.set( gid, settings )
     }
     settings[key] = val
-    await this._backend.setGuildSetting( guild !== 'global' ? guild : null, 'commando', JSON.stringify( settings ) )
-    if ( guild === 'global' )
+    await this._backend.setGuildSetting( gid !== 'global' ? gid : null, 'commando', JSON.stringify( settings ) )
+    if ( gid === 'global' )
       this.updateOtherShards( key, val )
     return val
   }
 
   async remove( guild, key )
   {
-    guild = this.constructor.getGuildID( guild )
-    const settings = this.settings.get( guild )
+    const gid = await this.snowflakeToID( this.constructor.getGuildID ( guild ) )
+    const settings = this.settings.get( gid )
     if ( !settings || typeof settings[key] === 'undefined' )
       return undefined
     const val = settings[key]
     settings[key] = undefined
-    await this._backend.setGuildSetting( guild !== 'global' ? guild : null, 'commando', JSON.stringify( settings ) )
+    await this._backend.setGuildSetting( gid !== 'global' ? gid : null, 'commando', JSON.stringify( settings ) )
     if ( guild === 'global' )
       this.updateOtherShards( key, undefined )
     return val
@@ -134,11 +157,11 @@ class SettingsProvider extends SettingProvider
 
   async clear( guild )
   {
-    guild = this.constructor.getGuildID( guild )
-    if ( !this.settings.has( guild ) )
+    const gid = await this.snowflakeToID( this.constructor.getGuildID( guild ) )
+    if ( !this.settings.has( gid ) )
       return
-    this.settings.delete( guild )
-    await this._backend.removeGuildSetting( guild !== 'global' ? guild : null )
+    this.settings.delete( gid )
+    await this._backend.removeGuildSetting( gid !== 'global' ? gid : null )
   }
 
   setupGuild( guild, settings )
