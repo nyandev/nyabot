@@ -65,6 +65,10 @@ export class Nya implements NyaInterface
 
 		this.registerModule( new XPModule() )
 	}
+	getBackend(): Backend
+	{
+		return this._backend
+	}
 	async onDebug( info: string )
 	{
 		logSprintf( 'debug', info )
@@ -207,8 +211,8 @@ export class Nya implements NyaInterface
 				const guild = await this._backend.getGuildBySnowflake( message.guild.id )
 				if ( guild )
 				{
-					this._backend.setGuildSetting( guild.id, 'testsetting', 'cool value bro!' )
-					this._backend.setGuildSetting( guild.id, 'poop', 'yeehaw' )
+					//this._backend.setGuildSetting( guild.id, 'testsetting', 'cool value bro!' )
+					//this._backend.setGuildSetting( guild.id, 'poop', 'yeehaw' )
 					let ftch = await this._backend.getGuildSettings( guild.id )
 					console.log( ftch )
 				}
@@ -296,6 +300,8 @@ export class Nya implements NyaInterface
 				})
 			this._client.setProvider( new SettingsProvider( this._backend ) )
 			this._client.registry.registerDefaults()
+			this._client.registry.registerGroup( 'xp' )
+			this._client.registry.registerCommands( this._modules[0].getCommands( this, this._client ) )
 			resolve( true )
 		})
 	}
