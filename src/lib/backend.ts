@@ -4,22 +4,21 @@ const sprintf = sprintfjs.sprintf
 
 import { logSprintf } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
-import { RedisClient, createClient } from 'redis'
+import { Redis } from './redis'
+import { CommandoClient } from 'discord.js-commando'
+
+import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
 export class Backend
 {
-  _redis: RedisClient
+  _redis: Redis
   _db: Sequelize
   _models: any
   constructor( config: any )
   {
-    this._redis = createClient({
-      host: '127.0.0.1',
-      port: 6379,
-      db: 0
-    })
+    this._redis = new Redis( config.redis )
     this._db = new Sequelize( config.db.name, config.db.user, config.db.passwd, {
       host: config.db.host,
       port: config.db.port,
@@ -152,42 +151,22 @@ export class Backend
     }
     return null
   }
-  async redisIncrementFloat( key: string, value: any )
-  {
-    return new Promise( ( resolve, reject ) => {
-      this._redis.incrbyfloat( key, value, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
-  }
-  async redisGet( key: string )
-  {
-    return new Promise( ( resolve, reject ) => {
-      this._redis.get( key, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
-  }
-  async redisSet( key: string, value: any )
-  {
-    return new Promise( ( resolve, reject ) => {
-      this._redis.set( key, value, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
-  }
   async userShouldUpdateXP( user: any )
   {
     const key: string = ['userlastxppush', user.id].join( '_' )
-    const prevtime: any = await this.redisGet( key ) || 0
+    const prevtime: any = await this._redis.get( key ) || 0
     const delta: number= ( moment().unix() - prevtime )
     return ( delta > xpUpdateMinDelta )
+  }
+  async getUserXP( dsuser: User, dsguild: Guild ): Promise<any>
+  {
+    const user = await this.getUserBySnowflake( dsuser.id )
+    const guild = await this.getGuildBySnowflake( dsguild.id )
+    const guilduser = await this.getGuildUserByIDs( guild.id, user.id )
+    return {
+      globalXP: user ? user.experience : null,
+      serverXP: guilduser ? guilduser.experience : null
+    }
   }
   async userAddXP( dsUser: any, dsGuildMember: any, xp: number )
   {
@@ -205,7 +184,7 @@ export class Backend
       skey = ['usersrvcxp', user.id, guild.id].join( '_' )
     }
     const shouldUpdateDB = await this.userShouldUpdateXP( user )
-    const gxp: number = +await this.redisIncrementFloat( gkey, xp )
+    const gxp: number = +await this._redis.incrementFloat( gkey, xp )
     if ( shouldUpdateDB )
     {
       this._redis.set( gkey, '0' )
@@ -215,7 +194,7 @@ export class Backend
     }
     if ( skey && guild )
     {
-      const sxp: number = +await this.redisIncrementFloat( skey, xp )
+      const sxp: number = +await this._redis.incrementFloat( skey, xp )
       if ( shouldUpdateDB )
       {
         this._redis.set( skey, '0' )
@@ -229,7 +208,7 @@ export class Backend
     {
       // mark update time
       const key: string = ['userlastxppush', user.id].join( '_' )
-      await this.redisSet( key, moment().unix() )
+      await this._redis.set( key, moment().unix() )
     }
   }
   async upsertChannel( channel: any )
@@ -281,7 +260,8 @@ export class Backend
   }
   async initialize()
   {
-    return this._db.authenticate().then( () => {
+    return this._db.authenticate().then( () =>
+    {
       this._db.sync()
     })
   }
