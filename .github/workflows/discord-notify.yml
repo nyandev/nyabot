@@ -5,13 +5,12 @@ on:
 
 name: Discord Notification
 
+env:
+  DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
 jobs:
   notify:
     name: Discord Notification
     runs-on: ubuntu-latest
     steps:
-      - uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: info
-          details: Push
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - uses: Ilshidur/action-discord@master
