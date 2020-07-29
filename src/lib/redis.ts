@@ -6,11 +6,7 @@ export class Redis
 
   constructor( config: any )
   {
-    this._redis = createClient({
-      host: config.host,
-      port: config.port,
-      db: config.db
-    })
+    this._redis = createClient( config )
   }
 
   async incrementFloat( key: string, value: any )
