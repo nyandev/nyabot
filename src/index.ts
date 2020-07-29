@@ -13,6 +13,8 @@ import { logSprintf } from './globals'
 import { Backend } from './lib/backend'
 import { Nya } from './lib/nya'
 
+// Main run function.
+// Uses Graceful and some promise trickery to handle Ctrl+C & exit neatly.
 async function run( configuration: any )
 {
   let backend = new Backend( configuration.backend )
@@ -40,6 +42,9 @@ async function run( configuration: any )
 
 try
 {
+  // This is the main entrypoint.
+  // Load a JSON configuration file and call the runfunc.
+
   const argv: any = minimist( process.argv.slice( 2 ) )
   const cfgname: string = ( 'c' in argv ) ? argv.c
     : ( 'config' in argv ) ? argv.config
