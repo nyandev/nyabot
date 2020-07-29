@@ -5,14 +5,14 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/noorus/nyabot.git"
+    "url": "git+https://github.com/nyandev/nyabot.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/noorus/nyabot/issues"
+    "url": "https://github.com/nyandev/nyabot/issues"
   },
-  "homepage": "https://github.com/noorus/nyabot#readme",
+  "homepage": "https://github.com/nyandev/nyabot#readme",
   "main": "built/index.js",
   "scripts": {
     "dev": "ts-node ./src/index.ts",
