@@ -27,3 +27,8 @@ export function promiseSerial( funcs: any[] ): void
     promise.then( ( result: any ) => func().then( Array.prototype.concat.bind( result ) ) ),
     Promise.resolve( [] ) )
 }
+
+export function datetimeNow(): string
+{
+  return moment().format( 'YYYY-MM-DD HH:mm:ss.SSSSSS' )
+}

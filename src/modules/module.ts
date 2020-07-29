@@ -18,6 +18,7 @@ export interface NyaInterface
   getBackend(): Backend
   registerCommand( name: string, cb: CommandCallbackType ): boolean
   respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+  getGlobalSettingKeys(): string[]
 }
 
 export abstract class ModuleBase

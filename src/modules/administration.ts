@@ -12,27 +12,33 @@ import { Backend } from '../lib/backend'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
-class ConfigEditCommand extends Commando.Command
+class ConfigCommand extends Commando.Command
 {
   protected _service: ModuleBase
   constructor( service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client, {
-      name: 'bce',
-      aliases: ['botconfedit', 'botconfig'],
+      name: 'config',
+      aliases: ['botconfedit', 'botconfig', 'bce'],
       group: 'admin',
-      memberName: 'bce',
+      memberName: 'config',
       description: 'Description',
       details: 'Command details',
-      examples: ['bce'],
+      examples: ['config global get MessageEditableDuration', 'config global set MessageEditableDuration 10'],
       args: [{
+        key: 'scope',
+        prompt: 'Configuration scope, global or server?',
+        type: 'string',
+        oneOf: ['global', 'server']
+      }, {
         key: 'key',
         prompt: 'Which configuration value to change?',
         type: 'string'
       }, {
         key: 'value',
-        prompt: 'Value to set.',
-        type: 'string'
+        prompt: 'Value to set, or nothing to get current value',
+        type: 'string',
+        default: 'get'
       }],
       argsPromptLimit: 0
     })
@@ -40,16 +46,26 @@ class ConfigEditCommand extends Commando.Command
   }
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
   {
-    console.log( args )
-    /*let target: User = message.author
-    if ( args && typeof args === 'object' )
+    const argstruct: any = args
+    const host: NyaInterface = this._service.getHost()
+    if ( argstruct.scope === 'global' )
     {
-      const struct: any = args
-      if ( struct.target && struct.target instanceof User )
-        target = struct.target
+      const gkeys: string[] = host.getGlobalSettingKeys()
+      if ( !gkeys.includes( argstruct.key ) )
+        return host.respondTo( message, 'config_badkey', gkeys )
+      if ( argstruct.value === 'get' )
+      {
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        return host.respondTo( message, 'config_get', argstruct.key, value )
+      }
+      else
+      {
+        await this._service.getBackend().setGlobalSetting( argstruct.key, argstruct.value )
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        return host.respondTo( message, 'config_set', argstruct.key, value )
+      }
     }
-    const xpstruct = await this._service.getBackend().getUserXP( target, message.guild )
-    return this._service.getHost().respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )*/
+    console.log( args )
     return message.reply( 'boop' )
   }
 }
@@ -69,7 +85,7 @@ export class AdministrationModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     return [
-      new ConfigEditCommand( this, this.getClient() )
+      new ConfigCommand( this, this.getClient() )
     ]
   }
   registerStuff( id: number, host: NyaInterface ): boolean

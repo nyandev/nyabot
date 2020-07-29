@@ -35,6 +35,12 @@ class TalkModule
 			.addField( 'Server', server, true )
 		return message.embed( embed )
 	}
+	async sendPrintfResponse( message: Commando.CommandoMessage, print: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+	{
+		const embed = new MessageEmbed()
+			.setDescription( sprintf.apply( this, [print].concat( args ) ) )
+		return message.embed( embed )
+	}
 }
 
 export class Nya implements NyaInterface
@@ -88,6 +94,10 @@ export class Nya implements NyaInterface
 	getBackend(): Backend
 	{
 		return this._backend
+	}
+	getGlobalSettingKeys(): string[]
+	{
+		return ['MessageEditableDuration']
 	}
 	async onDebug( info: string )
 	{
@@ -243,6 +253,12 @@ export class Nya implements NyaInterface
 	{
 		if ( replycode === 'xp' )
 			return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
+		else if ( replycode === 'config_badkey' )
+			return this._talk.sendPrintfResponse( message, 'Unknown global setting. Available keys are: %s', [args[0]].join( ', ' ) )
+		else if ( replycode === 'config_get' )
+			return this._talk.sendPrintfResponse( message, 'The value of global **%s** is: **%s**', args[0], args[1] )
+		else if ( replycode === 'config_set' )
+			return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
 		return null
 	}
 	async onGuildUnavailable( guild: Guild )

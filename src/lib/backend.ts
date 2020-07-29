@@ -2,7 +2,7 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
-import { logSprintf } from '../globals'
+import { logSprintf, datetimeNow } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
 import { Redis } from './redis'
 import { CommandoClient } from 'discord.js-commando'
@@ -18,6 +18,7 @@ export class Backend
   _db: Sequelize
   _models: any
   _settingCache = new Map()
+
   constructor( config: any )
   {
     this._redis = new Redis( config.redis )
@@ -51,21 +52,25 @@ export class Backend
       GuildSetting: require( '../models/guildsetting' )( this._db, DataTypes )
     }
   }
+
   async getAllGuildsSettings( settingKey: string )
   {
     const cond = { key: settingKey }
     return this._models.GuildSetting.findAll({ where: cond })
   }
+
   async getGuildSettings( guild: number )
   {
     const cond = { guildID: guild }
     return this._models.GuildSetting.findAll({ where: cond })
   }
+
   async getGuildSetting( guild: number, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.findOne({ where: cond })
   }
+
   async setGuildSetting( guild: number, settingKey: string, settingValue: string )
   {
     const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
@@ -83,35 +88,49 @@ export class Backend
         return this._models.GuildSetting.create( vals )
       })
   }
+
   async removeGuildSetting( guild: number, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.destroy({ where: cond })
   }
+
   async getGlobalSetting( settingKey: string, defaultValue: any ): Promise<any>
   {
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
       return value
-    const cond = { guildID: 0, key: settingKey }
+    const cond: any = { guildID: null, key: settingKey }
     const row = await this._models.GuildSetting.findOne({ where: cond })
     if ( row )
     {
       this._settingCache.set( settingKey, row.value )
       return row.value
     }
+    else
+    {
+      const vals: any = {
+        guildID: null,
+        key: settingKey,
+        value: defaultValue,
+        lastChanged: datetimeNow()
+      }
+      await this._models.GuildSetting.create( vals )
+      this._settingCache.set( settingKey, defaultValue )
+    }
     return defaultValue
   }
+
   async setGlobalSetting( settingKey: string, settingValue: any )
   {
-    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
-    const cond = { guildID: 0, key: settingKey }
-    const vals = {
-      guildID: 0,
+    const cond: any = { guildID: null, key: settingKey }
+    const vals: any = {
+      guildID: null,
       key: settingKey,
       value: settingValue,
-      lastChanged: now
+      lastChanged: datetimeNow()
     }
+    this._settingCache.set( settingKey, settingValue )
     return this._models.GuildSetting.findOne({ where: cond })
       .then( ( obj: any ) => {
         if ( obj )
@@ -119,10 +138,10 @@ export class Backend
         return this._models.GuildSetting.create( vals )
       })
   }
+
   async upsertUser( user: any )
   {
-    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
-    const created = ( user.createdTimestamp > 0 ? moment( user.createdTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss' ) : null )
+    const created = ( user.createdTimestamp > 0 ? moment( user.createdTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss.SSSSSS' ) : null )
     let cond = { snowflake: user.id }
     let vals = {
       snowflake: user.id,
@@ -131,7 +150,7 @@ export class Backend
       avatar: user.avatar ? user.avatar : '',
       bot: user.bot,
       created: created,
-      updated: now
+      updated: datetimeNow()
     }
     return this._models.User.findOne({ where: cond })
       .then( ( obj: any ) => {
@@ -140,22 +159,26 @@ export class Backend
         return this._models.User.create( vals )
       })
   }
+
   async getGuildBySnowflake( flake: string )
   {
     let cond = { snowflake: flake }
     return this._models.Guild.findOne({ where: cond })
   }
+
   async getSnowflakeByGuildID( gid: number )
   {
     let cond = { id: gid }
     const guild = await this._models.Guild.findOne({ where: cond })
     return ( guild ? guild.snowflake : undefined )
   }
+
   async getUserBySnowflake( flake: string )
   {
     let cond = { snowflake: flake }
     return this._models.User.findOne({ where: cond })
   }
+
   async getGuildUserByIDs( guildId: number, userId: number )
   {
     let cond = { guildID: guildId, userID: userId }
@@ -252,7 +275,6 @@ export class Backend
       let cond = { snowflake: channel.id }
       const nsfw = ( channel.type === 'text' ? ( channel.nsfw === null ? false : channel.nsfw ) : false )
       const topic = ( channel.type === 'text' ? ( channel.topic ? channel.topic : '' ) : '' )
-      const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
       let vals = {
         snowflake: channel.id,
         guildID: guild.id,
@@ -261,7 +283,7 @@ export class Backend
         deleted: ( channel.deleted === null ? false : channel.deleted ),
         nsfw: nsfw,
         topic: topic,
-        updated: now
+        updated: datetimeNow()
       }
       return this._models.Channel.findOne({ where: cond })
         .then( ( obj: any ) => {
@@ -273,7 +295,6 @@ export class Backend
   }
   async upsertGuild( guild: any )
   {
-    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
     let cond = { snowflake: guild.id }
     let vals = {
       snowflake: guild.id,
@@ -281,8 +302,8 @@ export class Backend
       icon: guild.icon,
       region: guild.region,
       available: guild.available,
-      joined: moment( guild.joinedTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss'),
-      updated: now
+      joined: moment( guild.joinedTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss.SSSSSS'),
+      updated: datetimeNow()
     }
     return this._models.Guild.findOne({ where: cond })
       .then( ( obj: any ) => {
