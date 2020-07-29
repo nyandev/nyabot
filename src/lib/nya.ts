@@ -2,8 +2,8 @@ import { logSprintf } from '../globals'
 import fs = require( 'fs' )
 import { EventEmitter } from 'events'
 
-import Discord = require( 'discord.js' )
 import Commando = require( 'discord.js-commando' )
+import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
 import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
@@ -11,11 +11,31 @@ const sprintf = sprintfjs.sprintf
 
 import { Backend } from './backend'
 import { Parser } from './parser'
-import { CommandCallbackType, NyaInterface, ModuleInterface } from '../modules/module'
+import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
 import { XPModule } from '../modules/xp'
+import { AdministrationModule } from '../modules/administration'
 
 import SettingsProvider = require( './settingsprovider' )
+import { isNullOrUndefined } from 'util'
+
+class TalkModule
+{
+	_parent: Nya
+	constructor( parent: Nya )
+	{
+		this._parent = parent
+	}
+	async sendXPResponse( message: Commando.CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null> | null
+	{
+		const embed = new MessageEmbed()
+			.setTitle( 'Experience' )
+			.setDescription( sprintf( 'XP Stats for **%s**', target.tag ) )
+			.addField( 'Global', global, true )
+			.addField( 'Server', server, true )
+		return message.embed( embed )
+	}
+}
 
 export class Nya implements NyaInterface
 {
@@ -28,8 +48,9 @@ export class Nya implements NyaInterface
 	_client: Commando.CommandoClient
 	stoppedPromise: any
 	_stoppedResolve: any
-	_modules: ModuleInterface[]
-	makePresence(): Discord.PresenceData
+	_modules: ModuleBase[]
+	_talk: TalkModule
+	makePresence(): PresenceData
 	{
 		return {
 			status: 'online',
@@ -42,7 +63,7 @@ export class Nya implements NyaInterface
 	{
 		return false
 	}
-	registerModule( mod: ModuleInterface ): void
+	registerModule( mod: ModuleBase ): void
 	{
 		const index = this._modules.length
 		mod.registerStuff( index, this )
@@ -62,8 +83,7 @@ export class Nya implements NyaInterface
 		this._backend = backend
 		this._emitter = new EventEmitter()
 		this._parser = new Parser( this._config.prefix )
-
-		this.registerModule( new XPModule() )
+		this._talk = new TalkModule( this )
 	}
 	getBackend(): Backend
 	{
@@ -99,7 +119,7 @@ export class Nya implements NyaInterface
 	{
 		logSprintf( 'nya', 'onShardReady: %i', id )
 	}
-	async onGuildCreate( dsGuild: Discord.Guild )
+	async onGuildCreate( dsGuild: Guild )
 	{
 		let guild = await this._backend.upsertGuild( dsGuild )
 		let dsChannels = dsGuild.channels.cache
@@ -123,12 +143,12 @@ export class Nya implements NyaInterface
 		let guild = await this._backend.upsertGuild( dsNewGuild )
 		this._emitter.emit( 'guildUpdated', guild )
 	}
-	async onGuildDelete( dsGuild: Discord.Guild )
+	async onGuildDelete( dsGuild: Guild )
 	{
 		let guild = await this._backend.upsertGuild( dsGuild )
 		this._emitter.emit( 'guildDeleted', guild )
 	}
-	async onChannelCreate( dsChannel: Discord.Channel )
+	async onChannelCreate( dsChannel: Channel )
 	{
 		if ( dsChannel.type !== 'dm' )
 		{
@@ -144,7 +164,7 @@ export class Nya implements NyaInterface
 			this._emitter.emit( 'channelUpdated', channel )
 		}
 	}
-	async onChannelDelete( dsChannel: Discord.Channel )
+	async onChannelDelete( dsChannel: Channel )
 	{
 		if ( dsChannel.type !== 'dm' )
 		{
@@ -162,9 +182,9 @@ export class Nya implements NyaInterface
 		// currently we care about everyone that's not a bot
 		return ( !user.bot )
 	}
-	buildEmbedTypical( title: string, description: string, fields: any[], footer: boolean ): Discord.MessageEmbed
+	buildEmbedTypical( title: string, description: string, fields: any[], footer: boolean ): MessageEmbed
 	{
-		const embed = new Discord.MessageEmbed()
+		const embed = new MessageEmbed()
 			.setTitle( title )
 			.setDescription( description )
 		if ( footer )
@@ -177,14 +197,14 @@ export class Nya implements NyaInterface
 		})
 		return embed
 	}
-	buildEmbedWelcome( user: Discord.User ): Discord.MessageEmbed
+	buildEmbedWelcome( user: User ): MessageEmbed
 	{
 		const description = sprintf( 'Welcome to the server, **%s**!\n```fix\nID: %s```', user.tag, user.id )
 		const embed = this.buildEmbedTypical( 'New Member', description, [], false )
 		embed.setThumbnail( user.displayAvatarURL() )
 		return embed
 	}
-	async onMessage( message: Discord.Message )
+	async onMessage( message: Message )
 	{
 		if ( !this.shouldCareAbout( message.author ) )
 			return
@@ -219,13 +239,19 @@ export class Nya implements NyaInterface
 			}
 		}
 	}
-	async onGuildUnavailable( guild: Discord.Guild )
+	async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+	{
+		if ( replycode === 'xp' )
+			return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
+		return null
+	}
+	async onGuildUnavailable( guild: Guild )
 	{
 		logSprintf( 'nya', 'onGuildUnavailable' )
 	}
-	initialize()
+	async initialize()
 	{
-		return new Promise( ( resolve, reject ) =>
+		return new Promise( async ( resolve, reject ) =>
 		{
 			this._opts = {
 				shards: 0,
@@ -247,7 +273,7 @@ export class Nya implements NyaInterface
 				},
 				owner: this._config.owners,
 				commandPrefix: this._config.prefix,
-				commandEditableDuration: this._config.msgEditableDuration
+				commandEditableDuration: await this._backend.getGlobalSetting( 'MessageEditableDuration', this._config.msgEditableDuration )
 			}
 			this._inviteLink = null
 			this._client = new Commando.Client( this._opts )
@@ -298,10 +324,25 @@ export class Nya implements NyaInterface
 						${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
 					`);
 				})
+			//this._client.dispatcher.addInhibitor( ( msg: Commando.CommandoMessage ): any =>
+			//{
+			//	return ( msg.channel && msg.channel.type !== 'dm' && msg.channel.name.indexOf( 'botdev' ) > 0 ) ? false : 'beep boop'
+			//})
 			this._client.setProvider( new SettingsProvider( this._backend ) )
-			this._client.registry.registerDefaults()
-			this._client.registry.registerGroup( 'xp' )
-			this._client.registry.registerCommands( this._modules[0].getCommands( this, this._client ) )
+			this._client.registry.registerDefaultTypes()
+
+			this.registerModule( new XPModule( this._modules.length, this, this._client ) )
+			this.registerModule( new AdministrationModule( this._modules.length, this, this._client ) )
+
+			this._client.registry.registerDefaultGroups()
+			this._modules.forEach( module => {
+				this._client.registry.registerGroups( module.getGroups() )
+			})
+
+			this._client.registry.registerDefaultCommands()
+			this._modules.forEach( module => {
+				this._client.registry.registerCommands( module.getCommands() )
+			})
 			resolve( true )
 		})
 	}

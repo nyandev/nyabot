@@ -12,32 +12,36 @@ import { Backend } from '../lib/backend'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
-class XPCommand extends Commando.Command
+class ConfigEditCommand extends Commando.Command
 {
   protected _service: ModuleBase
   constructor( service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client, {
-      name: 'xp',
-      aliases: ['exp'],
-      group: 'xp',
-      memberName: 'xp',
+      name: 'bce',
+      aliases: ['botconfedit', 'botconfig'],
+      group: 'admin',
+      memberName: 'bce',
       description: 'Description',
       details: 'Command details',
-      examples: ['xp'],
+      examples: ['bce'],
       args: [{
-        key: 'target',
-        prompt: 'Whose stats should I fetch?',
-        type: 'user',
-        default: ''
+        key: 'key',
+        prompt: 'Which configuration value to change?',
+        type: 'string'
+      }, {
+        key: 'value',
+        prompt: 'Value to set.',
+        type: 'string'
       }],
-      argsPromptLimit: 1
+      argsPromptLimit: 0
     })
     this._service = service
   }
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
   {
-    let target: User = message.author
+    console.log( args )
+    /*let target: User = message.author
     if ( args && typeof args === 'object' )
     {
       const struct: any = args
@@ -45,11 +49,12 @@ class XPCommand extends Commando.Command
         target = struct.target
     }
     const xpstruct = await this._service.getBackend().getUserXP( target, message.guild )
-    return this._service.getHost().respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )
+    return this._service.getHost().respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )*/
+    return message.reply( 'boop' )
   }
 }
 
-export class XPModule extends ModuleBase
+export class AdministrationModule extends ModuleBase
 {
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
@@ -58,13 +63,13 @@ export class XPModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'xp', 'XP', false )
+      new Commando.CommandGroup( this.getClient(), 'admin', 'Administration', false )
     ]
   }
   getCommands(): Commando.Command[]
   {
     return [
-      new XPCommand( this, this.getClient() )
+      new ConfigEditCommand( this, this.getClient() )
     ]
   }
   registerStuff( id: number, host: NyaInterface ): boolean

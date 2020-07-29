@@ -1,8 +1,5 @@
 'use strict'
 
-const sprintf = require( 'sprintf-js' ).sprintf
-const moment = require( 'moment' )
-
 module.exports = ( sequelize, DataTypes ) =>
 {
   return sequelize.define( 'guilduser',

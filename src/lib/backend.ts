@@ -8,6 +8,7 @@ import { Redis } from './redis'
 import { CommandoClient } from 'discord.js-commando'
 
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import { Resolver } from 'dns'
 
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
@@ -16,6 +17,7 @@ export class Backend
   _redis: Redis
   _db: Sequelize
   _models: any
+  _settingCache = new Map()
   constructor( config: any )
   {
     this._redis = new Redis( config.redis )
@@ -67,8 +69,8 @@ export class Backend
   async setGuildSetting( guild: number, settingKey: string, settingValue: string )
   {
     const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
-    let cond = { guildID: guild, key: settingKey }
-    let vals = {
+    const cond = { guildID: guild, key: settingKey }
+    const vals = {
       guildID: guild,
       key: settingKey,
       value: settingValue,
@@ -85,6 +87,37 @@ export class Backend
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.destroy({ where: cond })
+  }
+  async getGlobalSetting( settingKey: string, defaultValue: any ): Promise<any>
+  {
+    const value = this._settingCache.get( settingKey )
+    if ( value !== undefined )
+      return value
+    const cond = { guildID: 0, key: settingKey }
+    const row = await this._models.GuildSetting.findOne({ where: cond })
+    if ( row )
+    {
+      this._settingCache.set( settingKey, row.value )
+      return row.value
+    }
+    return defaultValue
+  }
+  async setGlobalSetting( settingKey: string, settingValue: any )
+  {
+    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
+    const cond = { guildID: 0, key: settingKey }
+    const vals = {
+      guildID: 0,
+      key: settingKey,
+      value: settingValue,
+      lastChanged: now
+    }
+    return this._models.GuildSetting.findOne({ where: cond })
+      .then( ( obj: any ) => {
+        if ( obj )
+          return obj.update( vals )
+        return this._models.GuildSetting.create( vals )
+      })
   }
   async upsertUser( user: any )
   {
