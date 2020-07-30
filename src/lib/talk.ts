@@ -34,4 +34,17 @@ export class TalkModule
       .setDescription( sprintf.apply( this, [print].concat( args ) ) )
     return message.embed( embed )
   }
+
+  async sendPlainResponse( message: Commando.CommandoMessage, data: any ): Promise<Message | Message[] | null> | null
+  {
+    const embed = new MessageEmbed()
+    if ( !data.print )
+      data.print = ''
+    if ( !data.args )
+      data.args = []
+    embed.setDescription( sprintf.apply( this, [data.print].concat( data.args ) ) || '' )
+    if ( data.imageURL )
+      embed.setImage( data.imageURL )
+    return message.embed( embed )
+  }
 }
