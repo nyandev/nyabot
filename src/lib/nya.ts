@@ -100,10 +100,7 @@ export class Nya implements NyaInterface
   async onReady()
   {
     logSprintf( 'nya', 'onReady' )
-	for ( const guild of this._client.guilds.cache.values() )
-		this._backend.upsertGuild( guild )
-	for ( const channel of this._client.channels.cache.values() )
-		this._backend.upsertChannel( channel )
+	this._client.guilds.cache.each( guild => this.onGuildCreate( guild ) )
   }
 
   async onRateLimit( rateLimitInfo: any )
