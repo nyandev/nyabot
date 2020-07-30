@@ -60,7 +60,10 @@ export class XPModule extends ModuleBase
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
-    this._parser = new Parser( host.getPrefix() )
+    this._parser = new Parser( null )
+    host.getBackend().getGlobalSetting( 'Prefix' ).then( ( value: any ) => {
+      this._parser.setPrefix( value )
+    })
     client.on( 'commandPrefixChange', ( guild: any, prefix: any ) =>
     {
       if ( !guild )
@@ -70,29 +73,29 @@ export class XPModule extends ModuleBase
 
   async onMessage( msg: Message ): Promise<void>
   {
-		const parsed = this._parser.parseMessage( msg.content )
-		if ( parsed.xp !== false )
-		{
-			this._backend.userAddXP( msg.author, msg.member, parsed.xp )
-		}
-		/*const cmd = this._parser.parseCommand( parsed )
-		if ( cmd )
-		{
-			logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
-			if ( cmd.command === 'test' && msg.author )
-			{
-				const embed = this.buildEmbedWelcome( message.author )
-				message.channel.send( embed )
-				const guild = await this._backend.getGuildBySnowflake( message.guild.id )
-				if ( guild )
-				{
-					//this._backend.setGuildSetting( guild.id, 'testsetting', 'cool value bro!' )
-					//this._backend.setGuildSetting( guild.id, 'poop', 'yeehaw' )
-					let ftch = await this._backend.getGuildSettings( guild.id )
-					console.log( ftch )
-				}
-			}
-		}*/
+    const parsed = this._parser.parseMessage( msg.content )
+    if ( parsed.xp !== false )
+    {
+      this._backend.userAddXP( msg.author, msg.member, parsed.xp )
+    }
+    /*const cmd = this._parser.parseCommand( parsed )
+    if ( cmd )
+    {
+      logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
+      if ( cmd.command === 'test' && msg.author )
+      {
+        const embed = this.buildEmbedWelcome( message.author )
+        message.channel.send( embed )
+        const guild = await this._backend.getGuildBySnowflake( message.guild.id )
+        if ( guild )
+        {
+          //this._backend.setGuildSetting( guild.id, 'testsetting', 'cool value bro!' )
+          //this._backend.setGuildSetting( guild.id, 'poop', 'yeehaw' )
+          let ftch = await this._backend.getGuildSettings( guild.id )
+          console.log( ftch )
+        }
+      }
+    }*/
   }
 
   getGroups(): Commando.CommandGroup[]
@@ -112,9 +115,6 @@ export class XPModule extends ModuleBase
   registerStuff( id: number, host: NyaInterface ): boolean
   {
     this._id = id
-    host.registerCommand( 'poop', (): boolean => {
-      return false
-    })
     return true
   }
 }

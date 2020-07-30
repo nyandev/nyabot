@@ -33,6 +33,7 @@ export class Nya implements NyaInterface
   _stoppedResolve: any
   _modules: ModuleBase[]
   _talk: TalkModule
+
   makePresence(): PresenceData
   {
     return {
@@ -42,73 +43,76 @@ export class Nya implements NyaInterface
       shardID: 0
     }
   }
-  registerCommand( name: string, cb: CommandCallbackType ): boolean
-  {
-    return false
-  }
+
   registerModule( mod: ModuleBase ): void
   {
     const index = this._modules.length
     mod.registerStuff( index, this )
     this._modules.push( mod )
   }
+
   constructor( config: any, backend: Backend )
   {
     this._modules = []
     this._config = {
       token: config.discord.token,
       owners: config.discord.owners,
-      prefix: config.prefix,
-      msgEditableDuration: config.msgEditableDuration,
       longName: config.longName,
-      iconURL: config.iconURL
+      iconURL: config.iconURL,
+      globalDefaults: ( config.globalDefaults ? config.globalDefaults : null )
     }
     this._backend = backend
     this._emitter = new EventEmitter()
     this._talk = new TalkModule( this )
   }
-  getPrefix(): string
-  {
-    return this._config.prefix
-  }
+
   getBackend(): Backend
   {
     return this._backend
   }
+
   getGlobalSettingKeys(): string[]
   {
-    return ['MessageEditableDuration']
+    return ['MessageEditableDuration', 'Prefix']
   }
+
   async onDebug( info: string )
   {
     logSprintf( 'debug', info )
   }
+
   async onWarning( info: string )
   {
     logSprintf( 'nya', 'onWarning: %s', info )
   }
+
   async onError( error: any )
   {
     logSprintf( 'nya', 'onError:' )
     console.log( error )
   }
+
   async onInvalidated()
   {
     logSprintf( 'nya', 'onInvalidated' )
   }
+
   async onReady()
   {
     logSprintf( 'nya', 'onReady' )
   }
+
   async onRateLimit( rateLimitInfo: any )
   {
     logSprintf( 'nya', 'onRateLimit:' )
     console.log( rateLimitInfo )
   }
+
   async onShardReady( id: number )
   {
     logSprintf( 'nya', 'onShardReady: %i', id )
   }
+
   async onGuildCreate( dsGuild: Guild )
   {
     let guild = await this._backend.upsertGuild( dsGuild )
@@ -128,16 +132,19 @@ export class Nya implements NyaInterface
       }, this )
     this._emitter.emit( 'guildCreated', guild )
   }
+
   async onGuildUpdate( dsOldGuild: any, dsNewGuild: any )
   {
     let guild = await this._backend.upsertGuild( dsNewGuild )
     this._emitter.emit( 'guildUpdated', guild )
   }
+
   async onGuildDelete( dsGuild: Guild )
   {
     let guild = await this._backend.upsertGuild( dsGuild )
     this._emitter.emit( 'guildDeleted', guild )
   }
+
   async onChannelCreate( dsChannel: Channel )
   {
     if ( dsChannel.type !== 'dm' )
@@ -146,6 +153,7 @@ export class Nya implements NyaInterface
       this._emitter.emit( 'channelCreated', channel )
     }
   }
+
   async onChannelUpdate( dsOldChannel: any, dsNewChannel: any )
   {
     if ( dsNewChannel.type !== 'dm' )
@@ -154,6 +162,7 @@ export class Nya implements NyaInterface
       this._emitter.emit( 'channelUpdated', channel )
     }
   }
+
   async onChannelDelete( dsChannel: Channel )
   {
     if ( dsChannel.type !== 'dm' )
@@ -162,11 +171,13 @@ export class Nya implements NyaInterface
       this._emitter.emit( 'channelDeleted', channel )
     }
   }
+  
   async onUserUpdate( dsOldUser: any, dsNewUser: any )
   {
     let user = await this._backend.upsertUser( dsNewUser )
     this._emitter.emit( 'userUpdated', user )
   }
+
   buildEmbedTypical( title: string, description: string, fields: any[], footer: boolean ): MessageEmbed
   {
     const embed = new MessageEmbed()
@@ -233,6 +244,10 @@ export class Nya implements NyaInterface
   {
     return new Promise( async ( resolve, reject ) =>
     {
+      const initval = await this._backend.initGlobalSettings( this._config.globalDefaults, this.getGlobalSettingKeys() )
+      if ( !initval )
+        return reject( new Error( 'Global settings init failed' ) )
+
       this._opts = {
         shards: 0,
         shardCount: 1,
@@ -252,8 +267,8 @@ export class Nya implements NyaInterface
           // intents: 
         },
         owner: this._config.owners,
-        commandPrefix: this._config.prefix,
-        commandEditableDuration: await this._backend.getGlobalSetting( 'MessageEditableDuration', this._config.msgEditableDuration )
+        commandPrefix: await this._backend.getGlobalSetting( 'Prefix' ),
+        commandEditableDuration: await this._backend.getGlobalSetting( 'MessageEditableDuration' )
       }
       this._inviteLink = null
       this._client = new Commando.Client( this._opts )

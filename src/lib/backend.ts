@@ -94,7 +94,7 @@ export class Backend
     return this._models.GuildSetting.destroy({ where: cond })
   }
 
-  async getGlobalSetting( settingKey: string, defaultValue: any ): Promise<any>
+  async getGlobalSettingSetDefault( settingKey: string, defaultValue: any ): Promise<any>
   {
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
@@ -118,6 +118,40 @@ export class Backend
       this._settingCache.set( settingKey, defaultValue )
     }
     return defaultValue
+  }
+
+  async getGlobalSetting( settingKey: string ): Promise<any>
+  {
+    const value = this._settingCache.get( settingKey )
+    if ( value !== undefined )
+      return value
+    const cond: any = { guildID: null, key: settingKey }
+    const row = await this._models.GuildSetting.findOne({ where: cond })
+    if ( row )
+    {
+      this._settingCache.set( settingKey, row.value )
+      return row.value
+    }
+    return undefined
+  }
+  
+  async initGlobalSettings( config: any, keys: string[] ): Promise<boolean>
+  {
+    if ( typeof config !== 'object' )
+      return false
+
+    for ( let i = 0; i < keys.length; ++i )
+    {
+      if ( !( keys[i] in config ) )
+      {
+        logSprintf( 'fatal', 'Configuration defaults are missing key "%s"', keys[i] )
+        return false
+      }
+      const defval = config[keys[i]]
+      const value = await this.getGlobalSettingSetDefault( keys[i], defval )
+      logSprintf( 'core', 'Global setting "%s" is %s', keys[i], value )
+    }
+    return true
   }
 
   async setGlobalSetting( settingKey: string, settingValue: any )

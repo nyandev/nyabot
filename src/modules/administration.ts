@@ -58,13 +58,13 @@ class ConfigCommand extends Commando.Command
         return host.respondTo( message, 'config_badkey', gkeys )
       if ( argstruct.value === 'get' )
       {
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
         return host.respondTo( message, 'config_get', argstruct.key, value )
       }
       else
       {
         await this._service.getBackend().setGlobalSetting( argstruct.key, argstruct.value )
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
         return host.respondTo( message, 'config_set', argstruct.key, value )
       }
     }
@@ -102,9 +102,6 @@ export class AdministrationModule extends ModuleBase
   registerStuff( id: number, host: NyaInterface ): boolean
   {
     this._id = id
-    host.registerCommand( 'poop', (): boolean => {
-      return false
-    })
     return true
   }
 }
