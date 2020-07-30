@@ -171,7 +171,7 @@ export class Nya implements NyaInterface
       this._emitter.emit( 'channelDeleted', channel )
     }
   }
-  
+
   async onUserUpdate( dsOldUser: any, dsNewUser: any )
   {
     let user = await this._backend.upsertUser( dsNewUser )
@@ -248,6 +248,11 @@ export class Nya implements NyaInterface
       if ( !initval )
         return reject( new Error( 'Global settings init failed' ) )
 
+      const owners = await this._backend.ensureOwners( this._config.owners )
+      owners.forEach( owner => {
+        logSprintf( 'core', 'Owner: %s', owner )
+      })
+
       this._opts = {
         shards: 0,
         shardCount: 1,
@@ -266,7 +271,7 @@ export class Nya implements NyaInterface
           large_threshold: 200
           // intents: 
         },
-        owner: this._config.owners,
+        owner: owners,
         commandPrefix: await this._backend.getGlobalSetting( 'Prefix' ),
         commandEditableDuration: await this._backend.getGlobalSetting( 'MessageEditableDuration' )
       }
@@ -319,10 +324,12 @@ export class Nya implements NyaInterface
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
           `);
         })
+
       //this._client.dispatcher.addInhibitor( ( msg: Commando.CommandoMessage ): any =>
       //{
       //	return ( msg.channel && msg.channel.type !== 'dm' && msg.channel.name.indexOf( 'botdev' ) > 0 ) ? false : 'beep boop'
       //})
+  
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
@@ -338,6 +345,7 @@ export class Nya implements NyaInterface
       this._modules.forEach( module => {
         this._client.registry.registerCommands( module.getCommands() )
       })
+
       resolve( true )
     })
   }
