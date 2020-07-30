@@ -116,9 +116,14 @@ export class Nya implements NyaInterface
 	{
 		logSprintf( 'nya', 'onInvalidated' )
 	}
-	async onReady()
+	async onReady( client: Commando.Client )
 	{
 		logSprintf( 'nya', 'onReady' )
+		// TODO: why is this._client still undefined here?
+		for ( const guild of client.guilds.cache.values() )
+			this._backend.upsertGuild( guild )
+		for ( const channel of client.channels.cache.values() )
+			this._backend.upsertChannel( channel )
 	}
 	async onRateLimit( rateLimitInfo: any )
 	{
@@ -294,11 +299,11 @@ export class Nya implements NyaInterface
 			this._inviteLink = null
 			this._client = new Commando.Client( this._opts )
 			this._client
-			  .on( 'debug', this.onDebug )
-			  .on( 'warn', this.onWarning )
-			  .on( 'error', this.onError )
-			  .on( 'invalidated', this.onInvalidated )
-			  .on( 'ready', this.onReady )
+				.on( 'debug', this.onDebug )
+				.on( 'warn', this.onWarning )
+				.on( 'error', this.onError )
+				.on( 'invalidated', this.onInvalidated )
+				.on( 'ready', () => this.onReady( this._client ) ) // wow this is ugly
 				.on( 'rateLimit', this.onRateLimit )
 				.on( 'shardReady', this.onShardReady )
 				.on( 'guildCreate', ( this.onGuildCreate ).bind( this ) )
@@ -306,7 +311,7 @@ export class Nya implements NyaInterface
 				.on( 'guildDelete', ( this.onGuildDelete ).bind( this ) )
 				.on( 'channelCreate', ( this.onChannelCreate ).bind( this ) )
 				.on( 'channelUpdate', ( this.onChannelUpdate ).bind( this ) )
-		  	.on( 'channelDelete', ( this.onChannelDelete ).bind( this ) )
+				.on( 'channelDelete', ( this.onChannelDelete ).bind( this ) )
 				.on( 'userUpdate', ( this.onUserUpdate ).bind( this ) )
 				.on( 'message', ( this.onMessage ).bind( this ) )
 				.on( 'guildUnavailable', this.onGuildUnavailable )
