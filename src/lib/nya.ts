@@ -17,7 +17,7 @@ import { XPModule } from '../modules/xp'
 import { AdministrationModule } from '../modules/administration'
 
 import SettingsProvider = require( './settingsprovider' )
-import { isNullOrUndefined } from 'util'
+
 
 // Nya is the bot main class.
 // Really needs some cleanup to refactor the random junk just crammed in here.
@@ -327,7 +327,7 @@ export class Nya implements NyaInterface
 
       //this._client.dispatcher.addInhibitor( ( msg: Commando.CommandoMessage ): any =>
       //{
-      //	return ( msg.channel && msg.channel.type !== 'dm' && msg.channel.name.indexOf( 'botdev' ) > 0 ) ? false : 'beep boop'
+      //  return ( msg.channel && msg.channel.type !== 'dm' && msg.channel.name.indexOf( 'botdev' ) > 0 ) ? false : 'beep boop'
       //})
   
       this._client.setProvider( new SettingsProvider( this._backend ) )
