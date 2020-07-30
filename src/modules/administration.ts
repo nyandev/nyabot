@@ -15,9 +15,11 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module
 class ConfigCommand extends Commando.Command
 {
   protected _service: ModuleBase
+
   constructor( service: ModuleBase, client: Commando.CommandoClient )
   {
-    super( client, {
+    super( client,
+    {
       name: 'config',
       aliases: ['botconfedit', 'botconfig', 'bce'],
       group: 'admin',
@@ -44,6 +46,7 @@ class ConfigCommand extends Commando.Command
     })
     this._service = service
   }
+
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
   {
     const argstruct: any = args
@@ -55,13 +58,13 @@ class ConfigCommand extends Commando.Command
         return host.respondTo( message, 'config_badkey', gkeys )
       if ( argstruct.value === 'get' )
       {
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
         return host.respondTo( message, 'config_get', argstruct.key, value )
       }
       else
       {
         await this._service.getBackend().setGlobalSetting( argstruct.key, argstruct.value )
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key, null )
+        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
         return host.respondTo( message, 'config_set', argstruct.key, value )
       }
     }
@@ -76,24 +79,29 @@ export class AdministrationModule extends ModuleBase
   {
     super( id, host, client )
   }
+
   getGroups(): Commando.CommandGroup[]
   {
     return [
       new Commando.CommandGroup( this.getClient(), 'admin', 'Administration', false )
     ]
   }
+
   getCommands(): Commando.Command[]
   {
     return [
       new ConfigCommand( this, this.getClient() )
     ]
   }
+
+  async onMessage( msg: Message ): Promise<void>
+  {
+    //
+  }
+
   registerStuff( id: number, host: NyaInterface ): boolean
   {
     this._id = id
-    host.registerCommand( 'poop', (): boolean => {
-      return false
-    })
     return true
   }
 }

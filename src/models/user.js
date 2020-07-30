@@ -64,6 +64,11 @@ module.exports = ( sequelize, DataTypes ) =>
       type: DataTypes.BIGINT.UNSIGNED,
       allowNull: false,
       defaultValue: 0
+    },
+    access: {
+      type: DataTypes.ENUM( 'owner', 'admin', 'user' ),
+      allowNull: false,
+      defaultValue: 'user'
     }
   }, { timestamps: false })
 }

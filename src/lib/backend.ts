@@ -8,7 +8,6 @@ import { Redis } from './redis'
 import { CommandoClient } from 'discord.js-commando'
 
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
-import { Resolver } from 'dns'
 
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
@@ -22,7 +21,9 @@ export class Backend
   constructor( config: any )
   {
     this._redis = new Redis( config.redis )
-    this._db = new Sequelize( config.db.name, config.db.user, config.db.passwd, {
+
+    this._db = new Sequelize( config.db.name, config.db.user, config.db.passwd,
+    {
       host: config.db.host,
       port: config.db.port,
       dialect: 'mariadb',
@@ -44,6 +45,7 @@ export class Backend
         logSprintf( 'db', 'Sequelize: %s', msg )
       }*/
     })
+
     this._models = {
       Guild: require( '../models/guild' )( this._db, DataTypes ),
       Channel: require( '../models/channel' )( this._db, DataTypes ),
@@ -73,13 +75,12 @@ export class Backend
 
   async setGuildSetting( guild: number, settingKey: string, settingValue: string )
   {
-    const now = moment().format( 'YYYY-MM-DD HH:mm:ss' )
     const cond = { guildID: guild, key: settingKey }
     const vals = {
       guildID: guild,
       key: settingKey,
       value: settingValue,
-      lastChanged: now
+      lastChanged: datetimeNow()
     }
     return this._models.GuildSetting.findOne({ where: cond })
       .then( ( obj: any ) => {
@@ -95,7 +96,7 @@ export class Backend
     return this._models.GuildSetting.destroy({ where: cond })
   }
 
-  async getGlobalSetting( settingKey: string, defaultValue: any ): Promise<any>
+  async getGlobalSettingSetDefault( settingKey: string, defaultValue: any ): Promise<any>
   {
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
@@ -119,6 +120,40 @@ export class Backend
       this._settingCache.set( settingKey, defaultValue )
     }
     return defaultValue
+  }
+
+  async getGlobalSetting( settingKey: string ): Promise<any>
+  {
+    const value = this._settingCache.get( settingKey )
+    if ( value !== undefined )
+      return value
+    const cond: any = { guildID: null, key: settingKey }
+    const row = await this._models.GuildSetting.findOne({ where: cond })
+    if ( row )
+    {
+      this._settingCache.set( settingKey, row.value )
+      return row.value
+    }
+    return undefined
+  }
+  
+  async initGlobalSettings( config: any, keys: string[] ): Promise<boolean>
+  {
+    if ( typeof config !== 'object' )
+      return false
+
+    for ( let i = 0; i < keys.length; ++i )
+    {
+      if ( !( keys[i] in config ) )
+      {
+        logSprintf( 'fatal', 'Configuration defaults are missing key "%s"', keys[i] )
+        return false
+      }
+      const defval = config[keys[i]]
+      const value = await this.getGlobalSettingSetDefault( keys[i], defval )
+      logSprintf( 'core', 'Global setting "%s" is %s', keys[i], value )
+    }
+    return true
   }
 
   async setGlobalSetting( settingKey: string, settingValue: any )
@@ -160,6 +195,21 @@ export class Backend
       })
   }
 
+  async ensureOwners( owners: string[] ): Promise<string[]>
+  {
+    const cond = { snowflake: owners }
+    await this._models.User.update(
+      { access: 'owner' },
+      { where: cond }
+    )
+    const rows = await this._models.User.findAll({ where: { access: 'owner' } })
+    rows.forEach( ( row: any ) => {
+      if ( row && row.snowflake && !owners.includes( row.snowflake ) )
+        owners.push( row.snowflake )
+    })
+    return owners
+  }
+
   async getGuildBySnowflake( flake: string )
   {
     let cond = { snowflake: flake }
@@ -184,6 +234,7 @@ export class Backend
     let cond = { guildID: guildId, userID: userId }
     return this._models.GuildUser.findOne({ where: cond })
   }
+
   async upsertGuildUser( guildmember: any )
   {
     const guild = await this.getGuildBySnowflake( guildmember.guild.id )
@@ -207,6 +258,7 @@ export class Backend
     }
     return null
   }
+
   async userShouldUpdateXP( user: any )
   {
     const key: string = ['userlastxppush', user.id].join( '_' )
@@ -214,6 +266,7 @@ export class Backend
     const delta: number= ( moment().unix() - prevtime )
     return ( delta > xpUpdateMinDelta )
   }
+
   async getUserXP( dsuser: User, dsguild: Guild ): Promise<any>
   {
     const user = await this.getUserBySnowflake( dsuser.id )
@@ -224,6 +277,7 @@ export class Backend
       serverXP: guilduser ? guilduser.experience : null
     }
   }
+
   async userAddXP( dsUser: any, dsGuildMember: any, xp: number )
   {
     if ( !dsUser )
@@ -267,6 +321,7 @@ export class Backend
       await this._redis.set( key, moment().unix() )
     }
   }
+
   async upsertChannel( channel: any )
   {
     let guild = await this.getGuildBySnowflake( channel.guild.id )
@@ -293,6 +348,7 @@ export class Backend
         })
     }
   }
+
   async upsertGuild( guild: any )
   {
     let cond = { snowflake: guild.id }
@@ -312,13 +368,18 @@ export class Backend
         return this._models.Guild.create( vals )
       })
   }
+
   async initialize()
   {
     return this._db.authenticate().then( () =>
     {
-      this._db.sync()
+      this._db.sync({
+        force: false,
+        alter: true
+      })
     })
   }
+
   async destroy()
   {
     return this._db.close()
