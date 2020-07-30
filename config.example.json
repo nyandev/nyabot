@@ -1,0 +1,33 @@
+// Copy this to config.json and fill in the required values.
+// Then delete all comments (lines beginning with "//").
+{
+  "backend": {
+    "db": {
+      "name": "nyabot",
+      "user": "nyabot",
+      "passwd": "kakkakun",
+      "host": "localhost",
+      "port": 3306
+    },
+    "redis": {
+      "host": "127.0.0.1",
+      "port": 6379,
+      // Replace host and port with "path": "/path/to/socket" if connecting via socket.
+      "db": 0
+    }
+  },
+  "bot": {
+    "discord": {
+      "token": "bot token goes here",
+      "owners": [
+        "your numeric user id goes here"
+      ]
+    },
+    "longName": "NyaBot",
+    "iconURL": "https://neonya.party/images/bot/540297582950481950_icon.png",
+    "globalDefaults": {
+        "MessageEditableDuration": 10,
+        "Prefix": "?"
+    }
+  }
+}
