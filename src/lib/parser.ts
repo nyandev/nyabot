@@ -74,31 +74,23 @@ export class ParsedEmote extends ParsedBase
 
 export class Parser
 {
-  protected _prefix: string
-  constructor( prefix = '.' )
-  {
-    this.setPrefix( prefix )
-  }
-  setPrefix( prefix: string ): void
-  {
-    this._prefix = prefix
-  }
-  parseCommand( parsed: ParsedStruct ): any
+  static parseCommand( parsed: ParsedStruct, prefix: string ): any
   {
     if ( parsed.parts.length < 1 || parsed.parts[0].type !== 'text' )
       return null
     const cmd = parsed.parts[0] as ParsedText
-    if ( cmd.text.indexOf( this._prefix ) === 0 )
+    if ( cmd.text.indexOf( prefix ) === 0 )
     {
       let ret = {
-        command: cmd.text.substr( this._prefix.length ).toLowerCase(),
+        command: cmd.text.substr( prefix.length ).toLowerCase(),
         args: parsed.parts.slice( 1 )
       }
       return ret
     }
     return null
   }
-  parseMessage( fulltext: string ): ParsedStruct
+
+  static parseMessage( fulltext: string ): ParsedStruct
   {
     logSprintf( 'parse', 'Parsing:' )
     console.log( fulltext )
