@@ -18,7 +18,7 @@ export class TalkModule
     this._parent = parent
   }
 
-  async sendXPResponse( message: Commando.CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null> | null
+  async sendXPResponse( message: Commando.CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null>
   {
     const embed = new MessageEmbed()
       .setTitle( 'Experience' )
@@ -28,14 +28,14 @@ export class TalkModule
     return message.embed( embed )
   }
 
-  async sendPrintfResponse( message: Commando.CommandoMessage, print: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+  async sendPrintfResponse( message: Commando.CommandoMessage, print: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
     const embed = new MessageEmbed()
       .setDescription( sprintf.apply( this, [print].concat( args ) ) )
     return message.embed( embed )
   }
 
-  async sendPlainResponse( message: Commando.CommandoMessage, data: any ): Promise<Message | Message[] | null> | null
+  async sendPlainResponse( message: Commando.CommandoMessage, data: any ): Promise<Message | Message[] | null>
   {
     const embed = new MessageEmbed()
     if ( !data.print )

@@ -26,7 +26,7 @@ export class Nya implements NyaInterface
   _config: any
   _backend: Backend
   _emitter: EventEmitter
-  _inviteLink: string
+  _inviteLink: string | null
   _opts: Commando.CommandoClientOptions
   _client: Commando.CommandoClient
   stoppedPromise: any
@@ -39,7 +39,6 @@ export class Nya implements NyaInterface
     return {
       status: 'online',
       afk: false,
-      activity: null,
       shardID: 0
     }
   }
@@ -206,9 +205,9 @@ export class Nya implements NyaInterface
   {
     if ( message.partial )
       return false
-    if ( message.author.bot )
+    if ( !message.author || message.author.bot )
       return false
-    if ( message.author.id === this._client.user.id )
+    if ( !this._client.user || message.author.id === this._client.user.id )
       return false
     return true
   }
@@ -222,7 +221,7 @@ export class Nya implements NyaInterface
     })
   }
 
-  async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+  async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
     if ( replycode === 'xp' )
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
