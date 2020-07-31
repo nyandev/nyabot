@@ -11,52 +11,65 @@ const sprintf = sprintfjs.sprintf
 import { Backend } from '../lib/backend'
 import { Parser } from '../lib/parser'
 
-import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
+import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
-class XPCommand extends Commando.Command
+
+class EightBallCommand extends Commando.Command
 {
-  protected _service: ModuleBase
-
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
     {
-      name: 'xp',
-      aliases: ['exp'],
-      group: 'xp',
-      memberName: 'xp',
-      description: 'Description',
-      details: 'Command details',
-      examples: ['xp'],
+      name: '8ball',
+      group: 'games',
+      memberName: '8ball',
+      description: 'Answers a yes/no question.',
+      details: 'Call with a question as an argument.',
       args: [{
-        key: 'target',
-        prompt: 'Whose stats should I fetch?',
-        type: 'user',
-        default: ''
+        key: 'question',
+        prompt: 'Ask the 8-ball a question.',
+        type: 'string',
       }],
       argsPromptLimit: 1
     })
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    let target: User = message.author
-    if ( args && typeof args === 'object' )
-    {
-      const struct: any = args
-      if ( struct.target && struct.target instanceof User )
-        target = struct.target
-    }
-    const xpstruct = await this._service.getBackend().getUserXP( target, message.guild )
-    return this._service.getHost().respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )
+    const choices = ['yes', 'no']
+
+    let data = {}
+    const index = Math.floor( Math.random() * choices.length )
+    if (choices[index] === 'yes')
+      data = {
+        message: ' ',
+        imageURL: 'https://i.pinimg.com/originals/ce/68/ac/ce68ac827852aec0f097e58d930c2032.gif'
+      }
+    else
+      data = {
+        message: "That\u2019s no good, Onii-chan!"
+      }
+    return this._service.getHost().respondTo( message, '8ball', data )
   }
 }
 
-export class XPModule extends ModuleBase
+class HangmanCommand extends Commando.Command
 {
-  _parser: Parser
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangman',
+      group: 'games',
+      memberName: 'hangman',
+      description: "Start a game of Hangman.",
+      args: [],
+    })
+  }
+}
 
+export class GamesModule extends ModuleBase
+{
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
@@ -64,12 +77,15 @@ export class XPModule extends ModuleBase
 
   async onMessage( msg: Message ): Promise<void>
   {
-    const parsed = Parser.parseMessage( msg.content )
-    if ( parsed.xp !== false )
-    {
-      this._backend.userAddXP( msg.author, msg.member, parsed.xp )
+    if ( msg.content.length === 1 ) {
+      // check hangman
     }
-    /*const cmd = this._parser.parseCommand( parsed )
+    /*
+    const parsed = this._parser.parseMessage( msg.content )
+
+    const guild = message.guild ? message.guild.id : undefined
+    const prefix = this._backend.getSetting( 'Prefix', guild )
+    const cmd = this._parser.parseCommand( parsed, prefix )
     if ( cmd )
     {
       logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
@@ -92,14 +108,14 @@ export class XPModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'xp', 'XP', false )
+      new Commando.CommandGroup( this.getClient(), 'games', 'Games', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new XPCommand( this, this.getClient() )
+      new EightBallCommand( this, this.getClient() )
     ]
   }
 

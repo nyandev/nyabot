@@ -9,7 +9,7 @@ export class Redis
     this._redis = createClient( config )
   }
 
-  async incrementFloat( key: string, value: any )
+  async incrementFloat( key: string, value: any ): Promise<string>
   {
     return new Promise( ( resolve, reject ) =>
     {
