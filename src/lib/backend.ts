@@ -2,7 +2,7 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
-import { logSprintf, datetimeNow } from '../globals'
+import { datetimeNow, debug, logSprintf } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
 import { Redis } from './redis'
 import { CommandoClient } from 'discord.js-commando'
@@ -61,19 +61,19 @@ export class Backend
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSettings( guild: number )
+  async getGuildSettings( guild: string )
   {
     const cond = { guildID: guild }
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSetting( guild: number, settingKey: string )
+  async getGuildSetting( guild: string, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.findOne({ where: cond })
   }
 
-  async setGuildSetting( guild: number, settingKey: string, settingValue: string )
+  async setGuildSetting( guild: string, settingKey: string, settingValue: string )
   {
     const cond = { guildID: guild, key: settingKey }
     const vals = {
@@ -90,7 +90,7 @@ export class Backend
       })
   }
 
-  async removeGuildSetting( guild: number, settingKey: string )
+  async removeGuildSetting( guild: string, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.destroy({ where: cond })
@@ -124,6 +124,7 @@ export class Backend
 
   async getGlobalSetting( settingKey: string ): Promise<any>
   {
+    debug( this._settingCache )
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
       return value
@@ -158,6 +159,7 @@ export class Backend
 
   async setGlobalSetting( settingKey: string, settingValue: any )
   {
+    debug(this._settingCache)
     const cond: any = { guildID: null, key: settingKey }
     const vals: any = {
       guildID: null,
@@ -172,6 +174,19 @@ export class Backend
           return obj.update( vals )
         return this._models.GuildSetting.create( vals )
       })
+  }
+
+  /*  Returns a setting primarily from guild settings, if it it set there,
+   *  and secondarily from global settings.
+   */
+  async getSetting( settingKey: string, guild?: string )
+  {
+    let guildSetting
+    if ( guild )
+      guildSetting = await this.getGuildSetting( guild, settingKey )
+    if ( guildSetting !== undefined)
+      return guildSetting
+    return await this.getGlobalSetting( settingKey )
   }
 
   async upsertUser( user: any )
