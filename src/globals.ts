@@ -32,3 +32,18 @@ export function datetimeNow(): string
 {
   return moment().format( 'YYYY-MM-DD HH:mm:ss.SSSSSS' )
 }
+
+/*  Log for debugging.
+ */
+export function debug(...args: any[]): void
+{
+  if ( true /* replace with configuration.debug */ )
+    console.log(...args)
+}
+
+/*  Log for end users (intended to be written to a file in production)
+ */
+export function log(...args: any[]): void
+{
+  console.log(...args)
+}
