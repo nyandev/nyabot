@@ -13,11 +13,10 @@ import { Parser } from '../lib/parser'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
+
 class EightBallCommand extends Commando.Command
 {
-  protected _service: ModuleBase
-
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -33,10 +32,9 @@ class EightBallCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     })
-    this._service = service
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const choices = ['yes', 'no']
 
@@ -55,34 +53,39 @@ class EightBallCommand extends Commando.Command
   }
 }
 
+class HangmanCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangman',
+      group: 'games',
+      memberName: 'hangman',
+      description: "Start a game of Hangman.",
+      args: [],
+    })
+  }
+}
+
 export class GamesModule extends ModuleBase
 {
-  _parser: Parser
-
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
-    this._parser = new Parser( null )
-    host.getBackend().getGlobalSetting( 'Prefix' ).then( ( value: any ) => {
-      this._parser.setPrefix( value )
-    })
-    client.on( 'commandPrefixChange', ( guild: any, prefix: any ) =>
-    {
-      if ( !guild )
-        this._parser.setPrefix( prefix )
-    })
   }
 
   async onMessage( msg: Message ): Promise<void>
   {
-    /*
-    const parsed = this._parser.parseMessage( msg.content )
-    if ( parsed.xp !== false )
-    {
-      this._backend.userAddXP( msg.author, msg.member, parsed.xp )
+    if ( msg.content.length === 1 ) {
+      // check hangman
     }
     /*
-    const cmd = this._parser.parseCommand( parsed )
+    const parsed = this._parser.parseMessage( msg.content )
+
+    const guild = message.guild ? message.guild.id : undefined
+    const prefix = this._backend.getSetting( 'Prefix', guild )
+    const cmd = this._parser.parseCommand( parsed, prefix )
     if ( cmd )
     {
       logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )

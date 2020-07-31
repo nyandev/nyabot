@@ -39,7 +39,7 @@ class XPCommand extends Commando.Command
     this._service = service
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     let target: User = message.author
     if ( args && typeof args === 'object' )
@@ -60,20 +60,11 @@ export class XPModule extends ModuleBase
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
-    this._parser = new Parser( null )
-    host.getBackend().getGlobalSetting( 'Prefix' ).then( ( value: any ) => {
-      this._parser.setPrefix( value )
-    })
-    client.on( 'commandPrefixChange', ( guild: any, prefix: any ) =>
-    {
-      if ( !guild )
-        this._parser.setPrefix( prefix )
-    })
   }
 
   async onMessage( msg: Message ): Promise<void>
   {
-    const parsed = this._parser.parseMessage( msg.content )
+    const parsed = Parser.parseMessage( msg.content )
     if ( parsed.xp !== false )
     {
       this._backend.userAddXP( msg.author, msg.member, parsed.xp )
