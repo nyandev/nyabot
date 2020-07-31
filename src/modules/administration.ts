@@ -14,9 +14,7 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module
 
 class ConfigCommand extends Commando.Command
 {
-  protected _service: ModuleBase
-
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -26,7 +24,7 @@ class ConfigCommand extends Commando.Command
       memberName: 'config',
       description: 'Description',
       details: 'Command details',
-      examples: ['config global get MessageEditableDuration', 'config global set MessageEditableDuration 10'],
+      examples: ['config global MessageEditableDuration', 'config global MessageEditableDuration 10'],
       args: [{
         key: 'scope',
         prompt: 'Configuration scope, global or server?',
@@ -44,10 +42,9 @@ class ConfigCommand extends Commando.Command
       }],
       argsPromptLimit: 0
     })
-    this._service = service
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null> | null
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const argstruct: any = args
     const host: NyaInterface = this._service.getHost()
@@ -65,10 +62,15 @@ class ConfigCommand extends Commando.Command
       {
         await this._service.getBackend().setGlobalSetting( argstruct.key, argstruct.value )
         const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
+        if ( argstruct.key === 'Prefix')
+          this.client.commandPrefix = value
         return host.respondTo( message, 'config_set', argstruct.key, value )
       }
     }
-    console.log( args )
+    else if ( argstruct.scope === 'server' )
+    {
+      console.log(args)
+    }
     return message.reply( 'boop' )
   }
 }
