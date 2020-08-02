@@ -60,6 +60,7 @@ class HangmanCommand extends Commando.Command
 {
   static wordlists: Record<string, string[]> =
     JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/hangman.json' ), 'utf8' ) ).wordlists
+  static visibleChars = ['!', '?', "'", '-', ' ']
 
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
@@ -148,12 +149,9 @@ class HangmanListCommand extends Commando.Command
 function drawHangman( state: any, showWord: boolean = false )
 {
   const { word, guesses, misses } = state
-  debug("word is", word)
   const resultArray = []
   for ( const char of word ) {
-    if ( char === ' ' )
-      resultArray.push( ' ' )
-    else if ( guesses.includes( char.toLowerCase() ) || showWord )
+    if ( HangmanCommand.visibleChars.includes(char) || guesses.includes( char.toLowerCase() ) || showWord )
       resultArray.push( char )
     else
       resultArray.push( '_' )
@@ -186,7 +184,6 @@ function hangmanWin( message: Message, state: any, redis: Redis ): void
 function hangmanWinState( state: any ): boolean
 {
   const wordNoSpaces = Array.from( state.word.toLowerCase() ).filter( char => char !== ' ' )
-  debug(wordNoSpaces)
   return wordNoSpaces.every( char => state.guesses.includes( char ) )
 }
 
@@ -211,8 +208,7 @@ export class GamesModule extends ModuleBase
         hangmanWin( message, hangmanState, redis )
       } else if ( message.content.trim().length === 1 ) {
         const char = message.content.trim()[0].toLowerCase()
-        debug("state is", hangmanState)
-        if ( char !== ' ' && !hangmanState.guesses.includes( char )) {
+        if ( !HangmanCommand.visibleChars.includes( char ) && !hangmanState.guesses.includes( char )) {
           hangmanState.guesses.push( char.toLowerCase() )
           if ( hangmanState.word.toLowerCase().indexOf( char ) === -1 ) {
             // miss
@@ -227,7 +223,6 @@ export class GamesModule extends ModuleBase
           } else {
             // hit
             message.channel.send( "Correct! ```" + drawHangman( hangmanState ) + "```" )
-            debug( "win state:", hangmanWinState( hangmanState ) )
             if ( hangmanWinState( hangmanState ) )
               hangmanWin( message, hangmanState, redis )
             else
