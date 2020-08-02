@@ -58,7 +58,7 @@ class EightBallCommand extends Commando.Command
 
 class HangmanCommand extends Commando.Command
 {
-  protected words: Record<string, string[]>
+  protected wordlists: Record<string, string[]>
 
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
@@ -75,8 +75,8 @@ class HangmanCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     })
-    const wordsPath = path.resolve( __dirname, '../../src/data/hangman.json' )
-    this.words = JSON.parse( fs.readFileSync( wordsPath, 'utf8' ) )
+    const wordsPath = path.resolve( __dirname, '../../data/hangman.json' )
+    this.wordlists = JSON.parse( fs.readFileSync( wordsPath, 'utf8' ) ).wordlists
   }
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -87,10 +87,10 @@ class HangmanCommand extends Commando.Command
     if ( await redis.get(redisKey) )
       return this._service.getHost().respondTo( message, 'hangman_exists' )
 
-    if ( !this.words.hasOwnProperty( arg.toLowerCase() ) )
+    if ( !this.wordlists.hasOwnProperty( arg.toLowerCase() ) )
       return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
 
-    const wordlist = this.words[arg]
+    const wordlist = this.wordlists[arg]
     const word = wordlist[Math.floor(Math.random() * wordlist.length)]
 
     const state = {
