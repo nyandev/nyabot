@@ -86,10 +86,10 @@ class HangmanCommand extends Commando.Command
     if ( await redis.get(redisKey) )
       return this._service.getHost().respondTo( message, 'hangman_exists' )
 
-    if ( HangmanCommand.wordlists.hasOwnProperty( arg.toLowerCase() ) )
+    if ( !HangmanCommand.wordlists.hasOwnProperty( arg.toLowerCase() ) )
       return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
 
-    const wordlist = HangmanCommand.wordlists[arg]
+    const wordlist = HangmanCommand.wordlists[arg.toLowerCase()]
     const word = wordlist[Math.floor(Math.random() * wordlist.length)]
 
     const state = {
