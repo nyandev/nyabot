@@ -20,10 +20,9 @@
     "clean": "rimraf dist/*",
     "tsc": "tsc",
     "build": "npm-run-all clean tsc",
-    "start": "node ."
+    "start": "node ./built/index.js"
   },
   "dependencies": {
-    "@discordjs/opus": "^0.3.2",
     "anchorme": "^2.1.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
@@ -32,7 +31,7 @@
     "erlpack": "github:discord/erlpack",
     "ffmpeg": "0.0.4",
     "gemoji": "^5.0.1",
-    "mariadb": "^2.4.1",
+    "mariadb": "^2.4.2",
     "minimist": "^1.2.5",
     "moment": "^2.27.0",
     "mysql2": "^2.1.0",
@@ -40,21 +39,21 @@
     "redis": "^3.0.2",
     "sequelize": "^6.3.3",
     "sprintf-js": "^1.1.2",
+    "unicode-13.0.0": "^0.8.0",
     "utf-8-validate": "^5.0.2",
-    "ytdl-core": "^3.1.2",
+    "ytdl-core": "^3.2.0",
     "zlib-sync": "^0.1.7"
   },
   "devDependencies": {
     "@types/minimist": "^1.2.0",
     "@types/moment": "^2.13.0",
-    "@types/node": "^14.0.26",
+    "@types/node": "^14.0.27",
     "@types/redis": "^2.8.25",
     "@types/sequelize": "^4.28.9",
     "@types/sprintf-js": "^1.1.2",
     "@types/validator": "^13.1.0",
     "@types/ws": "^7.2.6",
     "ts-node": "^8.10.2",
-    "typescript": "^3.9.7",
-    "unicode-13.0.0": "^0.8.0"
+    "typescript": "^3.9.7"
   }
 }
