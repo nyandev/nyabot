@@ -241,6 +241,8 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "This channel already has a hangman game running." )
     else if ( replycode === 'hangman_invalid_wordlist' )
       return this._talk.sendPrintfResponse( message, "There is no word list called %s.", args[0] )
+    else if ( replycode === 'hangman_list' )
+      return this._talk.sendPrintfResponse( message, "Available wordlists: %s", args[0] )
     return null
   }
 

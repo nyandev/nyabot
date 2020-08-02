@@ -58,7 +58,8 @@ class EightBallCommand extends Commando.Command
 
 class HangmanCommand extends Commando.Command
 {
-  protected wordlists: Record<string, string[]>
+  static wordlists: Record<string, string[]> =
+    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/hangman.json' ), 'utf8' ) ).wordlists
 
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
@@ -75,8 +76,6 @@ class HangmanCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     })
-    const wordsPath = path.resolve( __dirname, '../../data/hangman.json' )
-    this.wordlists = JSON.parse( fs.readFileSync( wordsPath, 'utf8' ) ).wordlists
   }
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -87,10 +86,10 @@ class HangmanCommand extends Commando.Command
     if ( await redis.get(redisKey) )
       return this._service.getHost().respondTo( message, 'hangman_exists' )
 
-    if ( !this.wordlists.hasOwnProperty( arg.toLowerCase() ) )
+    if ( HangmanCommand.wordlists.hasOwnProperty( arg.toLowerCase() ) )
       return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
 
-    const wordlist = this.wordlists[arg]
+    const wordlist = HangmanCommand.wordlists[arg]
     const word = wordlist[Math.floor(Math.random() * wordlist.length)]
 
     const state = {
@@ -123,6 +122,26 @@ class HangmanStopCommand extends Commando.Command
     const redisKey = `hangman-${message.channel.id}`
     redis.del( redisKey )
     return this._service.getHost().respondTo( message, 'hangman_stop' )
+  }
+}
+
+class HangmanListCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangmanlist',
+      group: 'games',
+      memberName: 'hangmanlist',
+      description: "Show the word lists available for Hangman."
+    })
+  }
+
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const wordlists = Object.keys( HangmanCommand.wordlists )
+    return this._service.getHost().respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
   }
 }
 
@@ -254,7 +273,8 @@ export class GamesModule extends ModuleBase
     return [
       new EightBallCommand( this, this.getClient() ),
       new HangmanCommand( this, this.getClient() ),
-      new HangmanStopCommand( this, this.getClient() )
+      new HangmanStopCommand( this, this.getClient() ),
+      new HangmanListCommand( this, this.getClient() )
     ]
   }
 
