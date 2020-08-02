@@ -1,4 +1,4 @@
-import { logSprintf } from '../globals'
+import path = require( 'path' )
 import fs = require( 'fs' )
 import { EventEmitter } from 'events'
 import Commando = require( 'discord.js-commando' )
@@ -8,8 +8,11 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
+import { debug, logSprintf } from '../globals'
+
 import { Backend } from '../lib/backend'
 import { Parser } from '../lib/parser'
+import { Redis } from '../lib/redis'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
@@ -55,6 +58,8 @@ class EightBallCommand extends Commando.Command
 
 class HangmanCommand extends Commando.Command
 {
+  protected words: Record<string, string[]>
+
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
@@ -63,9 +68,105 @@ class HangmanCommand extends Commando.Command
       group: 'games',
       memberName: 'hangman',
       description: "Start a game of Hangman.",
-      args: [],
+      args: [{
+        key: 'wordlist',
+        prompt: 'Choose a word list.',
+        type: 'string'
+      }],
+      argsPromptLimit: 1
+    })
+    const wordsPath = path.resolve( __dirname, '../../src/data/hangman.json' )
+    this.words = JSON.parse( fs.readFileSync( wordsPath, 'utf8' ) )
+  }
+
+  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const arg = args.wordlist
+    const redis = this._service.getBackend()._redis
+    const redisKey = `hangman-${message.channel.id}`
+    if ( await redis.get(redisKey) )
+      return this._service.getHost().respondTo( message, 'hangman_exists' )
+
+    if ( !this.words.hasOwnProperty( arg.toLowerCase() ) )
+      return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
+
+    const wordlist = this.words[arg]
+    const word = wordlist[Math.floor(Math.random() * wordlist.length)]
+
+    const state = {
+      word: word,
+      guesses: [],
+      misses: 0
+    }
+    redis.set( redisKey, JSON.stringify(state) )
+
+    return this._service.getHost().respondTo( message, 'hangman_start', drawHangman( state ) )
+  }
+}
+
+class HangmanStopCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangmanstop',
+      group: 'games',
+      memberName: 'hangmanstop',
+      description: "Stop a running Hangman game."
     })
   }
+
+  async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const redis = this._service.getBackend()._redis
+    const redisKey = `hangman-${message.channel.id}`
+    redis.del( redisKey )
+    return this._service.getHost().respondTo( message, 'hangman_stop' )
+  }
+}
+
+function drawHangman( state: any )
+{
+  const { word, guesses, misses } = state
+  debug("word is", word)
+  const resultArray = []
+  for ( const char of word ) {
+    if ( char === ' ' )
+      resultArray.push( ' ' )
+    else if ( guesses.includes( char.toLowerCase() ) )
+      resultArray.push( char )
+    else
+      resultArray.push( '_' )
+  }
+  const wrongGuesses = hangmanWrongGuesses( state ).toUpperCase()
+  let result = resultArray.join(' ')
+  if ( wrongGuesses )
+    result += `\nGuesses: ${wrongGuesses}`
+  return result
+}
+
+function hangmanWrongGuesses( state: any )
+{
+  const result = []
+  for ( const char of state.guesses ) {
+    if ( state.word.toLowerCase().indexOf( char ) === -1 )
+    result.push( char )
+  }
+  return result.join(' ')
+}
+
+function hangmanWin( message: Message, state: any, redis: Redis ): void
+{
+  message.channel.send( `The word is "${state.word}"! ${message.author.username} is the winner.` )
+  redis.del( `hangman-${message.channel.id}` )
+}
+
+function hangmanWinState( state: any ): boolean
+{
+  const wordNoSpaces = Array.from( state.word.toLowerCase() ).filter( char => char !== ' ' )
+  debug(wordNoSpaces)
+  return wordNoSpaces.every( char => state.guesses.includes( char ) )
 }
 
 export class GamesModule extends ModuleBase
@@ -75,10 +176,37 @@ export class GamesModule extends ModuleBase
     super( id, host, client )
   }
 
-  async onMessage( msg: Message ): Promise<void>
+  async onMessage( message: Message ): Promise<void>
   {
-    if ( msg.content.length === 1 ) {
-      // check hangman
+    const redis = this.getBackend()._redis
+    const hangmanRedisKey = `hangman-${message.channel.id}`
+    const hangmanStateString = await redis.get( hangmanRedisKey )
+    if ( typeof hangmanStateString === 'string' && hangmanStateString ) {
+      const hangmanState = JSON.parse( hangmanStateString )
+      if ( message.content.toLowerCase() === hangmanState.word.toLowerCase() ) {
+        hangmanWin( message, hangmanState, redis )
+      } else if ( message.content.trim().length === 1 ) {
+        const char = message.content.trim()[0].toLowerCase()
+        debug("state is", hangmanState)
+        if ( char !== ' ' && !hangmanState.guesses.includes( char )) {
+          hangmanState.guesses.push( char.toLowerCase() )
+          if ( hangmanState.word.toLowerCase().indexOf( char ) === -1 ) {
+            // miss
+            hangmanState.misses += 1
+            message.channel.send( "Nope! ```" + drawHangman( hangmanState ) + "```" )
+            redis.set( hangmanRedisKey, JSON.stringify( hangmanState ) )
+            // TODO: check for fail state
+          } else {
+            // hit
+            message.channel.send( "Correct! ```" + drawHangman( hangmanState ) + "```" )
+            debug( "win state:", hangmanWinState( hangmanState ) )
+            if ( hangmanWinState( hangmanState ) )
+              hangmanWin( message, hangmanState, redis )
+            else
+              redis.set( hangmanRedisKey, JSON.stringify( hangmanState ) )
+          }
+        }
+      }
     }
     /*
     const parsed = this._parser.parseMessage( msg.content )
@@ -115,7 +243,9 @@ export class GamesModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     return [
-      new EightBallCommand( this, this.getClient() )
+      new EightBallCommand( this, this.getClient() ),
+      new HangmanCommand( this, this.getClient() ),
+      new HangmanStopCommand( this, this.getClient() )
     ]
   }
 
