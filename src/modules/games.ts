@@ -126,7 +126,7 @@ class HangmanStopCommand extends Commando.Command
   }
 }
 
-function drawHangman( state: any )
+function drawHangman( state: any, showWord: boolean = false )
 {
   const { word, guesses, misses } = state
   debug("word is", word)
@@ -134,13 +134,15 @@ function drawHangman( state: any )
   for ( const char of word ) {
     if ( char === ' ' )
       resultArray.push( ' ' )
-    else if ( guesses.includes( char.toLowerCase() ) )
+    else if ( guesses.includes( char.toLowerCase() ) || showWord )
       resultArray.push( char )
     else
       resultArray.push( '_' )
   }
   const wrongGuesses = hangmanWrongGuesses( state ).toUpperCase()
   let result = resultArray.join(' ')
+  if ( state.misses )
+    result += `\n${GamesModule.hangmanStates[state.misses]}`
   if ( wrongGuesses )
     result += `\nGuesses: ${wrongGuesses}`
   return result
@@ -171,6 +173,9 @@ function hangmanWinState( state: any ): boolean
 
 export class GamesModule extends ModuleBase
 {
+  static hangmanStates: Record<string, string> =
+    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/hangman.json' ), 'utf8' ) ).states
+ 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
@@ -197,7 +202,7 @@ export class GamesModule extends ModuleBase
               message.channel.send( "Nope! ```" + drawHangman( hangmanState ) + "```" )
               redis.set( hangmanRedisKey, JSON.stringify( hangmanState ) )
             } else {
-              message.channel.send( `You lost! The word was "${hangmanState.word}".`)
+              message.channel.send( "You lost!\n```" + drawHangman( hangmanState, true ) + "```" )
               redis.del( hangmanRedisKey )
             }
           } else {
