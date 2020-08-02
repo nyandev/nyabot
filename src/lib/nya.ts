@@ -13,8 +13,9 @@ import { Backend } from './backend'
 import { TalkModule } from './talk'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
-import { XPModule } from '../modules/xp'
 import { AdministrationModule } from '../modules/administration'
+import { ClubModule } from '../modules/club'
+import { XPModule } from '../modules/xp'
 
 import SettingsProvider = require( './settingsprovider' )
 
@@ -232,6 +233,8 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, 'The value of global **%s** is: **%s**', args[0], args[1] )
     else if ( replycode === 'config_set' )
       return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
+    else if ( replycode === 'club_list' )
+      return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
     return null
   }
 
@@ -333,8 +336,8 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      this.registerModule( new XPModule( this._modules.length, this, this._client ) )
-      this.registerModule( new AdministrationModule( this._modules.length, this, this._client ) )
+      for (const module of [AdministrationModule, ClubModule, XPModule])
+        this.registerModule( new module( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()
       this._modules.forEach( module => {

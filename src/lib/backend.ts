@@ -46,13 +46,10 @@ export class Backend
       }*/
     })
 
-    this._models = {
-      Guild: require( '../models/guild' )( this._db, DataTypes ),
-      Channel: require( '../models/channel' )( this._db, DataTypes ),
-      User: require( '../models/user' )( this._db, DataTypes ),
-      GuildUser: require( '../models/guilduser' )( this._db, DataTypes ),
-      GuildSetting: require( '../models/guildsetting' )( this._db, DataTypes )
-    }
+    this._models = {}
+    for (const model of
+        ['Channel', 'Club', 'ClubUser', 'Guild', 'GuildUser', 'GuildSetting', 'User'])
+      this._models[model] = require( `../models/${model.toLowerCase()}` )( this._db, DataTypes )
   }
 
   async getAllGuildsSettings( settingKey: string )
