@@ -193,9 +193,13 @@ export class GamesModule extends ModuleBase
           if ( hangmanState.word.toLowerCase().indexOf( char ) === -1 ) {
             // miss
             hangmanState.misses += 1
-            message.channel.send( "Nope! ```" + drawHangman( hangmanState ) + "```" )
-            redis.set( hangmanRedisKey, JSON.stringify( hangmanState ) )
-            // TODO: check for fail state
+            if ( hangmanState.misses < 10 ) {
+              message.channel.send( "Nope! ```" + drawHangman( hangmanState ) + "```" )
+              redis.set( hangmanRedisKey, JSON.stringify( hangmanState ) )
+            } else {
+              message.channel.send( `You lost! The word was "${hangmanState.word}".`)
+              redis.del( hangmanRedisKey )
+            }
           } else {
             // hit
             message.channel.send( "Correct! ```" + drawHangman( hangmanState ) + "```" )
