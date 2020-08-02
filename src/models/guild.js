@@ -11,7 +11,7 @@ module.exports = ( sequelize, DataTypes ) =>
       allowNull: false
     },
     snowflake: {
-      type: DataTypes.BIGINT.UNSIGNED,
+      type: DataTypes.TEXT,
       allowNull: false,
       unique: true
     },
