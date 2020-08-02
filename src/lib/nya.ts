@@ -235,14 +235,19 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
     else if ( replycode === '8ball' )
       return this._talk.sendPlainResponse( message,  args[0] )
-    else if ( replycode === 'hangman_start' )
-      return this._talk.sendPrintfResponse( message, "```%s```", args[0] )
-    else if ( replycode === 'hangman_exists' )
+    else if ( replycode === 'hangman_start' ) {
+      if ( !args[1] )
+        return this._talk.sendPrintfResponse( message, "```%s```", ...args )
+      else
+        return this._talk.sendPrintfResponse( message, "**Note**: %s\n```%s```", args[1], args[0] )
+    } else if ( replycode === 'hangman_exists' )
       return this._talk.sendPrintfResponse( message, "This channel already has a hangman game running." )
     else if ( replycode === 'hangman_invalid_wordlist' )
       return this._talk.sendPrintfResponse( message, "There is no word list called %s.", args[0] )
     else if ( replycode === 'hangman_list' )
       return this._talk.sendPrintfResponse( message, "Available wordlists: %s", args[0] )
+    else if ( replycode === 'hangman_stop' )
+      return this._talk.sendPrintfResponse( message, "Hangman stopped." )
     return null
   }
 
