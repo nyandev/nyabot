@@ -9,6 +9,7 @@ import { CommandoClient } from 'discord.js-commando'
 
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
+
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
 export class Backend
@@ -48,8 +49,20 @@ export class Backend
 
     this._models = {}
     for (const model of
-        ['Channel', 'Club', 'ClubUser', 'Guild', 'GuildUser', 'GuildSetting', 'User'])
+        ['Channel', 'Guild', 'GuildUser', 'GuildSetting', 'User'])
       this._models[model] = require( `../models/${model.toLowerCase()}` )( this._db, DataTypes )
+    const { clubInit } = require('../models/club')
+    debug(clubInit)
+    this._models.Club = clubInit( this._db )
+    debug(this._models.Club)
+    this._models.ClubUser = require('../models/clubuser').clubUserInit(this._db)
+    this._models.Club.hasMany(this._models.ClubUser, {
+      foreignKey: 'clubID',
+      primaryKey: true
+    })
+    this._models.ClubUser.belongsTo(this._models.Club, {
+      foreignKey: 'clubID'
+    })
   }
 
   async getAllGuildsSettings( settingKey: string )

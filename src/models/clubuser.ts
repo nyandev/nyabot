@@ -1,15 +1,11 @@
-'use strict'
+import { DataTypes, Model, Sequelize } from 'sequelize'
 
-module.exports = ( sequelize, DataTypes ) =>
+
+class ClubUser extends Model {}
+
+export function clubUserInit( sequelize: Sequelize )
 {
-  return sequelize.define( 'clubuser',
-  {
-    clubID: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      primaryKey: true,
-      allowNull: false,
-      references: { model: 'club', key: 'id' }
-    },
+  ClubUser.init({
     userID: {
       type: DataTypes.INTEGER.UNSIGNED,
       primaryKey: true,
@@ -25,5 +21,11 @@ module.exports = ( sequelize, DataTypes ) =>
       allowNull: false,
       defaultValue: 0
     }
-  }, { timestamps: false })
+  },
+  {
+    sequelize,
+    modelName: 'ClubUser',
+    timestamps: false
+  })
+  return ClubUser
 }

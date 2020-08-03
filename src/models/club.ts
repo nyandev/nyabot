@@ -1,9 +1,13 @@
-'use strict'
+import { DataTypes, Model, Sequelize } from 'sequelize'
 
-module.exports = ( sequelize, DataTypes ) =>
+import { debug } from '../globals'
+
+
+class Club extends Model {}
+
+export function clubInit( sequelize: Sequelize )
 {
-  return sequelize.define( 'club',
-  {
+  Club.init({
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       primaryKey: true,
@@ -25,6 +29,18 @@ module.exports = ( sequelize, DataTypes ) =>
     updated: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    totalExperience: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return 0
+      }
     }
-  }, { timestamps: false })
+  },
+  {
+    sequelize,
+    modelName: 'Club',
+    timestamps: false
+  })
+  return Club
 }

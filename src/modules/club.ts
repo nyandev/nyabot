@@ -48,16 +48,25 @@ class ListClubsCommand extends Commando.Command
       name: 'clubs',
       group: 'clubs',
       memberName: 'clubs',
-      description: "List clubs.",
+      description: "List all clubs.",
     })
   }
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const clubs = await this._service.getBackend()._models.Club.findAll({
-      attributes: ['name']
+    const models = this._service.getBackend()._models
+    const clubs = await models.Club.findAll({
+      attributes: ['name'],
+      include: [models.ClubUser]
     })
-    const clubNames = clubs.map( (club: Record<string, any>) => club.name ).join('\n')
+    debug(clubs)
+    if (!clubs.length)
+      return this._service.getHost().respondTo(message, 'club_list_empty')
+    const clubNames = clubs.map((club: any) => {
+      const memberCount = club.ClubUsers.length
+      const plural = memberCount === 1 ? '' : 's'
+      return `${club.name} (${memberCount} member${plural})`
+    }).join('\n')
     return this._service.getHost().respondTo( message, 'club_list', clubNames )
   }
 }

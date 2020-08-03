@@ -235,6 +235,8 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
     else if ( replycode === 'club_list' )
       return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
+    else if ( replycode === 'club_list_empty' )
+      return this._talk.sendPrintfResponse( message, "There are no clubs." )
     return null
   }
 
