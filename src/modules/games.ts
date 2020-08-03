@@ -58,10 +58,6 @@ class EightBallCommand extends Commando.Command
 
 class HangmanCommand extends Commando.Command
 {
-  static wordlists: Record<string, string[]> =
-    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/hangman.json' ), 'utf8' ) ).wordlists
-  static visibleChars = ['!', '?', '\u2019', '-', ' ']
-
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
@@ -87,10 +83,10 @@ class HangmanCommand extends Commando.Command
     if ( await redis.get( redisKey ) )
       return this._service.getHost().respondTo( message, 'hangman_exists' )
 
-    if ( !HangmanCommand.wordlists.hasOwnProperty( arg ) )
+    if ( !Hangman.wordlists.hasOwnProperty( arg ) )
       return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
 
-    const wordlist = HangmanCommand.wordlists[arg]
+    const wordlist = Hangman.wordlists[arg]
     const word = wordlist[Math.floor( Math.random() * wordlist.length )]
 
     const hangman = new Hangman( {
@@ -147,7 +143,7 @@ class HangmanListCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const wordlists = Object.keys( HangmanCommand.wordlists )
+    const wordlists = Object.keys( Hangman.wordlists )
     return this._service.getHost().respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
   }
 }
@@ -166,7 +162,7 @@ class Hangman {
 
   static states = Hangman.data.states
   static wordlists = Hangman.data.wordlists
-  static visibleChars = [' ', '!', '?', '-', '\u2019']
+  static hiddenChars = Array.from('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
 
   word: string
   guesses: string[]
@@ -183,7 +179,7 @@ class Hangman {
   draw( showWord: boolean = false ) {
     const resultArray = []
     for ( const char of this.word ) {
-      if ( showWord || Hangman.visibleChars.includes( char ) ||
+      if ( showWord || !Hangman.hiddenChars.includes( char ) ||
           this.guesses.includes( char.toLowerCase() ) )
         resultArray.push( char )
       else
@@ -204,7 +200,7 @@ class Hangman {
 
   get isWon(): boolean {
     const wordNoPunctuation = Array.from( this.word.toLowerCase() )
-      .filter( ( char: string ) => !Hangman.visibleChars.includes( char ) )
+      .filter( ( char: string ) => Hangman.hiddenChars.includes( char ) )
     return wordNoPunctuation.every( char => this.guesses.includes( char ) )
   }
 
@@ -257,7 +253,7 @@ export class GamesModule extends ModuleBase
       } else if ( message.content.trim().length === 1 ) {
         // Check one-character messages
         const char = message.content.trim()[0].toLowerCase()
-        if ( !Hangman.visibleChars.includes( char ) && !hangman.guessed( char ) ) {
+        if ( Hangman.hiddenChars.includes( char ) && !hangman.guessed( char ) ) {
           hangman.guesses.push( char.toLowerCase() )
           if ( !hangman.wordIncludes( char ) ) {
             // Incorrect guess
