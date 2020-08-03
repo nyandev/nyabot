@@ -34,7 +34,7 @@ class EightBallCommand extends Commando.Command
         type: 'string',
       }],
       argsPromptLimit: 1
-    })
+    } )
   }
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -43,7 +43,7 @@ class EightBallCommand extends Commando.Command
 
     let data = {}
     const index = Math.floor( Math.random() * choices.length )
-    if (choices[index] === 'yes')
+    if ( choices[index] === 'yes' )
       data = {
         message: ' ',
         imageURL: 'https://i.pinimg.com/originals/ce/68/ac/ce68ac827852aec0f097e58d930c2032.gif'
@@ -76,7 +76,7 @@ class HangmanCommand extends Commando.Command
         type: 'string'
       }],
       argsPromptLimit: 1
-    })
+    } )
   }
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -84,26 +84,26 @@ class HangmanCommand extends Commando.Command
     const arg = args.wordlist.toLowerCase()
     const redis = this._service.getBackend()._redis
     const redisKey = `hangman-${message.channel.id}`
-    if (await redis.get(redisKey))
-      return this._service.getHost().respondTo(message, 'hangman_exists')
+    if ( await redis.get( redisKey ) )
+      return this._service.getHost().respondTo( message, 'hangman_exists' )
 
-    if (!HangmanCommand.wordlists.hasOwnProperty(arg))
+    if ( !HangmanCommand.wordlists.hasOwnProperty( arg ) )
       return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
 
     const wordlist = HangmanCommand.wordlists[arg]
-    const word = wordlist[Math.floor(Math.random() * wordlist.length)]
+    const word = wordlist[Math.floor( Math.random() * wordlist.length )]
 
-    const hangman = new Hangman({
+    const hangman = new Hangman( {
       word: word,
       guesses: [],
       misses: 0,
-    })
-    hangman.save(redisKey, redis)
+    } )
+    hangman.save( redisKey, redis )
 
     let note
-    if (arg === 'anime')
+    if ( arg === 'anime' )
       note = "English anime titles are preferred."
-    return this._service.getHost().respondTo(message, 'hangman_start', hangman.draw(), note)
+    return this._service.getHost().respondTo( message, 'hangman_start', hangman.draw(), note )
   }
 }
 
@@ -117,7 +117,7 @@ class HangmanStopCommand extends Commando.Command
       group: 'games',
       memberName: 'hangmanstop',
       description: "Stop a running Hangman game."
-    })
+    } )
   }
 
   async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -142,7 +142,7 @@ class HangmanListCommand extends Commando.Command
       group: 'games',
       memberName: 'hangmanlist',
       description: "Show the word lists available for Hangman."
-    })
+    } )
   }
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -161,7 +161,7 @@ type HangmanState = {
 
 class Hangman {
   private static data =
-    JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../data/hangman.json'), 'utf8'))
+    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/hangman.json' ), 'utf8' ) )
   private static defaultHiddenChar = '_'
 
   static states = Hangman.data.states
@@ -173,48 +173,48 @@ class Hangman {
   misses: number
   hiddenChar: string
 
-  constructor({ word, guesses, misses, hiddenChar }: HangmanState) {
+  constructor( { word, guesses, misses, hiddenChar }: HangmanState ) {
     this.word = word
     this.guesses = guesses
     this.misses = misses
     this.hiddenChar = hiddenChar ?? Hangman.defaultHiddenChar
   }
 
-  draw(showWord: boolean = false) {
+  draw( showWord: boolean = false ) {
     const resultArray = []
-    for (const char of this.word) {
-      if (showWord || Hangman.visibleChars.includes(char) ||
-          this.guesses.includes(char.toLowerCase()))
-        resultArray.push(char)
+    for ( const char of this.word ) {
+      if ( showWord || Hangman.visibleChars.includes( char ) ||
+          this.guesses.includes( char.toLowerCase() ) )
+        resultArray.push( char )
       else
-        resultArray.push(this.hiddenChar)
+        resultArray.push( this.hiddenChar )
     }
     const wrongGuesses = this.wrongGuesses
-    let result = resultArray.join(' ')
-    if (this.misses)
+    let result = resultArray.join( ' ' )
+    if ( this.misses )
       result += `\n${Hangman.states[this.misses]}`
     if ( wrongGuesses )
       result += `\nGuesses: ${wrongGuesses}`
     return result
   }
 
-  guessed(char: string): boolean {
-    return this.guesses.includes(char)
+  guessed( char: string ): boolean {
+    return this.guesses.includes( char )
   }
 
   get isWon(): boolean {
-    const wordNoPunctuation = Array.from(this.word.toLowerCase())
-      .filter((char: string) => !Hangman.visibleChars.includes(char))
-    return wordNoPunctuation.every(char => this.guesses.includes(char))
+    const wordNoPunctuation = Array.from( this.word.toLowerCase() )
+      .filter( ( char: string ) => !Hangman.visibleChars.includes( char ) )
+    return wordNoPunctuation.every( char => this.guesses.includes( char ) )
   }
 
-  save(redisKey: string, redis: Redis): void {
-    redis.set(redisKey, JSON.stringify({
+  save( redisKey: string, redis: Redis ): void {
+    redis.set( redisKey, JSON.stringify( {
       word: this.word,
       guesses: this.guesses,
       misses: this.misses,
       hiddenChar: this.hiddenChar
-    }))
+    } ) )
   }
 
   get wrongGuesses(): string {
@@ -223,16 +223,16 @@ class Hangman {
       if ( this.word.toLowerCase().indexOf( char ) === -1 )
       result.push( char )
     }
-    return result.join(' ').toUpperCase()
+    return result.join( ' ' ).toUpperCase()
   }
 
-  win(message: Message, redis: Redis): void {
-    message.channel.send(`The word is "${this.word}"! ${message.author.username} is the winner.`)
-    redis.del(`hangman-${message.channel.id}`)
+  win( message: Message, redis: Redis ): void {
+    message.channel.send( `The word is "${this.word}"! ${message.author.username} is the winner.` )
+    redis.del( `hangman-${message.channel.id}` )
   }
 
-  wordIncludes(char: string): boolean {
-    return this.word.toLowerCase().indexOf(char.toLowerCase()) !== -1
+  wordIncludes( char: string ): boolean {
+    return this.word.toLowerCase().indexOf( char.toLowerCase() ) !== -1
   }
 }
 
@@ -247,35 +247,35 @@ export class GamesModule extends ModuleBase
   {
     const redis = this.getBackend()._redis
     const hangmanRedisKey = `hangman-${message.channel.id}`
-    const hangmanState = await redis.get(hangmanRedisKey)
+    const hangmanState = await redis.get( hangmanRedisKey )
 
-    if (typeof hangmanState === 'string') {
-      const hangman = new Hangman(JSON.parse(hangmanState))
-      if (message.content.replace("'", '\u2019').toLowerCase() === hangman.word.toLowerCase() ) {
+    if ( typeof hangmanState === 'string' ) {
+      const hangman = new Hangman( JSON.parse( hangmanState ) )
+      if ( message.content.replace( "'", '\u2019' ).toLowerCase() === hangman.word.toLowerCase() ) {
         // Check if the message is identical to the word
-        hangman.win(message, redis)
-      } else if (message.content.trim().length === 1) {
+        hangman.win( message, redis )
+      } else if ( message.content.trim().length === 1 ) {
         // Check one-character messages
         const char = message.content.trim()[0].toLowerCase()
-        if (!Hangman.visibleChars.includes(char) && !hangman.guessed(char)) {
+        if ( !Hangman.visibleChars.includes( char ) && !hangman.guessed( char ) ) {
           hangman.guesses.push( char.toLowerCase() )
-          if ( !hangman.wordIncludes(char)) {
+          if ( !hangman.wordIncludes( char ) ) {
             // Incorrect guess
             hangman.misses += 1
-            if (hangman.misses < 10) {
+            if ( hangman.misses < 10 ) {
               message.channel.send( "Nope! ```" + hangman.draw() + "```" )
-              hangman.save(hangmanRedisKey, redis)
+              hangman.save( hangmanRedisKey, redis )
             } else {
-              message.channel.send( "You lost!\n```" + hangman.draw(true) + "```" )
-              redis.del(hangmanRedisKey)
+              message.channel.send( "You lost!\n```" + hangman.draw( true ) + "```" )
+              redis.del( hangmanRedisKey )
             }
           } else {
             // Correct guess
             message.channel.send( "Correct! ```" + hangman.draw() + "```" )
-            if (hangman.isWon)
-              hangman.win(message, redis)
+            if ( hangman.isWon )
+              hangman.win( message, redis )
             else
-              hangman.save(hangmanRedisKey, redis)
+              hangman.save( hangmanRedisKey, redis )
           }
         }
       }
@@ -290,7 +290,7 @@ export class GamesModule extends ModuleBase
     const cmd = this._parser.parseCommand( parsed, prefix )
     if ( cmd )
     {
-      logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
+      logSprintf( 'debug', 'Looks like a command: %s ( %i args )', cmd.command, cmd.args.length )
       if ( cmd.command === 'test' && msg.author )
       {
         const embed = this.buildEmbedWelcome( message.author )
