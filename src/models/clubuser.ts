@@ -24,7 +24,7 @@ export function clubUserInit( sequelize: Sequelize )
   },
   {
     sequelize,
-    modelName: 'ClubUser',
+    modelName: 'clubuser',
     timestamps: false
   })
   return ClubUser

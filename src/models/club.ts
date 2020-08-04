@@ -16,7 +16,7 @@ export function clubInit( sequelize: Sequelize )
     },
     name: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: false,
     },
     icon: {
       type: DataTypes.TEXT,
@@ -39,8 +39,9 @@ export function clubInit( sequelize: Sequelize )
   },
   {
     sequelize,
-    modelName: 'Club',
+    modelName: 'club',
     timestamps: false
   })
+
   return Club
 }

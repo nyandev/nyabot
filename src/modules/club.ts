@@ -54,7 +54,7 @@ class ListClubsCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const models = this._service.getBackend()._models
+    const models = this._service.getBackend()._db.models
     const clubs = await models.Club.findAll({
       attributes: ['name'],
       include: [models.ClubUser]
@@ -80,12 +80,16 @@ export class ClubModule extends ModuleBase
     super( id, host, client )
   }
 
-  async onMessage( msg: Message ): Promise<void>
+  async onMessage( message: Message ): Promise<void>
   {
-    const parsed = Parser.parseMessage( msg.content )
+    const parsed = Parser.parseMessage( message.content )
     if ( parsed.xp !== false )
     {
-      this._backend.userAddXP( msg.author, msg.member, parsed.xp )
+      const user = await this._backend.getUserBySnowflake( message.author.id )
+      if ( user )
+      {
+        // do things and stuff
+      }
     }
     /*const cmd = this._parser.parseCommand( parsed )
     if ( cmd )
