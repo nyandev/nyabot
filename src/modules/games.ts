@@ -79,7 +79,7 @@ class HangmanCommand extends Commando.Command
   {
     const arg = args.wordlist.toLowerCase()
     const redis = this._service.getBackend()._redis
-    const redisKey = `hangman-${message.channel.id}`
+    const redisKey = `hangman_${message.channel.id}`
     if ( await redis.get( redisKey ) )
       return this._service.getHost().respondTo( message, 'hangman_exists' )
 
@@ -119,7 +119,7 @@ class HangmanStopCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const redis = this._service.getBackend()._redis
-    const redisKey = `hangman-${message.channel.id}`
+    const redisKey = `hangman_${message.channel.id}`
     if ( redis.get( redisKey ) ) {
       redis.del( redisKey )
       return this._service.getHost().respondTo( message, 'hangman_stop' )
@@ -224,7 +224,7 @@ class Hangman {
 
   win( message: Message, redis: Redis ): void {
     message.channel.send( `The word is "${this.word}"! ${message.author.username} is the winner.` )
-    redis.del( `hangman-${message.channel.id}` )
+    redis.del( `hangman_${message.channel.id}` )
   }
 
   wordIncludes( char: string ): boolean {
@@ -242,7 +242,7 @@ export class GamesModule extends ModuleBase
   async onMessage( message: Message ): Promise<void>
   {
     const redis = this.getBackend()._redis
-    const hangmanRedisKey = `hangman-${message.channel.id}`
+    const hangmanRedisKey = `hangman_${message.channel.id}`
     const hangmanState = await redis.get( hangmanRedisKey )
 
     if ( typeof hangmanState === 'string' ) {
