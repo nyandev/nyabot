@@ -225,6 +225,8 @@ export class Nya implements NyaInterface
 
   async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
+    const currencySymbol = this._config.globalDefaults.CurrencySymbol
+
     if ( replycode === 'xp' )
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
@@ -234,11 +236,17 @@ export class Nya implements NyaInterface
     else if ( replycode === 'config_set' )
       return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
     else if ( replycode === 'currency_award_user' )
-      return this._talk.sendPrintfResponse( message, "%s awarded %d currency to %s.", ...args)
+      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to %s.`, ...args)
     else if ( replycode === 'currency_award_role' )
-      return this._talk.sendPrintfResponse( message, "%s awarded %d currency to everyone with the %s role.", ...args)
+      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args)
     else if ( replycode === 'currency_show' )
-      return this._talk.sendPrintfResponse( message, "%s has %d currency.", ...args )
+      return this._talk.sendPrintfResponse( message, `%s has %d ${currencySymbol}.`, ...args )
+    else if ( replycode === 'slot_insufficient_funds' )
+      return this._talk.sendPrintfResponse( message, "You don\u2019t have that much!" )
+    else if ( replycode === 'slot_win' )
+      return this._talk.sendPrintfResponse( message, `%s! You won %d ${currencySymbol}!`, ...args )
+    else if ( replycode === 'slot_no_win' )
+      return this._talk.sendPrintfResponse( message, "%s Better luck next time!", ...args )
     return null
   }
 

@@ -78,7 +78,7 @@ class ShowCurrencyCommand extends Commando.Command
         key: 'target',
         prompt: "Who?",
         type: 'user',
-        default: ( msg: Commando.CommandoMessage, arg: Commando.Argument ) => msg.author
+        default: ( msg: Commando.CommandoMessage ) => msg.author
       }]
     })
   }
@@ -88,6 +88,76 @@ class ShowCurrencyCommand extends Commando.Command
     const backend = this._service.getBackend()
     const user = await backend.getUserBySnowflake( args.target.id )
     return this._service.getHost().respondTo( message, 'currency_show', user.name, user.currency )
+  }
+}
+
+
+class SlotCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'slot',
+      group: 'currency',
+      memberName: 'slot',
+      description: "Spin the slot machine.",
+      args: [{
+        key: 'amount',
+        prompt: "How much?",
+        type: 'integer',
+        min: 1,
+        max: 1000
+      }]
+    })
+  }
+
+  async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null >
+  {
+    const MULTIPLIERS = {
+      threeJokers: 30,
+      threeSame: 10,
+      twoJokers: 4,
+      oneJoker: 1
+    }
+    const SLOTS_STRINGS = [
+      this._service.getHost()._config.globalDefaults.SlotsJoker,
+      ':hearts:',
+      ':butterfly:',
+      ':sun_with_face:',
+      ':green_apple:',
+      ':dolphin:'
+    ]
+
+    const backend = this._service.getBackend()
+    const user = await backend.getUserBySnowflake( message.author.id )
+    if ( user.currency < args.amount )
+      return this._service.getHost().respondTo( message, 'slot_insufficient_funds' )
+
+    await user.decrement( { currency: args.amount } )
+
+    const slots = []
+    for (let i = 0; i < 3; i++)
+      slots.push( Math.floor( Math.random() * SLOTS_STRINGS.length ) )
+
+    const slotString = slots.map( index => SLOTS_STRINGS[index] ).join('')
+    let multiplier = 0
+    if ( slots.every( slot => slot === 0 ) ) {
+      multiplier = MULTIPLIERS.threeJokers
+    } else if ( slots[0] === slots[1] && slots[1] === slots[2] ) {
+      multiplier = MULTIPLIERS.threeSame
+    } else if ( slots.filter( slot => slot === 0 ).length === 2 ) {
+      multiplier = MULTIPLIERS.twoJokers
+    } else if ( slots.indexOf( 0 ) !== -1 ) {
+      multiplier = MULTIPLIERS.oneJoker
+    }
+    const winAmount = args.amount * multiplier
+    if ( winAmount > 0 ) {
+      await user.increment( { currency: winAmount } )
+      return this._service.getHost().respondTo( message, 'slot_win', slotString, winAmount )
+    } else {
+      return this._service.getHost().respondTo( message, 'slot_no_win', slotString )
+    }
   }
 }
 
@@ -114,7 +184,8 @@ export class CurrencyModule extends ModuleBase
   {
     return [
       new AwardCurrencyCommand( this, this.getClient() ),
-      new ShowCurrencyCommand( this, this.getClient() )
+      new ShowCurrencyCommand( this, this.getClient() ),
+      new SlotCommand( this, this.getClient() )
     ]
   }
 
