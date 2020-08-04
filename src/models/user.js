@@ -69,6 +69,11 @@ module.exports = ( sequelize, DataTypes ) =>
       type: DataTypes.ENUM( 'owner', 'admin', 'user' ),
       allowNull: false,
       defaultValue: 'user'
+    },
+    currency: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      defaultValue: 0
     }
   }, { timestamps: false })
 }
