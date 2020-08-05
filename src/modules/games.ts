@@ -120,7 +120,7 @@ class HangmanStopCommand extends Commando.Command
   {
     const redis = this._service.getBackend()._redis
     const redisKey = `hangman_${message.channel.id}`
-    if ( redis.get( redisKey ) ) {
+    if ( await redis.get( redisKey ) ) {
       redis.del( redisKey )
       return this._service.getHost().respondTo( message, 'hangman_stop' )
     }
