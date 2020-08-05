@@ -258,7 +258,7 @@ export class GamesModule extends ModuleBase
           if ( !hangman.wordIncludes( char ) ) {
             // Incorrect guess
             hangman.misses += 1
-            if ( hangman.misses < 10 ) {
+            if ( hangman.misses < Hangman.states.length ) {
               message.channel.send( "Nope! ```" + hangman.draw() + "```" )
               hangman.save( hangmanRedisKey, redis )
             } else {
