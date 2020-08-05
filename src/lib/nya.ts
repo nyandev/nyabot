@@ -13,9 +13,13 @@ import { Backend } from './backend'
 import { TalkModule } from './talk'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
+
 import { GamesModule } from '../modules/games'
 import { XPModule } from '../modules/xp'
 import { AdministrationModule } from '../modules/administration'
+import { ClubModule } from '../modules/club'
+import { GamesModule } from '../modules/games'
+import { XPModule } from '../modules/xp'
 
 import SettingsProvider = require( './settingsprovider' )
 
@@ -248,6 +252,10 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "Available wordlists: %s", args[0] )
     else if ( replycode === 'hangman_stop' )
       return this._talk.sendPrintfResponse( message, "Hangman stopped." )
+    else if ( replycode === 'club_list' )
+      return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
+    else if ( replycode === 'club_list_empty' )
+      return this._talk.sendPrintfResponse( message, "There are no clubs." )
     return null
   }
 
@@ -349,9 +357,8 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      for ( const module of [AdministrationModule, GamesModule, XPModule] )
+      for ( const module of [AdministrationModule, ClubModule, GamesModule, XPModule] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
-      //this.registerModule( new AdministrationModule( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()
       this._modules.forEach( module => {
