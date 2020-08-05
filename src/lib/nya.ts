@@ -13,6 +13,7 @@ import { Backend } from './backend'
 import { TalkModule } from './talk'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
+import { GamesModule } from '../modules/games'
 import { XPModule } from '../modules/xp'
 import { AdministrationModule } from '../modules/administration'
 
@@ -232,6 +233,21 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, 'The value of global **%s** is: **%s**', args[0], args[1] )
     else if ( replycode === 'config_set' )
       return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
+    else if ( replycode === '8ball' )
+      return this._talk.sendPlainResponse( message,  args[0] )
+    else if ( replycode === 'hangman_start' ) {
+      if ( !args[1] )
+        return this._talk.sendPrintfResponse( message, "```%s```", ...args )
+      else
+        return this._talk.sendPrintfResponse( message, "**Note**: %s\n```%s```", args[1], args[0] )
+    } else if ( replycode === 'hangman_exists' )
+      return this._talk.sendPrintfResponse( message, "This channel already has a hangman game running." )
+    else if ( replycode === 'hangman_invalid_wordlist' )
+      return this._talk.sendPrintfResponse( message, "There is no word list called %s.", args[0] )
+    else if ( replycode === 'hangman_list' )
+      return this._talk.sendPrintfResponse( message, "Available wordlists: %s", args[0] )
+    else if ( replycode === 'hangman_stop' )
+      return this._talk.sendPrintfResponse( message, "Hangman stopped." )
     return null
   }
 
@@ -333,8 +349,9 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      this.registerModule( new XPModule( this._modules.length, this, this._client ) )
-      this.registerModule( new AdministrationModule( this._modules.length, this, this._client ) )
+      for ( const module of [AdministrationModule, GamesModule, XPModule] )
+        this.registerModule( new module( this._modules.length, this, this._client ) )
+      //this.registerModule( new AdministrationModule( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()
       this._modules.forEach( module => {

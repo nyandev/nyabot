@@ -21,6 +21,18 @@ export class Redis
     })
   }
 
+  async del( key: string )
+  {
+    return new Promise( ( resolve, reject ) =>
+    {
+      this._redis.del( key, ( err, res ) => {
+        if ( err )
+          return reject( err )
+        resolve( res )
+      })
+    })
+  }
+
   async get( key: string )
   {
     return new Promise( ( resolve, reject ) =>
