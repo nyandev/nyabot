@@ -71,7 +71,7 @@ module.exports = ( sequelize, DataTypes ) =>
       defaultValue: 'user'
     },
     currency: {
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0
     }
