@@ -27,7 +27,16 @@
     "iconURL": "https://neonya.party/images/bot/540297582950481950_icon.png",
     "globalDefaults": {
         "MessageEditableDuration": 10,
-        "Prefix": "?"
+        "Prefix": "?",
+        "CurrencySymbol": ":cherry_blossom:",
+        "SlotsJoker": ":cherry_blossom:",
+        "SlotsImages": [
+            ":hearts:",
+            ":butterfly:",
+            ":sun_with_face:",
+            ":green_apple:",
+            ":dolphin:"
+        ]
     }
   }
 }

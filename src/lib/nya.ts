@@ -14,10 +14,9 @@ import { TalkModule } from './talk'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
-import { GamesModule } from '../modules/games'
-import { XPModule } from '../modules/xp'
 import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
+import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
 import { XPModule } from '../modules/xp'
 
@@ -229,6 +228,10 @@ export class Nya implements NyaInterface
 
   async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
+    const currencySymbol = this._config.globalDefaults.CurrencySymbol
+
+    // oh god here we go
+
     if ( replycode === 'xp' )
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
@@ -256,6 +259,18 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
     else if ( replycode === 'club_list_empty' )
       return this._talk.sendPrintfResponse( message, "There are no clubs." )
+    else if ( replycode === 'currency_award_user' )
+      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to %s.`, ...args)
+    else if ( replycode === 'currency_award_role' )
+      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args)
+    else if ( replycode === 'currency_show' )
+      return this._talk.sendPrintfResponse( message, `%s has %d ${currencySymbol}.`, ...args )
+    else if ( replycode === 'slot_insufficient_funds' )
+      return this._talk.sendPrintfResponse( message, "You don\u2019t have that much!" )
+    else if ( replycode === 'slot_win' )
+      return this._talk.sendPrintfResponse( message, `%s You won %d ${currencySymbol}!`, ...args )
+    else if ( replycode === 'slot_no_win' )
+      return this._talk.sendPrintfResponse( message, "%s Better luck next time!", ...args )
     return null
   }
 
@@ -357,7 +372,7 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      for ( const module of [AdministrationModule, ClubModule, GamesModule, XPModule] )
+      for ( const module of [AdministrationModule, ClubModule, CurrencyModule, GamesModule, XPModule] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()
