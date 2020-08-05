@@ -107,7 +107,6 @@ class SlotCommand extends Commando.Command
         prompt: "How much?",
         type: 'integer',
         min: 1,
-        max: 1000
       }]
     })
   }
@@ -120,13 +119,10 @@ class SlotCommand extends Commando.Command
       twoJokers: 4,
       oneJoker: 1
     }
-    const SLOTS_STRINGS = [
-      this._service.getHost()._config.globalDefaults.SlotsJoker,
-      ':hearts:',
-      ':butterfly:',
-      ':sun_with_face:',
-      ':green_apple:',
-      ':dolphin:'
+    const config = this._service.getHost()._config
+    const images = [
+      config.globalDefaults.SlotsJoker,
+      ...config.globalDefaults.SlotsImages
     ]
 
     const backend = this._service.getBackend()
@@ -138,9 +134,9 @@ class SlotCommand extends Commando.Command
 
     const slots = []
     for (let i = 0; i < 3; i++)
-      slots.push( Math.floor( Math.random() * SLOTS_STRINGS.length ) )
+      slots.push( Math.floor( Math.random() * images.length ) )
 
-    const slotString = slots.map( index => SLOTS_STRINGS[index] ).join('')
+    const slotString = slots.map( index => images[index] ).join(' ')
     let multiplier = 0
     if ( slots.every( slot => slot === 0 ) ) {
       multiplier = MULTIPLIERS.threeJokers

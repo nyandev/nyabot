@@ -29,7 +29,14 @@
         "MessageEditableDuration": 10,
         "Prefix": "?",
         "CurrencySymbol": ":cherry_blossom:",
-        "SlotsJoker": ":black_joker:"
+        "SlotsJoker": ":cherry_blossom:",
+        "SlotsImages": [
+            ":hearts:",
+            ":butterfly:",
+            ":sun_with_face:",
+            ":green_apple:",
+            ":dolphin:"
+        ]
     }
   }
 }

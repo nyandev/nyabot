@@ -244,7 +244,7 @@ export class Nya implements NyaInterface
     else if ( replycode === 'slot_insufficient_funds' )
       return this._talk.sendPrintfResponse( message, "You don\u2019t have that much!" )
     else if ( replycode === 'slot_win' )
-      return this._talk.sendPrintfResponse( message, `%s! You won %d ${currencySymbol}!`, ...args )
+      return this._talk.sendPrintfResponse( message, `%s You won %d ${currencySymbol}!`, ...args )
     else if ( replycode === 'slot_no_win' )
       return this._talk.sendPrintfResponse( message, "%s Better luck next time!", ...args )
     return null
