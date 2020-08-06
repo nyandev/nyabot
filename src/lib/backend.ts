@@ -55,7 +55,7 @@ export class Backend
     debug(clubInit)
     this._models.Club = clubInit( this._db )
     debug(this._models.Club)
-    this._models.ClubUser = require('../models/clubuser').clubUserInit(this._db)
+    this._models.ClubUser = require('../models/clubuser').clubUserInit( this._db )
     this._models.Club.hasMany(this._models.ClubUser, {
       foreignKey: 'clubID',
       primaryKey: true

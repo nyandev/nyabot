@@ -54,16 +54,16 @@ class ListClubsCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const models = this._service.getBackend()._db.models
+    const models = this._service.getBackend()._models
     const clubs = await models.Club.findAll({
       attributes: ['name'],
       include: [models.ClubUser]
     })
-    debug(clubs)
-    if (!clubs.length)
-      return this._service.getHost().respondTo(message, 'club_list_empty')
+    if ( !clubs.length )
+      return this._service.getHost().respondTo( message, 'club_list_empty' )
+
     const clubNames = clubs.map((club: any) => {
-      const memberCount = club.ClubUsers.length
+      const memberCount = club.clubusers.length
       const plural = memberCount === 1 ? '' : 's'
       return `${club.name} (${memberCount} member${plural})`
     }).join('\n')

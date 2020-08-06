@@ -19,7 +19,7 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
 class SankakuCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient, cmdName: string, protected tags: string )
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient, cmdName: string, protected tags: string, protected nsfwCmd = true )
   {
     super( client,
     {
@@ -32,13 +32,12 @@ class SankakuCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    if ( message.channel instanceof TextChannel && !message.channel.nsfw ) {
+    if ( this.nsfwCmd && message.channel instanceof TextChannel && !message.channel.nsfw ) {
       message.channel.send( "Whoops! Can\u2019t post this on a Christian channel!" )
       return null
     }
-
     const threshold = 4
-    const url = `https://capi-v2.sankakucomplex.com/posts?default_threshold=${threshold}&limit=1&tags=-video%20order:random%20${encodeURIComponent(this.tags)}`
+    const url = `https://capi-v2.sankakucomplex.com/posts?default_threshold=${threshold}&limit=1&tags=order:random -video ${encodeURIComponent(this.tags)}`
     let data
     try {
       data = await fetch(url, {
@@ -46,6 +45,7 @@ class SankakuCommand extends Commando.Command
           'User-Agent': 'NyaBot/0.1.0',
         }
       }).then( (response: any) => response.json() )
+      debug( data )
     } catch (e) {
       return this._service.getHost().respondTo( message, 'link_fail' )
     }
@@ -85,6 +85,7 @@ export class PervModule extends ModuleBase
     return [
       new SankakuCommand( this, this.getClient(), 'boobs', 'nipples' ),
       new SankakuCommand( this, this.getClient(), 'butts', 'ass' ),
+      new SankakuCommand( this, this.getClient(), 'girl', 'female rating:safe', false )
     ]
   }
 
