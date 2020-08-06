@@ -1,4 +1,4 @@
-import { logSprintf } from '../globals'
+import { debug, logSprintf } from '../globals'
 import fs = require( 'fs' )
 import { EventEmitter } from 'events'
 
@@ -230,9 +230,8 @@ export class Nya implements NyaInterface
   async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
     const currencySymbol = this._config.globalDefaults.CurrencySymbol
-
-    // oh god here we go
-
+    const printf = (print: string, ...args: any[]) => this._talk.sendPrintfResponse( message, print, ...args )
+    // oh god
     if ( replycode === 'xp' )
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
@@ -282,6 +281,19 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "A club with that name already exists." )
     else if ( replycode === 'club_create_fail' )
       return this._talk.sendPrintfResponse( message, "Failed to create the club." )
+    else if ( replycode === 'club_join_nonexistent' )
+      return printf( "There is no club with that name." )
+    else if ( replycode === 'club_join_multiple' )
+      return printf( "There are multiple clubs with that name. (That shouldn\u2019t happen.)" )
+    else if ( replycode === 'club_join_success' )
+      return printf( "%s joined %s.", args[0], args[1] )
+    else if ( replycode === 'club_already_in_club' )
+      return printf( "You must leave your current club first." )
+    else if ( replycode === 'club_leave_not_in_club' )
+      return printf( "You are not in a club!" )
+    else if ( replycode === 'club_leave_success' ) {
+      return printf( args[1].map( (clubName: string) => `${args[0]} left ${clubName}.` ).join('\n') )
+    }
     return null
   }
 
