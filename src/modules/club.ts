@@ -14,15 +14,15 @@ import { Parser } from '../lib/parser'
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
 
-class CreateClubCommand extends Commando.Command
+class NewClubCommand extends Commando.Command
 {
   constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
   {
     super( client,
     {
-      name: 'clubcreate',
+      name: 'newclub',
       group: 'clubs',
-      memberName: 'clubcreate',
+      memberName: 'newclub',
       description: "Create a new club.",
       args: [{
         key: 'name',
@@ -35,7 +35,7 @@ class CreateClubCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const db = this._service.getBackend()._db
+    const host = this._service.getHost()
     const models = this._service.getBackend()._models
     const existing = await models.Club.findAll({
       where: Sequelize.where(
@@ -44,9 +44,15 @@ class CreateClubCommand extends Commando.Command
       )
     })
     if ( existing.length )
-      return this._service.getHost().respondTo( message, 'club_create_exists' )
+      return host.respondTo( message, 'club_create_exists' )
 
     const user = await this._service.getBackend().getUserBySnowflake( message.author.id )
+    const currentClub = models.ClubUser.count({
+      where: { userID: user.id }
+    })
+    if ( currentClub )
+      return host.respondTo( message, 'club_already_in_club' )
+
     const clubData = {
       name: args.name,
       owner: user.id,
@@ -54,15 +60,66 @@ class CreateClubCommand extends Commando.Command
     }
     const club: any = await models.Club.create( clubData )
     if ( !club )
-      return this._service.getHost().respondTo( message, 'club_create_fail' )
+      return host.respondTo( message, 'club_create_fail' )
 
     const clubUserData = {
       userID: user.id,
       clubID: club.id,
       joined: datetimeNow()
     }
-    models.ClubUser.create( clubUserData )
-    return this._service.getHost().respondTo( message, 'club_create_success' )
+    await models.ClubUser.create( clubUserData )
+    return host.respondTo( message, 'club_create_success' )
+  }
+}
+
+
+class JoinClubCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'joinclub',
+      group: 'clubs',
+      memberName: 'joinclub',
+      description: "Join a club.",
+      args: [{
+        key: 'name',
+        prompt: "Which club?",
+        type: 'string'
+      }]
+    })
+  }
+
+  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const backend = this._service.getBackend()
+    const models = backend._models
+    const clubs = await models.Club.findAll({
+      where: Sequelize.where(
+        Sequelize.fn( 'lower', Sequelize.col( 'name' ) ),
+        Sequelize.fn( 'lower', args.name )
+      )
+    })
+    const host = this._service.getHost()
+    if ( !clubs.length )
+      return host.respondTo( message, 'club_join_nonexistent' )
+    else if ( clubs.length > 1 )
+      return host.respondTo( message, 'club_join_multiple' )
+    const [club] = clubs
+    const user = await backend.getUserBySnowflake( message.author.id )
+    const currentClub = await models.ClubUser.count({
+      where: { userID: user.id }
+    })
+    if ( currentClub )
+      return host.respondTo( message, 'club_already_in_club' )
+    const clubUserData = {
+      userID: user.id,
+      clubID: club.id,
+      joined: datetimeNow()
+    }
+    await models.ClubUser.create( clubUserData )
+    return host.respondTo( message, 'club_join_success', user.name, club.name )
   }
 }
 
@@ -149,8 +206,9 @@ export class ClubModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     return [
-      new CreateClubCommand( this, this.getClient() ),
-      new ListClubsCommand( this, this.getClient() )
+      new JoinClubCommand( this, this.getClient() ),
+      new ListClubsCommand( this, this.getClient() ),
+      new NewClubCommand( this, this.getClient() )
     ]
   }
 

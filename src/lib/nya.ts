@@ -225,6 +225,7 @@ export class Nya implements NyaInterface
 
   async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
+    const printf = (print: string, ...args: any[]) => this._talk.sendPrintfResponse( message, print, ...args )
     if ( replycode === 'xp' )
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
@@ -243,6 +244,14 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "A club with that name already exists." )
     else if ( replycode === 'club_create_fail' )
       return this._talk.sendPrintfResponse( message, "Failed to create the club." )
+    else if ( replycode === 'club_join_nonexistent' )
+      return printf( "There is no club with that name." )
+    else if ( replycode === 'club_join_multiple' )
+      return printf( "There are multiple clubs with that name. (That shouldn\u2019t happen.)" )
+    else if ( replycode === 'club_join_success' )
+      return printf( "%s joined %s.", args[0], args[1] )
+    else if ( replycode === 'club_already_in_club' )
+      return printf( "You must leave your current club first." )
     return null
   }
 
