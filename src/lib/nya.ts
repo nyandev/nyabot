@@ -237,6 +237,12 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
     else if ( replycode === 'club_list_empty' )
       return this._talk.sendPrintfResponse( message, "There are no clubs." )
+    else if ( replycode === 'club_create_success' )
+      return this._talk.sendPrintfResponse( message, "Club created!" )
+    else if ( replycode === 'club_create_exists' )
+      return this._talk.sendPrintfResponse( message, "A club with that name already exists." )
+    else if ( replycode === 'club_create_fail' )
+      return this._talk.sendPrintfResponse( message, "Failed to create the club." )
     return null
   }
 
