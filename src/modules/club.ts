@@ -1,9 +1,9 @@
-import { debug, logSprintf } from '../globals'
+import { datetimeNow, debug, logSprintf } from '../globals'
 import fs = require( 'fs' )
 import { EventEmitter } from 'events'
 import Commando = require( 'discord.js-commando' )
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
-
+import { Sequelize } from 'sequelize'
 import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
@@ -33,11 +33,39 @@ class CreateClubCommand extends Commando.Command
     })
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    return null
+    const db = this._service.getBackend()._db
+    const models = this._service.getBackend()._models
+    const existing = await models.Club.findAll({
+      where: Sequelize.where(
+        Sequelize.fn('lower', Sequelize.col('name')),
+        Sequelize.fn('lower', args.name)
+      )
+    })
+    if ( existing.length )
+      return this._service.getHost().respondTo( message, 'club_create_exists' )
+
+    const user = await this._service.getBackend().getUserBySnowflake( message.author.id )
+    const clubData = {
+      name: args.name,
+      owner: user.id,
+      created: datetimeNow()
+    }
+    const club: any = await models.Club.create( clubData )
+    if ( !club )
+      return this._service.getHost().respondTo( message, 'club_create_fail' )
+
+    const clubUserData = {
+      userID: user.id,
+      clubID: club.id,
+      joined: datetimeNow()
+    }
+    models.ClubUser.create( clubUserData )
+    return this._service.getHost().respondTo( message, 'club_create_success' )
   }
 }
+
 
 class ListClubsCommand extends Commando.Command
 {
@@ -62,11 +90,11 @@ class ListClubsCommand extends Commando.Command
     if ( !clubs.length )
       return this._service.getHost().respondTo( message, 'club_list_empty' )
 
-    const clubNames = clubs.map((club: any) => {
+    const clubNames = clubs.map( (club: any) => {
       const memberCount = club.clubusers.length
       const plural = memberCount === 1 ? '' : 's'
       return `${club.name} (${memberCount} member${plural})`
-    }).join('\n')
+    } ).join( '\n' )
     return this._service.getHost().respondTo( message, 'club_list', clubNames )
   }
 }

@@ -276,6 +276,12 @@ export class Nya implements NyaInterface
       return this._talk.sendAttachmentResponse( message, args[0] )
     else if ( replycode === 'link_fail' )
       return this._talk.sendPrintfResponse( message, "Sorry! Couldn\u2019t fetch that." )
+    else if ( replycode === 'club_create_success' )
+      return this._talk.sendPrintfResponse( message, "Club created!" )
+    else if ( replycode === 'club_create_exists' )
+      return this._talk.sendPrintfResponse( message, "A club with that name already exists." )
+    else if ( replycode === 'club_create_fail' )
+      return this._talk.sendPrintfResponse( message, "Failed to create the club." )
     return null
   }
 
