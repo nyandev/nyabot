@@ -18,7 +18,6 @@ import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
 import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
-import { PervModule } from '../modules/perv'
 import { XPModule } from '../modules/xp'
 
 import SettingsProvider = require( './settingsprovider' )
@@ -395,7 +394,7 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      for ( const module of [AdministrationModule, ClubModule, CurrencyModule, GamesModule, PervModule, XPModule] )
+      for ( const module of [AdministrationModule, ClubModule, CurrencyModule, GamesModule, XPModule] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()
