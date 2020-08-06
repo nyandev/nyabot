@@ -56,97 +56,6 @@ class EightBallCommand extends Commando.Command
   }
 }
 
-class HangmanCommand extends Commando.Command
-{
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
-  {
-    super( client,
-    {
-      name: 'hangman',
-      group: 'games',
-      memberName: 'hangman',
-      description: "Start a game of Hangman.",
-      args: [{
-        key: 'wordlist',
-        prompt: 'Choose a word list.',
-        type: 'string'
-      }],
-      argsPromptLimit: 1
-    } )
-  }
-
-  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
-  {
-    const arg = args.wordlist.toLowerCase()
-    const redis = this._service.getBackend()._redis
-    const redisKey = `hangman_${message.channel.id}`
-    if ( await redis.get( redisKey ) )
-      return this._service.getHost().respondTo( message, 'hangman_exists' )
-
-    if ( !Hangman.wordlists.hasOwnProperty( arg ) )
-      return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
-
-    const wordlist = Hangman.wordlists[arg]
-    const word = wordlist[Math.floor( Math.random() * wordlist.length )]
-
-    const hangman = new Hangman( {
-      word: word,
-      guesses: [],
-      misses: 0,
-    } )
-    hangman.save( redisKey, redis )
-
-    let note
-    if ( arg === 'anime' )
-      note = "English anime titles are preferred."
-    return this._service.getHost().respondTo( message, 'hangman_start', hangman.draw(), note )
-  }
-}
-
-class HangmanStopCommand extends Commando.Command
-{
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
-  {
-    super( client,
-    {
-      name: 'hangmanstop',
-      group: 'games',
-      memberName: 'hangmanstop',
-      description: "Stop a running Hangman game."
-    } )
-  }
-
-  async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
-  {
-    const redis = this._service.getBackend()._redis
-    const redisKey = `hangman_${message.channel.id}`
-    if ( await redis.get( redisKey ) ) {
-      redis.del( redisKey )
-      return this._service.getHost().respondTo( message, 'hangman_stop' )
-    }
-    return null
-  }
-}
-
-class HangmanListCommand extends Commando.Command
-{
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
-  {
-    super( client,
-    {
-      name: 'hangmanlist',
-      group: 'games',
-      memberName: 'hangmanlist',
-      description: "Show the word lists available for Hangman."
-    } )
-  }
-
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
-  {
-    const wordlists = Object.keys( Hangman.wordlists )
-    return this._service.getHost().respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
-  }
-}
 
 type HangmanState = {
   word: string,
@@ -154,6 +63,7 @@ type HangmanState = {
   misses: number,
   hiddenChar?: string
 }
+
 
 class Hangman {
   private static data =
@@ -231,6 +141,101 @@ class Hangman {
     return this.word.toLowerCase().indexOf( char.toLowerCase() ) !== -1
   }
 }
+
+class HangmanCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangman',
+      group: 'games',
+      memberName: 'hangman',
+      description: "Start a game of Hangman.",
+      args: [{
+        key: 'wordlist',
+        prompt: 'Choose a word list.',
+        type: 'string'
+      }],
+      argsPromptLimit: 1
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const arg = args.wordlist.toLowerCase()
+    const redis = this._service.getBackend()._redis
+    const redisKey = `hangman_${message.channel.id}`
+    if ( await redis.get( redisKey ) )
+      return this._service.getHost().respondTo( message, 'hangman_exists' )
+
+    if ( !Hangman.wordlists.hasOwnProperty( arg ) )
+      return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
+
+    const wordlist = Hangman.wordlists[arg]
+    const word = wordlist[Math.floor( Math.random() * wordlist.length )]
+
+    const hangman = new Hangman( {
+      word: word,
+      guesses: [],
+      misses: 0,
+    } )
+    hangman.save( redisKey, redis )
+
+    let note
+    if ( arg === 'anime' )
+      note = "English anime titles are preferred."
+    return this._service.getHost().respondTo( message, 'hangman_start', hangman.draw(), note )
+  }
+}
+
+
+class HangmanStopCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangmanstop',
+      group: 'games',
+      memberName: 'hangmanstop',
+      description: "Stop a running Hangman game."
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const redis = this._service.getBackend()._redis
+    const redisKey = `hangman_${message.channel.id}`
+    if ( await redis.get( redisKey ) ) {
+      redis.del( redisKey )
+      return this._service.getHost().respondTo( message, 'hangman_stop' )
+    }
+    return null
+  }
+}
+
+
+class HangmanListCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'hangmanlist',
+      group: 'games',
+      memberName: 'hangmanlist',
+      description: "Show the word lists available for Hangman."
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const wordlists = Object.keys( Hangman.wordlists )
+    return this._service.getHost().respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
+  }
+}
+
 
 export class GamesModule extends ModuleBase
 {

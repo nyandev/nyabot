@@ -47,4 +47,12 @@ export class TalkModule
       embed.setImage( data.imageURL )
     return message.embed( embed )
   }
+
+  async sendAttachmentResponse( message: Commando.CommandoMessage, data: Record<string, any> )
+  {
+    const attachment = new MessageAttachment( data.imageBuffer )
+    const sent = await message.channel.send( data.text, attachment )
+    sent.suppressEmbeds()
+    return sent
+  }
 }

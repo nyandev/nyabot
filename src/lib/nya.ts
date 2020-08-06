@@ -18,6 +18,7 @@ import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
 import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
+import { PervModule } from '../modules/perv'
 import { XPModule } from '../modules/xp'
 
 import SettingsProvider = require( './settingsprovider' )
@@ -271,6 +272,10 @@ export class Nya implements NyaInterface
       return this._talk.sendPrintfResponse( message, `%s You won %d ${currencySymbol}!`, ...args )
     else if ( replycode === 'slot_no_win' )
       return this._talk.sendPrintfResponse( message, "%s Better luck next time!", ...args )
+    else if ( replycode === 'link' )
+      return this._talk.sendAttachmentResponse( message, args[0] )
+    else if ( replycode === 'link_fail' )
+      return this._talk.sendPrintfResponse( message, "Sorry! Couldn\u2019t fetch that." )
     return null
   }
 
@@ -372,7 +377,7 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
-      for ( const module of [AdministrationModule, ClubModule, CurrencyModule, GamesModule, XPModule] )
+      for ( const module of [AdministrationModule, ClubModule, CurrencyModule, GamesModule, PervModule, XPModule] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       this._client.registry.registerDefaultGroups()

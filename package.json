@@ -23,6 +23,7 @@
     "start": "node ./built/index.js"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.5.7",
     "anchorme": "^2.1.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
@@ -35,6 +36,7 @@
     "minimist": "^1.2.5",
     "moment": "^2.27.0",
     "mysql2": "^2.1.0",
+    "node-fetch": "^2.6.0",
     "node-graceful": "^3.0.0",
     "redis": "^3.0.2",
     "sequelize": "^6.3.3",
