@@ -47,10 +47,10 @@ class NewClubCommand extends Commando.Command
       return host.respondTo( message, 'club_create_exists' )
 
     const user = await this._service.getBackend().getUserBySnowflake( message.author.id )
-    const currentClub = models.ClubUser.count({
+    const currentClubs = models.ClubUser.count({
       where: { userID: user.id }
     })
-    if ( currentClub )
+    if ( currentClubs > 0 )
       return host.respondTo( message, 'club_already_in_club' )
 
     const clubData = {
@@ -108,10 +108,10 @@ class JoinClubCommand extends Commando.Command
       return host.respondTo( message, 'club_join_multiple' )
     const [club] = clubs
     const user = await backend.getUserBySnowflake( message.author.id )
-    const currentClub = await models.ClubUser.count({
+    const currentClubs = await models.ClubUser.count({
       where: { userID: user.id }
     })
-    if ( currentClub )
+    if ( currentClubs > 0 )
       return host.respondTo( message, 'club_already_in_club' )
     const clubUserData = {
       userID: user.id,

@@ -63,8 +63,8 @@ export class Backend
     this._models.ClubUser.belongsTo( this._models.Club, {
       foreignKey: 'clubID'
     } )
-    this._models.Club.hasOne( this._models.User, { foreignKey: 'owner' } )
-    this._models.User.belongsTo( this._models.Club, { foreignKey: 'userID' } )
+    this._models.Club.belongsTo( this._models.User, { foreignKey: 'owner' } )
+    this._models.User.hasMany( this._models.Club, { foreignKey: 'owner' } )
   }
 
   async getAllGuildsSettings( settingKey: string )
