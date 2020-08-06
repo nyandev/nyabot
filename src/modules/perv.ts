@@ -33,7 +33,7 @@ class SankakuCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     if ( this.nsfwCmd && message.channel instanceof TextChannel && !message.channel.nsfw ) {
-      message.channel.send( "Whoops! Can\u2019t post this on a Christian channel!" )
+      message.channel.send( "Whoops! Can\u2019t post that on a Christian channel!" )
       return null
     }
     const threshold = 4

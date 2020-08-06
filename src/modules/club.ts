@@ -20,9 +20,9 @@ class CreateClubCommand extends Commando.Command
   {
     super( client,
     {
-      name: 'clubcreate',
+      name: 'newclub',
       group: 'clubs',
-      memberName: 'clubcreate',
+      memberName: 'newclub',
       description: "Create a new club.",
       args: [{
         key: 'name',
