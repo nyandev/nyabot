@@ -1,6 +1,7 @@
-'use strict'
+import { DataTypes, Sequelize } from 'sequelize'
 
-module.exports = ( sequelize, DataTypes ) =>
+
+export function init( sequelize: Sequelize )
 {
   return sequelize.define( 'guild',
   {

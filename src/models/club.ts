@@ -1,13 +1,9 @@
 import { DataTypes, Model, Sequelize } from 'sequelize'
 
-import { debug } from '../globals'
 
-
-class Club extends Model {}
-
-export function clubInit( sequelize: Sequelize )
+export function init( sequelize: Sequelize )
 {
-  Club.init({
+  return sequelize.define( 'club', {
     id: {
       type: DataTypes.INTEGER.UNSIGNED,
       primaryKey: true,
@@ -21,6 +17,11 @@ export function clubInit( sequelize: Sequelize )
     icon: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    owner: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      references: { model: 'user', key: 'id' }
     },
     created: {
       type: DataTypes.DATE,
@@ -38,10 +39,6 @@ export function clubInit( sequelize: Sequelize )
     }
   },
   {
-    sequelize,
-    modelName: 'club',
     timestamps: false
   })
-
-  return Club
 }

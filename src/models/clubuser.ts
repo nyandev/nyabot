@@ -1,16 +1,24 @@
-import { DataTypes, Model, Sequelize } from 'sequelize'
+import { DataTypes, Sequelize } from 'sequelize'
 
 
-class ClubUser extends Model {}
-
-export function clubUserInit( sequelize: Sequelize )
+export function init( sequelize: Sequelize )
 {
-  ClubUser.init({
-    userID: {
+  return sequelize.define( 'clubuser', {
+    id: {
       type: DataTypes.INTEGER.UNSIGNED,
       primaryKey: true,
+      autoIncrement: true,
+      allowNull: false
+    },
+    userID: {
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       references: { model: 'user', key: 'id' }
+    },
+    clubID: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      references: { model: 'club', key: 'id' }
     },
     joined: {
       type: DataTypes.DATE,
@@ -23,9 +31,6 @@ export function clubUserInit( sequelize: Sequelize )
     }
   },
   {
-    sequelize,
-    modelName: 'clubuser',
     timestamps: false
   })
-  return ClubUser
 }
