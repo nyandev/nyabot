@@ -47,7 +47,7 @@ class NewClubCommand extends Commando.Command
       return host.respondTo( message, 'club_create_exists' )
 
     const user = await this._service.getBackend().getUserBySnowflake( message.author.id )
-    const currentClubs = models.ClubUser.count({
+    const currentClubs = await models.ClubUser.count({
       where: { userID: user.id }
     })
     if ( currentClubs > 0 )

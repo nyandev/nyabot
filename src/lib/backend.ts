@@ -48,17 +48,11 @@ export class Backend
     })
 
     this._models = {}
-
-    // Models in ES (.js)
-    /*
-    for (const model of
-        ['User', 'Guild', 'GuildUser', 'GuildSetting', 'Channel'])
-      this._models[model] = require( `../models/${model.toLowerCase()}` )( this._db, DataTypes )
-    */
-
-    // Models in TS (.ts)
     for ( const model of ['User', 'Guild', 'GuildUser', 'GuildSetting', 'Channel', 'Club', 'ClubUser'] )
       this._models[model] = require( `../models/${model.toLowerCase()}` ).init( this._db )
+
+    this._models.Club.hasMany( this._models.ClubUser, { foreignKey: 'clubID' } )
+    this._models.ClubUser.belongsTo( this._models.Club, { foreignKey: 'clubID' } )
   }
 
   async getAllGuildsSettings( settingKey: string )

@@ -15,11 +15,6 @@ export function init( sequelize: Sequelize )
       allowNull: false,
       references: { model: 'user', key: 'id' }
     },
-    clubID: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      references: { model: 'club', key: 'id' }
-    },
     joined: {
       type: DataTypes.DATE,
       allowNull: false
