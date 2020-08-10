@@ -98,7 +98,7 @@ class Hangman {
     const wrongGuesses = this.wrongGuesses
     let result = resultArray.join( ' ' )
     if ( this.misses )
-      result += `\n${Hangman.states[this.misses]}`
+      result += `\n${Hangman.states[this.misses - 1]}`
     if ( wrongGuesses )
       result += `\nGuesses: ${wrongGuesses}`
     return result
