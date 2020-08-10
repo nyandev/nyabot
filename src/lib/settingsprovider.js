@@ -31,14 +31,15 @@ class SettingsProvider extends SettingProvider
       }
       catch ( err )
       {
-        client.emit( 'warn', `SettingsProvider couldn't parse the settings stored for guild ${row.guild}.` )
+        client.emit( 'warn', `SettingsProvider couldn't parse the settings stored for guild ${row.guildID}.` )
         continue
       }
       this.settings.set( row.guildID, settings )
       const flake = await this.idToSnowflake( ( row.guildID !== null && row.guildID !== 0 ) ? row.guildID : 'global' )
       if ( row.guildID && !client.guilds.cache.has( flake ) )
         continue
-      this.setupGuild( flake, settings )
+      if ( flake )
+        this.setupGuild( flake, settings )
     }
 
     this.listeners
@@ -100,7 +101,7 @@ class SettingsProvider extends SettingProvider
   async idToSnowflake( gid )
   {
     if ( gid === null || gid === undefined || gid === 0 || gid === '0' || gid === 'global' )
-      return undefined
+      return null
     let flake = this._flakeCache.get( gid )
     if ( !flake )
     {

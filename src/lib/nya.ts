@@ -37,6 +37,7 @@ export class Nya implements NyaInterface
   _stoppedResolve: any
   _modules: ModuleBase[]
   _talk: TalkModule
+  messages: Record<string, string>
 
   makePresence(): PresenceData
   {
@@ -67,6 +68,7 @@ export class Nya implements NyaInterface
     this._backend = backend
     this._emitter = new EventEmitter()
     this._talk = new TalkModule( this )
+    this.messages = JSON.parse( fs.readFileSync( 'data/messages.json', 'utf8' ) )
   }
 
   getBackend(): Backend
@@ -235,10 +237,6 @@ export class Nya implements NyaInterface
       return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
       return this._talk.sendPrintfResponse( message, 'Unknown global setting. Available keys are: %s', [args[0]].join( ', ' ) )
-    else if ( replycode === 'config_get' )
-      return this._talk.sendPrintfResponse( message, 'The value of global **%s** is: **%s**', args[0], args[1] )
-    else if ( replycode === 'config_set' )
-      return this._talk.sendPrintfResponse( message, 'Global configuration **%s** set to **%s**', args[0], args[1] )
     else if ( replycode === '8ball' )
       return this._talk.sendPlainResponse( message,  args[0] )
     else if ( replycode === 'hangman_start' ) {
@@ -246,53 +244,21 @@ export class Nya implements NyaInterface
         return this._talk.sendPrintfResponse( message, "```%s```", ...args )
       else
         return this._talk.sendPrintfResponse( message, "**Note**: %s\n```%s```", args[1], args[0] )
-    } else if ( replycode === 'hangman_exists' )
-      return this._talk.sendPrintfResponse( message, "This channel already has a hangman game running." )
-    else if ( replycode === 'hangman_invalid_wordlist' )
-      return this._talk.sendPrintfResponse( message, "There is no word list called %s.", args[0] )
-    else if ( replycode === 'hangman_list' )
-      return this._talk.sendPrintfResponse( message, "Available wordlists: %s", args[0] )
-    else if ( replycode === 'hangman_stop' )
-      return this._talk.sendPrintfResponse( message, "Hangman stopped." )
-    else if ( replycode === 'club_list' )
-      return this._talk.sendPrintfResponse( message, "Clubs:\n%s", args[0] )
-    else if ( replycode === 'club_list_empty' )
-      return this._talk.sendPrintfResponse( message, "There are no clubs." )
+    }
     else if ( replycode === 'currency_award_user' )
       return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to %s.`, ...args)
     else if ( replycode === 'currency_award_role' )
       return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args)
     else if ( replycode === 'currency_show' )
       return this._talk.sendPrintfResponse( message, `%s has %d ${currencySymbol}.`, ...args )
-    else if ( replycode === 'slot_insufficient_funds' )
-      return this._talk.sendPrintfResponse( message, "You don\u2019t have that much!" )
     else if ( replycode === 'slot_win' )
       return this._talk.sendPrintfResponse( message, `%s You won %d ${currencySymbol}!`, ...args )
-    else if ( replycode === 'slot_no_win' )
-      return this._talk.sendPrintfResponse( message, "%s Better luck next time!", ...args )
     else if ( replycode === 'link' )
       return this._talk.sendAttachmentResponse( message, args[0] )
-    else if ( replycode === 'link_fail' )
-      return this._talk.sendPrintfResponse( message, "Sorry! Couldn\u2019t fetch that." )
-    else if ( replycode === 'club_create_success' )
-      return this._talk.sendPrintfResponse( message, "Club created!" )
-    else if ( replycode === 'club_create_exists' )
-      return this._talk.sendPrintfResponse( message, "A club with that name already exists." )
-    else if ( replycode === 'club_create_fail' )
-      return this._talk.sendPrintfResponse( message, "Failed to create the club." )
-    else if ( replycode === 'club_join_nonexistent' )
-      return printf( "There is no club with that name." )
-    else if ( replycode === 'club_join_multiple' )
-      return printf( "There are multiple clubs with that name. (That shouldn\u2019t happen.)" )
-    else if ( replycode === 'club_join_success' )
-      return printf( "%s joined %s.", args[0], args[1] )
-    else if ( replycode === 'club_already_in_club' )
-      return printf( "You must leave your current club first." )
-    else if ( replycode === 'club_leave_not_in_club' )
-      return printf( "You are not in a club!" )
-    else if ( replycode === 'club_leave_success' ) {
+    else if ( replycode === 'club_leave_success' )
       return printf( args[1].map( (clubName: string) => `${args[0]} left ${clubName}.` ).join('\n') )
-    }
+    else
+      return this._talk.sendPrintfResponse( message, this.messages[replycode], ...args )
     return null
   }
 
