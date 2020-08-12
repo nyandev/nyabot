@@ -32,6 +32,7 @@ async function run( configuration: any )
     {
       nya.stop()
       await backend.destroy()
+      await backend._redis.del('speedTyping_*') // TOOD: apparently wildcards don't work like this
       return nya.stoppedPromise
     })
   }).catch( ( error: Error ) =>

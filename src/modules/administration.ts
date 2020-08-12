@@ -9,7 +9,7 @@ import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
 import { Backend } from '../lib/backend'
-
+import { Nya } from '../lib/nya'
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
 class ConfigCommand extends Commando.Command
@@ -75,6 +75,45 @@ class ConfigCommand extends Commando.Command
   }
 }
 
+class StatusCommand extends Commando.Command {
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'status',
+      group: 'admin',
+      memberName: 'status',
+      description: "Set the bot\u2019s activity.",
+      args: [
+        {
+          key: 'type',
+          prompt: "Type: empty, watching, streaming, or listening",
+          type: 'string',
+          oneOf: ['empty', 'watching', 'playing', 'listening']
+        },
+        {
+          key: 'thing',
+          prompt: "Whatcha doing?",
+          type: 'string',
+          default: ''
+        }
+      ]
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | null>
+  {
+    const host: any = this._service.getHost()
+    if ( args.type === 'empty' )
+      host._client.user.setActivity()
+    else if ( !args.thing )
+      return host.respondTo( message, 'status_undefined' )
+    else
+      host._client.user.setActivity( args.thing, { type: args.type.toUpperCase() } )
+    return null
+  }
+}
+
 export class AdministrationModule extends ModuleBase
 {
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
@@ -92,7 +131,8 @@ export class AdministrationModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     return [
-      new ConfigCommand( this, this.getClient() )
+      new ConfigCommand( this, this.getClient() ),
+      new StatusCommand( this, this.getClient() )
     ]
   }
 

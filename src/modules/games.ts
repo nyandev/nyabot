@@ -237,6 +237,44 @@ class HangmanListCommand extends Commando.Command
 }
 
 
+class SpeedTyping {
+  static texts =
+    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/speedtyping.json' ), 'utf8' ) )
+}
+
+
+class SpeedTypingCommand extends Commando.Command
+{
+  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'speedtyping',
+      group: 'games',
+      memberName: 'speedtyping',
+      description: "Start a game of speed typing.",
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const redis = this._service.getBackend()._redis
+    const redisKey = `speedTyping_${message.channel.id}`
+    if ( await redis.get( redisKey ) )
+      return this._service.getHost().respondTo( message, 'speedtyping_exists' )
+    const texts = Object.keys( SpeedTyping.texts )
+    const index = Math.floor( Math.random() * texts.length )
+    const { time, text } = SpeedTyping.texts[texts[index]]
+    redis.set( redisKey, text )
+    setTimeout( () => {
+      redis.del( redisKey )
+      message.channel.send( "Speed typing contest ended." )
+    }, time * 1000 )
+    return this._service.getHost().respondTo( message, 'speedtyping_start', time, '```' + text + '```' )
+  }
+}
+
+
 export class GamesModule extends ModuleBase
 {
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
@@ -247,9 +285,9 @@ export class GamesModule extends ModuleBase
   async onMessage( message: Message ): Promise<void>
   {
     const redis = this.getBackend()._redis
+
     const hangmanRedisKey = `hangman_${message.channel.id}`
     const hangmanState = await redis.get( hangmanRedisKey )
-
     if ( typeof hangmanState === 'string' ) {
       const hangman = new Hangman( JSON.parse( hangmanState ) )
       if ( message.content.replace( "'", '\u2019' ).toLowerCase() === hangman.word.toLowerCase() ) {
@@ -279,6 +317,14 @@ export class GamesModule extends ModuleBase
               hangman.save( hangmanRedisKey, redis )
           }
         }
+      }
+
+      const speedTypingRedisKey = `speedTyping_${message.channel.id}`
+      const speedTypingText = await redis.get( speedTypingRedisKey )
+      // really lazy implementation, maybe add a timer and shit
+      if ( typeof speedTypingText === 'string' ) {
+        if ( message.content === speedTypingText )
+          message.channel.send( `${message.author.username} completed speed typing!` )
       }
     }
 
@@ -321,7 +367,8 @@ export class GamesModule extends ModuleBase
       new EightBallCommand( this, this.getClient() ),
       new HangmanCommand( this, this.getClient() ),
       new HangmanStopCommand( this, this.getClient() ),
-      new HangmanListCommand( this, this.getClient() )
+      new HangmanListCommand( this, this.getClient() ),
+      new SpeedTypingCommand( this, this.getClient() )
     ]
   }
 

@@ -2,6 +2,7 @@
   "config_badkey": "Unknown global setting. Available keys are: %s",
   "config_get": "The value of global **%s** is: **%s**",
   "config_set": "Global configuration **%s** set to **%s**",
+  "status_undefined": "I need more information!",
   "8ball": "TODO",
   "hangman_start": "TODO",
   "hangman_exists": "This channel already has a hangman game running.",
@@ -26,5 +27,7 @@
   "club_join_success": "%s joined %s.",
   "club_already_in_club": "You must leave your current club first.",
   "club_leave_not_in_club": "You are not in a club!",
-  "club_leave_success": "%s left %s."
+  "club_leave_success": "%s left %s.",
+  "speedtyping_start": "Speed typing contest started! Time limit is %d seconds. The text is\n%s",
+  "speedtyping_exists": "A speed typing contest is already running on this channel."
 }
