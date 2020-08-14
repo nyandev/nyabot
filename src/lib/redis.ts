@@ -56,4 +56,16 @@ export class Redis
       })
     })
   }
+
+  async keys( query: string )
+  {
+    return new Promise( ( resolve, reject ) =>
+    {
+      this._redis.keys( query, ( err, res ) => {
+        if ( err )
+          return reject( err )
+        resolve( res )
+      })
+    })
+  }
 }

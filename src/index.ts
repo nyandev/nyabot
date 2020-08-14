@@ -31,8 +31,15 @@ async function run( configuration: any )
     Graceful.on( 'exit', async () =>
     {
       nya.stop()
+
+      // Maybe call module.destroy() for each module here or something?
+      const speedtypingChannels = await backend._redis.keys( 'speedtyping_*' ) as string[] | null
+      if ( speedtypingChannels !== null ) {
+        for ( const channel of speedtypingChannels )
+          await backend._redis.del( channel )
+      }
+
       await backend.destroy()
-      await backend._redis.del('speedTyping_*') // TOOD: apparently wildcards don't work like this
       return nya.stoppedPromise
     })
   }).catch( ( error: Error ) =>

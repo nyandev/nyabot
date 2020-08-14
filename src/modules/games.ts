@@ -5,8 +5,6 @@ import Commando = require( 'discord.js-commando' )
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
 import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
 
 import { debug, logSprintf } from '../globals'
 
@@ -259,13 +257,18 @@ class SpeedTypingCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const redis = this._service.getBackend()._redis
-    const redisKey = `speedTyping_${message.channel.id}`
+    const redisKey = `speedtyping_${message.channel.id}`
     if ( await redis.get( redisKey ) )
       return this._service.getHost().respondTo( message, 'speedtyping_exists' )
     const texts = Object.keys( SpeedTyping.texts )
     const index = Math.floor( Math.random() * texts.length )
     const { time, text } = SpeedTyping.texts[texts[index]]
-    redis.set( redisKey, text )
+    const data = {
+      text,
+      started: moment().valueOf(),
+      words: text.split(' ').length
+    }
+    redis.set( redisKey, JSON.stringify( data ) )
     setTimeout( () => {
       redis.del( redisKey )
       message.channel.send( "Speed typing contest ended." )
@@ -319,12 +322,17 @@ export class GamesModule extends ModuleBase
         }
       }
 
-      const speedTypingRedisKey = `speedTyping_${message.channel.id}`
-      const speedTypingText = await redis.get( speedTypingRedisKey )
-      // really lazy implementation, maybe add a timer and shit
-      if ( typeof speedTypingText === 'string' ) {
-        if ( message.content === speedTypingText )
-          message.channel.send( `${message.author.username} completed speed typing!` )
+      const speedTypingRedisKey = `speedtyping_${message.channel.id}`
+      const speedTypingData = (await redis.get( speedTypingRedisKey )) as string | null
+      // really lazy implementation, maybe add a WPM counter and shit
+      if ( speedTypingData !== null ) {
+        const { text, started, words } = JSON.parse( speedTypingData )
+        if ( text === message.content ) {
+          const time = ( moment().valueOf() - started ) / 1000
+          const wpm = Math.round( words * 60 / time )
+          message.channel.send( `${message.author.username} completed speed typing in ${time} seconds!`
+            + `\nWords per minute: ${wpm}` )
+        }
       }
     }
 
