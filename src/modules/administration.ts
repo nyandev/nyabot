@@ -87,9 +87,9 @@ class StatusCommand extends Commando.Command {
       args: [
         {
           key: 'type',
-          prompt: "Type: empty, watching, streaming, or listening",
+          prompt: "Type: clear, watching, streaming, or listening",
           type: 'string',
-          oneOf: ['empty', 'watching', 'playing', 'listening']
+          oneOf: ['clear', 'watching', 'playing', 'listening']
         },
         {
           key: 'thing',
@@ -104,7 +104,7 @@ class StatusCommand extends Commando.Command {
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | null>
   {
     const host: any = this._service.getHost()
-    if ( args.type === 'empty' )
+    if ( args.type === 'clear' )
       host._client.user.setActivity()
     else if ( !args.thing )
       return host.respondTo( message, 'status_undefined' )
