@@ -10,6 +10,7 @@ import minimist = require( 'minimist' )
 import fs = require( 'fs' )
 
 import bodyParser = require( 'body-parser' )
+import http = require( 'http' )
 import express = require( 'express' )
 import twitter = require( 'twitter-webhooks' )
 
@@ -40,7 +41,16 @@ async function run( configuration: any )
     app: httpApp
   } )
   twitterWebhook.register()
-  httpApp.listen( configuration.backend.http.bind )
+
+  let httpServer: http.Server
+  if ( configuration.backend.http.port ) {
+    httpServer = httpApp.listen( configuration.backend.http.port )
+  } else {
+    const socket = configuration.backend.http.socket
+    httpServer = httpApp.listen( socket, () => {
+      fs.chmodSync( socket, '660' )
+    } )
+  }
 
   nya.initialize().then( async () =>
   {
@@ -52,6 +62,7 @@ async function run( configuration: any )
     Graceful.on( 'exit', async () =>
     {
       nya.stop()
+      httpServer.close()
 
       // Maybe call module.destroy() for each module here or something?
       const speedtypingChannels = await backend._redis.keys( 'speedtyping_*' ) as string[] | null
