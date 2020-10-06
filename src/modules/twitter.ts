@@ -28,8 +28,7 @@ class TwitterChannelCommand extends Commando.Command
       args: [{
         key: 'target',
         prompt: "Which channel?",
-        type: 'channel',
-        default: ''
+        type: 'channel'
       }],
       argsPromptLimit: 1
     })

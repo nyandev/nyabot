@@ -17,24 +17,26 @@
     },
     "http": {
       "domain": "example.com",
-      // bind can be a port number or path to Unix socket
-      "bind": 3000,
-
-      "twitterPath": "/webhooks/twitter",
-      "twitterEnvironment": "dev",
-      "twitterAPIKey": "<your key here>",
-      "twitterAPIKeySecret": "<your secret here>",
-      "twitterAccessToken": "<your token here>",
-      "twitterAccessTokenSecret": "<your secret here>",
-
-      "discordPath": "/webhooks/discord"
+      // Replace port with "socket": "/path/to/socket" if listening via socket.
+      "port": 3000
+    },
+    "discord": {
+      "path": "/webhooks/discord"
+    },
+    "twitter": {
+      "path": "/webhooks/twitter",
+      "environment": "dev",
+      "APIKey": "<your key here>",
+      "APIKeySecret": "<your secret here>",
+      "accessToken": "<your token here>",
+      "accessTokenSecret": "<your secret here>"
     }
   },
   "bot": {
     "discord": {
-      "token": "bot token goes here",
+      "token": "<your token here>",
       "owners": [
-        "your numeric user id goes here"
+        "<your numeric user id here>"
       ]
     },
     "longName": "NyaBot",

@@ -9,11 +9,6 @@ import Graceful from 'node-graceful'
 import minimist = require( 'minimist' )
 import fs = require( 'fs' )
 
-import bodyParser = require( 'body-parser' )
-import http = require( 'http' )
-import express = require( 'express' )
-import twitter = require( 'twitter-webhooks' )
-
 import { logSprintf } from './globals'
 import { Backend } from './lib/backend'
 import { Nya } from './lib/nya'
@@ -27,31 +22,6 @@ async function run( configuration: any )
 
   const nya = new Nya( configuration.bot, backend )
 
-  const httpApp = express()
-  httpApp.use( bodyParser.json() )
-  console.log('DOMAIN: ', `https://${configuration.backend.http.domain}`)
-  const twitterWebhook = twitter.userActivity( {
-    serverUrl: `https://${configuration.backend.http.domain}`,
-    route: configuration.backend.http.twitterPath,
-    consumerKey: configuration.backend.http.twitterAPIKey,
-    consumerSecret: configuration.backend.http.twitterAPIKeySecret,
-    accessToken: configuration.backend.http.twitterAccessToken,
-    accessTokenSecret: configuration.backend.http.twitterAccessTokenSecret,
-    environment: configuration.backend.http.twitterEnvironment,
-    app: httpApp
-  } )
-  twitterWebhook.register()
-
-  let httpServer: http.Server
-  if ( configuration.backend.http.port ) {
-    httpServer = httpApp.listen( configuration.backend.http.port )
-  } else {
-    const socket = configuration.backend.http.socket
-    httpServer = httpApp.listen( socket, () => {
-      fs.chmodSync( socket, '660' )
-    } )
-  }
-
   nya.initialize().then( async () =>
   {
     await nya.start()
@@ -61,10 +31,9 @@ async function run( configuration: any )
 
     Graceful.on( 'exit', async () =>
     {
-      nya.stop()
-      httpServer.close()
+      await nya.stop()
 
-      // Maybe call module.destroy() for each module here or something?
+      // TODO: Maybe call module.stop() for each module in Nya.stop()?
       const speedtypingChannels = await backend._redis.keys( 'speedtyping_*' ) as string[] | null
       if ( speedtypingChannels !== null ) {
         for ( const channel of speedtypingChannels )
