@@ -15,8 +15,20 @@
       // Replace host and port with "path": "/path/to/socket" if connecting via socket.
       "db": 0
     },
-    // Can be a port number or path to Unix socket
-    "http": 3000
+    "http": {
+      "domain": "example.com",
+      // bind can be a port number or path to Unix socket
+      "bind": 3000,
+
+      "twitterPath": "/webhooks/twitter",
+      "twitterEnvironment": "dev",
+      "twitterAPIKey": "<your key here>",
+      "twitterAPIKeySecret": "<your secret here>",
+      "twitterAccessToken": "<your token here>",
+      "twitterAccessTokenSecret": "<your secret here>",
+
+      "discordPath": "/webhooks/discord"
+    }
   },
   "bot": {
     "discord": {

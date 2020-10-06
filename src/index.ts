@@ -27,8 +27,20 @@ async function run( configuration: any )
   const nya = new Nya( configuration.bot, backend )
 
   const httpApp = express()
-  httpApp.use(bodyParser.json())
-  httpApp.listen( configuration.backend.http )
+  httpApp.use( bodyParser.json() )
+  console.log('DOMAIN: ', `https://${configuration.backend.http.domain}`)
+  const twitterWebhook = twitter.userActivity( {
+    serverUrl: `https://${configuration.backend.http.domain}`,
+    route: configuration.backend.http.twitterPath,
+    consumerKey: configuration.backend.http.twitterAPIKey,
+    consumerSecret: configuration.backend.http.twitterAPIKeySecret,
+    accessToken: configuration.backend.http.twitterAccessToken,
+    accessTokenSecret: configuration.backend.http.twitterAccessTokenSecret,
+    environment: configuration.backend.http.twitterEnvironment,
+    app: httpApp
+  } )
+  twitterWebhook.register()
+  httpApp.listen( configuration.backend.http.bind )
 
   nya.initialize().then( async () =>
   {
