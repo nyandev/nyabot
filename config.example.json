@@ -26,6 +26,7 @@
     "twitter": {
       "bearerToken": "<your token here>",
       "interval": 60,
+      // You should change maxResults only if Twitter changes the corresponding value
       "maxResults": 100
     }
   },
