@@ -266,7 +266,7 @@ class SpeedTypingCommand extends Commando.Command
     const data = {
       text,
       started: moment().valueOf(),
-      words: text.split(' ').length
+      chars: text.length
     }
     redis.set( redisKey, JSON.stringify( data ) )
     setTimeout( () => {
@@ -326,12 +326,12 @@ export class GamesModule extends ModuleBase
       const speedTypingData = (await redis.get( speedTypingRedisKey )) as string | null
       // really lazy implementation, maybe add a WPM counter and shit
       if ( speedTypingData !== null ) {
-        const { text, started, words } = JSON.parse( speedTypingData )
+        const { text, started, chars } = JSON.parse( speedTypingData )
         if ( text === message.content ) {
           const time = ( moment().valueOf() - started ) / 1000
-          const wpm = Math.round( words * 60 / time )
+          const cps = Math.round( 10 * chars / time ) / 10
           message.channel.send( `${message.author.username} completed speed typing in ${time} seconds!`
-            + `\nWords per minute: ${wpm}` )
+            + ` That\u2019s ${cps} characters per second.` )
         }
       }
     }
