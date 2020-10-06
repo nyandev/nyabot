@@ -24,12 +24,9 @@
       "path": "/webhooks/discord"
     },
     "twitter": {
-      "path": "/webhooks/twitter",
-      "environment": "dev",
-      "APIKey": "<your key here>",
-      "APIKeySecret": "<your secret here>",
-      "accessToken": "<your token here>",
-      "accessTokenSecret": "<your secret here>"
+      "bearerToken": "<your token here>",
+      "interval": 60,
+      "maxResults": 100
     }
   },
   "bot": {

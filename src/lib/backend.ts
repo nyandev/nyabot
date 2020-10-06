@@ -2,11 +2,9 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
-import bodyParser = require( 'body-parser' )
-import express = require( 'express' )
-import fs = require( 'fs' )
-import http = require( 'http' )
-import twitterWebhooks = require( 'twitter-webhooks' )
+//import express = require( 'express' )
+//import fs = require( 'fs' )
+//import http = require( 'http' )
 
 import { datetimeNow, debug, logSprintf } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
@@ -20,28 +18,20 @@ const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from re
 
 export class Backend
 {
+  _config: any
   _db: Sequelize
   _redis: Redis
-  _http: http.Server
+  //_http: http.Server
   _models: any
   _settingCache = new Map()
 
   constructor( config: any )
   {
-    const httpApp = express()
-    httpApp.use( bodyParser.json() )  // TODO: can this be replaced with express.json()?
-    const twitterWebhook = twitterWebhooks.userActivity( {
-      serverUrl: `https://${config.http.domain}`,
-      route: config.twitter.path,
-      consumerKey: config.twitter.APIKey,
-      consumerSecret: config.twitter.APIKeySecret,
-      accessToken: config.twitter.accessToken,
-      accessTokenSecret: config.twitter.accessTokenSecret,
-      environment: config.twitter.environment,
-      app: httpApp
-    } )
-    twitterWebhook.register()
+    /*
+     * Turns out we don't need a http server for Twitter (and have to use fetch periodically).
+     * Don't remove this since it should be useful for Twitch webhooks.
 
+    const httpApp = express()
     if ( config.http.port != null ) {
       this._http = httpApp.listen( config.http.port )
     } else {
@@ -49,6 +39,11 @@ export class Backend
       this._http = httpApp.listen( socket, () => {
         fs.chmodSync( socket, '660' )
       } )
+    }
+    */
+
+    this._config = {
+      twitter: config.twitter
     }
 
     this._redis = new Redis( config.redis )
@@ -427,7 +422,7 @@ export class Backend
 
   async destroy()
   {
-    this._http.close()
+    //this._http.close()
     return this._db.close()
   }
 }
