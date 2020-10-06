@@ -9,6 +9,10 @@ import Graceful from 'node-graceful'
 import minimist = require( 'minimist' )
 import fs = require( 'fs' )
 
+import bodyParser = require( 'body-parser' )
+import express = require( 'express' )
+import twitter = require( 'twitter-webhooks' )
+
 import { logSprintf } from './globals'
 import { Backend } from './lib/backend'
 import { Nya } from './lib/nya'
@@ -17,10 +21,14 @@ import { Nya } from './lib/nya'
 // Uses Graceful and some promise trickery to handle Ctrl+C & exit neatly.
 async function run( configuration: any )
 {
-  let backend = new Backend( configuration.backend )
+  const backend = new Backend( configuration.backend )
   await backend.initialize()
 
-  let nya = new Nya( configuration.bot, backend )
+  const nya = new Nya( configuration.bot, backend )
+
+  const httpApp = express()
+  httpApp.use(bodyParser.json())
+  httpApp.listen( configuration.backend.http )
 
   nya.initialize().then( async () =>
   {
@@ -28,6 +36,7 @@ async function run( configuration: any )
     logSprintf( 'core', 'Bot started!' )
     let link = await nya.generateInvite()
     logSprintf( 'core', 'Invite link: %s', link )
+
     Graceful.on( 'exit', async () =>
     {
       nya.stop()

@@ -14,7 +14,9 @@
       "port": 6379,
       // Replace host and port with "path": "/path/to/socket" if connecting via socket.
       "db": 0
-    }
+    },
+    // Can be a port number or path to Unix socket
+    "http": 3000
   },
   "bot": {
     "discord": {
@@ -24,7 +26,7 @@
       ]
     },
     "longName": "NyaBot",
-    "iconURL": "https://neonya.party/images/bot/540297582950481950_icon.png",
+    "iconURL": "https://cdn.discordapp.com/avatars/733106710843228221/df67a4e0a11dab524c2ef2fc9fc5a968.png",
     "globalDefaults": {
         "MessageEditableDuration": 10,
         "Prefix": "?",
