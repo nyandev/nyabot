@@ -2,16 +2,14 @@ import Commando = require( 'discord.js-commando' )
 import { Message, TextChannel } from 'discord.js'
 import { ApiClient, HelixStream } from 'twitch'
 import { StaticAuthProvider } from 'twitch-auth'
-import { ReverseProxyAdapter, WebHookListener } from 'twitch-webhooks'
+import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webhooks'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
 /*
- * TODO:
- * - apply changes from (un)follow commands without restarting the bot
- * - replace StaticAuthProvider with an auto-refreshing one
- *   (current access token was obtained manually and lasts for 60 days)
+ * TODO: replace StaticAuthProvider with an auto-refreshing one
+ *       (current access token was obtained manually and lasts for 60 days)
  */
 
 
@@ -71,6 +69,7 @@ class TwitchChannelCommand extends Commando.Command
     return host.respondTo( message, 'twitchchannel_set', channel.id )
   }
 }
+
 
 class TwitchFollowCommand extends Commando.Command
 {
@@ -144,15 +143,17 @@ class TwitchFollowCommand extends Commando.Command
     const guildSubs = this._service.guildSubscriptions.get( username )
     if ( guildSubs ) {
       guildSubs.push( username )
+      if ( guildSubs.length === 1 )
+        await this._service.subscribe( username )
     } else {
       this._service.guildSubscriptions.set( username, [guild.id] )
-      // TODO: we still need to subscribe the WebHookListener to this user
-      //       if no guild was previously following them
+      await this._service.subscribe( username )
     }
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitchfollow_success', username )
   }
 }
+
 
 class TwitchUnfollowCommand extends Commando.Command
 {
@@ -197,10 +198,11 @@ null>
 
     subs = subs.filter( (x: string) => x !== username )
     let guildSubs = this._service.guildSubscriptions.get( username )
-    if ( guildSubs )
-      guildSubs = guildSubs.filter( ( x: number ) => x !== username )
-    // TODO: we might also want to unsubscribe if no guilds follow this user any more
-
+    if ( guildSubs ) {
+      guildSubs = guildSubs.filter( ( x: number ) => x !== guild.id )
+      if ( !guildSubs.length )
+        await this._service.unsubscribe( username )
+    }
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitchunfollow_success', username )
   }
@@ -210,9 +212,11 @@ null>
 export class TwitchModule extends ModuleBase
 {
   config: any
+  apiClient: ApiClient
   listener: WebHookListener
   channels: Map<number, string>
   guildSubscriptions: Map<string, number[]>
+  webhookSubscriptions: Map<string, Subscription>
   currentStates: Map<string, HelixStream | null>
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
@@ -222,10 +226,10 @@ export class TwitchModule extends ModuleBase
     if ( !this.config.enabled )
       return
 
-    const apiClient = new ApiClient({
+    this.apiClient = new ApiClient({
       authProvider: new StaticAuthProvider( this.config.clientID, this.config.accessToken )
     })
-    this.listener = new WebHookListener( apiClient, new ReverseProxyAdapter( {
+    this.listener = new WebHookListener( this.apiClient, new ReverseProxyAdapter( {
       hostName: this.config.hostname,
       listenerPort: this.config.listenerPort,
       pathPrefix: this.config.path,
@@ -236,6 +240,7 @@ export class TwitchModule extends ModuleBase
     this.channels = new Map()
     this.currentStates = new Map()
     this.guildSubscriptions = new Map()
+    this.webhookSubscriptions = new Map()
 
     this.listener.listen().then( async () => {
 
@@ -262,31 +267,8 @@ export class TwitchModule extends ModuleBase
         }
       } )
 
-      for ( const username of this.guildSubscriptions.keys() ) {
-        const user = await apiClient.helix.users.getUserByName( username )
-        if ( !user )
-          continue
-
-        this.currentStates.set( username, await apiClient.helix.streams.getStreamByUserId( user ) )
-        const subscription = await this.listener.subscribeToStreamChanges( user, async (stream: HelixStream) => {
-          if ( !this.currentStates.get( username ) ) {
-            const guilds = this.guildSubscriptions.get( username )
-            if ( !guilds )
-              return
-            for ( const guildID of guilds ) {
-              const channelSnowflake = this.channels.get( guildID )
-              if ( !channelSnowflake )
-                return
-              const channel = await client.channels.fetch( channelSnowflake )
-              if ( !channel || channel.type !== 'text' )
-                return
-              ( channel as TextChannel ).send( `**${stream.userDisplayName}** went live: https://www.twitch.tv/${username}` )
-            }
-          }
-          this.currentStates.set( username, stream )
-        } )
-        console.log(`DEBUG subscribed to ${username}`, subscription)
-      }
+      for ( const username of this.guildSubscriptions.keys() )
+        this.subscribe( username )
     } )
   }
 
@@ -322,5 +304,54 @@ export class TwitchModule extends ModuleBase
   {
     this._id = id
     return true
+  }
+
+  async subscribe( username: string )
+  {
+    console.log('DEBUG 0')
+    if ( this.webhookSubscriptions.has( username ) )
+      return
+    console.log('DEBUG 1')
+    const user = await this.apiClient.helix.users.getUserByName( username )
+    if ( !user )
+      return
+    console.log('DEBUG', user)
+    this.currentStates.set( username, await this.apiClient.helix.streams.getStreamByUserId( user ) )
+    const subscription = await this.listener.subscribeToStreamChanges( user, async ( stream?: HelixStream ) => {
+      // subscribeToStreamChanges() fires in a number of scenarios, e.g. if the stream title changes,
+      // so we identify going-live events by checking that `stream` was previously undefined
+      if ( !stream )
+        return
+      if ( !this.currentStates.get( username ) ) {
+        const guilds = this.guildSubscriptions.get( username )
+        if ( !guilds )
+          return
+        for ( const guildID of guilds ) {
+          const channelSnowflake = this.channels.get( guildID )
+          if ( !channelSnowflake )
+            return
+          const channel = await this._client.channels.fetch( channelSnowflake )
+          if ( !channel || channel.type !== 'text' )
+            return
+          const message = `**${stream.userDisplayName}** went live! https://www.twitch.tv/${username}`;
+          ( channel as TextChannel ).send( message )
+        }
+      }
+      this.currentStates.set( username, stream )
+    } )
+    this.webhookSubscriptions.set( username, subscription )
+    console.log('DEBUG webhookSubscriptions', this.webhookSubscriptions)
+  }
+
+  unsubscribe( username: string )
+  {
+    console.log('DEBUG: unsubscribing from', username)
+    const subscription = this.webhookSubscriptions.get( username )
+    console.log('DEBUG: subscription:', subscription)
+    if ( !subscription )
+      return
+    subscription.stop()
+    this.webhookSubscriptions.delete( username )
+    console.log('DEBUG webhookSubscriptions', this.webhookSubscriptions)
   }
 }
