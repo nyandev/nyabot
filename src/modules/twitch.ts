@@ -9,7 +9,7 @@ import { NyaInterface, ModuleBase } from '../modules/module'
 
 /*
  * TODO:
- * - apply changes from commands without restarting the bot
+ * - apply changes from (un)follow commands without restarting the bot
  * - replace StaticAuthProvider with an auto-refreshing one
  *   (current access token was obtained manually and lasts for 60 days)
  */
@@ -17,9 +17,9 @@ import { NyaInterface, ModuleBase } from '../modules/module'
 
 class TwitchChannelCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitchModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitchModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -66,6 +66,7 @@ class TwitchChannelCommand extends Commando.Command
     if ( channel.type !== 'text' ) // TODO: check that channel can be posted to?
       return host.respondTo( message, 'twitchchannel_fail' )
 
+    this._service.channels.set( guild.id, channel.id )
     await backend.setGuildSetting( guild.id, settingKey, channel.id )
     return host.respondTo( message, 'twitchchannel_set', channel.id )
   }
@@ -73,9 +74,9 @@ class TwitchChannelCommand extends Commando.Command
 
 class TwitchFollowCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitchModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitchModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -123,7 +124,7 @@ class TwitchFollowCommand extends Commando.Command
     if ( !/^\w+$/.test( username ) )
       return host.respondTo( message, 'twitchfollow_nonexistent', username )
 
-// TODO: account existence check
+// TODO: account existence check? not totally necessary
 /*
     const config = this._service.getBackend()._config.twitch
     const fetchOpts = {
@@ -140,6 +141,14 @@ class TwitchFollowCommand extends Commando.Command
 */
 
     subs.push( username )
+    const guildSubs = this._service.guildSubscriptions.get( username )
+    if ( guildSubs ) {
+      guildSubs.push( username )
+    } else {
+      this._service.guildSubscriptions.set( username, [guild.id] )
+      // TODO: we still need to subscribe the WebHookListener to this user
+      //       if no guild was previously following them
+    }
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitchfollow_success', username )
   }
@@ -147,9 +156,9 @@ class TwitchFollowCommand extends Commando.Command
 
 class TwitchUnfollowCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitchModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitchModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -187,6 +196,11 @@ null>
       return host.respondTo( message, 'twitchunfollow_not_following', username )
 
     subs = subs.filter( (x: string) => x !== username )
+    let guildSubs = this._service.guildSubscriptions.get( username )
+    if ( guildSubs )
+      guildSubs = guildSubs.filter( ( x: number ) => x !== username )
+    // TODO: we might also want to unsubscribe if no guilds follow this user any more
+
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitchunfollow_success', username )
   }
@@ -271,6 +285,7 @@ export class TwitchModule extends ModuleBase
           }
           this.currentStates.set( username, stream )
         } )
+        console.log(`DEBUG subscribed to ${username}`, subscription)
       }
     } )
   }
