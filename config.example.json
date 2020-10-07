@@ -24,10 +24,12 @@
       "path": "/webhooks/discord"
     },
     "twitter": {
+      "enabled": true,
       "bearerToken": "<your token here>",
       "interval": 60,
-      // You should change maxResults only if Twitter changes the corresponding value
-      "maxResults": 100
+      // You shouldn't change maxResults or queryLengthMax unless Twitter changes the corresponding value
+      "maxResults": 100,
+      "queryLengthMax": 512
     }
   },
   "bot": {

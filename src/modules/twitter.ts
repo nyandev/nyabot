@@ -152,14 +152,18 @@ null>
 
 export class TwitterModule extends ModuleBase
 {
+  config: any
+
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
+    this.config = this._backend._config.twitter
+    if ( !this.config.enabled )
+      return
 
-    const config = this._backend._config.twitter
     const fetchOpts = {
       headers: {
-        Authorization: `Bearer ${config.bearerToken}`
+        Authorization: `Bearer ${this.config.bearerToken}`
       }
     }
     const redis = this._backend._redis
@@ -184,7 +188,7 @@ export class TwitterModule extends ModuleBase
         const latestTweet = await redis.get( redisKey )
         const since = latestTweet ? `&since_id=${latestTweet}` : ''
         fetch(
-          `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${config.maxResults}&tweet.fields=author_id${since}`,
+          `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}&tweet.fields=author_id${since}`,
           fetchOpts
         )
         .then( (response: any) => response.json() )
@@ -213,7 +217,7 @@ export class TwitterModule extends ModuleBase
             }
           } )
         } )
-      }, config.interval * 1000 )
+      }, this.config.interval * 1000 )
     }
   }
 
@@ -223,18 +227,26 @@ export class TwitterModule extends ModuleBase
 
   getGroups(): Commando.CommandGroup[]
   {
-    return [
-      new Commando.CommandGroup( this.getClient(), 'twitter', 'Twitter', false )
-    ]
+    if ( this.config.enabled ) {
+      return [
+        new Commando.CommandGroup( this.getClient(), 'twitter', 'Twitter', false )
+      ]
+    } else {
+      return []
+    }
   }
 
   getCommands(): Commando.Command[]
   {
-    return [
-      new TwitterChannelCommand( this, this.getClient() ),
-      new TwitterAddCommand( this, this.getClient() ),
-      new TwitterDeleteCommand( this, this.getClient() )
-    ]
+    if ( this.config.enabled ) {
+      return [
+        new TwitterChannelCommand( this, this.getClient() ),
+        new TwitterAddCommand( this, this.getClient() ),
+        new TwitterDeleteCommand( this, this.getClient() )
+      ]
+    } else {
+      return []
+    }
   }
 
   registerStuff( id: number, host: NyaInterface ): boolean
