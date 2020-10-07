@@ -17,8 +17,7 @@
     },
     "http": {
       "domain": "example.com",
-      // Replace port with "socket": "/path/to/socket" if listening via socket.
-      "port": 3000
+      "port": 8090
     },
     "twitch": {
       "enabled": true,

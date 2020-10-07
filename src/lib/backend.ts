@@ -2,10 +2,6 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
-//import express = require( 'express' )
-//import fs = require( 'fs' )
-//import http = require( 'http' )
-
 import { datetimeNow, debug, logSprintf } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
 import { Redis } from './redis'
@@ -21,28 +17,13 @@ export class Backend
   _config: any
   _db: Sequelize
   _redis: Redis
-  //_http: http.Server
   _models: any
   _settingCache = new Map()
 
   constructor( config: any )
   {
-    /*
-     * Turns out we don't need a http server for Twitter (and have to use fetch periodically).
-     * Don't remove this since it should be useful for Twitch webhooks.
-
-    const httpApp = express()
-    if ( config.http.port != null ) {
-      this._http = httpApp.listen( config.http.port )
-    } else {
-      const socket = config.http.socket
-      this._http = httpApp.listen( socket, () => {
-        fs.chmodSync( socket, '660' )
-      } )
-    }
-    */
-
     this._config = {
+      twitch: config.twitch,
       twitter: config.twitter
     }
 
@@ -422,7 +403,6 @@ export class Backend
 
   async destroy()
   {
-    //this._http.close()
     return this._db.close()
   }
 }
