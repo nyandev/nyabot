@@ -77,6 +77,11 @@ export class Nya implements NyaInterface
     return this._backend
   }
 
+  getClient(): Commando.CommandoClient
+  {
+    return this._client
+  }
+
   getGlobalSettingKeys(): string[]
   {
     return ['MessageEditableDuration', 'Prefix']
@@ -361,6 +366,8 @@ export class Nya implements NyaInterface
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
 
+      await this.start()
+
       for ( const module of [
           AdministrationModule,
           ClubModule,
@@ -385,13 +392,11 @@ export class Nya implements NyaInterface
     })
   }
 
-  async start()
-  {
-    let me = this;
+  async start() {
     this._stoppedResolve = null
     this.stoppedPromise = new Promise( resolve => {
-      me._stoppedResolve = resolve
-    })
+      this._stoppedResolve = resolve
+    } )
     return this._client.login( this._config.token )
   }
 

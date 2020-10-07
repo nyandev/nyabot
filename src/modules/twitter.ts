@@ -4,6 +4,7 @@ import { Message, TextChannel } from 'discord.js'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
 
+
 class TwitterChannelCommand extends Commando.Command
 {
   protected _service: ModuleBase
@@ -17,7 +18,7 @@ class TwitterChannelCommand extends Commando.Command
       memberName: 'twitterchannel',
       description: "Set a channel for posting tweets.",
       args: [{
-        key: 'target',
+        key: 'channel',
         prompt: "Which channel?",
         type: 'channel',
         default: ''
@@ -29,19 +30,34 @@ class TwitterChannelCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const host = this._service.getHost()
+    if ( !message.guild )
+      return null
 
-    if ( !args.target ) {
-      // TODO: show currently set channel
-      if ( false ) // TODO: if unset
+    const settingKey = 'TwitterChannel'
+    const host = this._service.getHost()
+    const backend = host.getBackend()
+    const client = host.getClient()
+
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+
+    if ( !args.channel ) {
+      const channelSetting = ( await backend.getGuildSetting( guild.id, settingKey ) )
+      if ( !channelSetting || !channelSetting.value )
         return host.respondTo( message, 'twitterchannel_unset' )
-      return host.respondTo( message, 'twitterchannel_show', '738183830069837907' )
+
+      const channel = await client.channels.fetch( channelSetting.value )
+      if ( !channel || channel.type !== 'text' )
+        return host.respondTo( message, 'twitterchannel_unset' )
+
+      return host.respondTo( message, 'twitterchannel_show', channel.id )
     }
 
-    console.log("!twitterchannel", args)
-    if ( false ) // TODO: if channel is not a text channel or can't be posted to
+    const channel = args.channel
+    if ( channel.type !== 'text' ) // TODO: check that channel can be posted to?
       return host.respondTo( message, 'twitterchannel_fail' )
-    return host.respondTo( message, 'twitterchannel_set', '738183830069837907' )
+
+    await backend.setGuildSetting( guild.id, settingKey, channel.id )
+    return host.respondTo( message, 'twitterchannel_set', channel.id )
   }
 }
 
@@ -148,18 +164,22 @@ export class TwitterModule extends ModuleBase
     }
     const redis = this._backend._redis
 
-    for ( const guildID of [1] ) { // TODO
-      // TODO: get channel from DB
-      let channel = client.channels.cache.get( '738183830069837907' )
-      if ( !( channel instanceof TextChannel ) )
-        continue
-
+    for ( const guildID of [1] ) { // TODO: iterate over all guilds
       const redisKey = `latesttweet_${guildID}`
 
-      setInterval( async function() {
-        // TODO: get accounts from DB
-        const accounts = ['ahogeez', 'ahogasm', 'neonyaparty', 'neonyastream']
-        const query = accounts.map( (handle: string) => `from:${handle}` ).join(' OR ')
+      setInterval( async () => {
+        const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitterChannel' )
+        if ( !channelSetting )
+          return
+        const channel = await client.channels.fetch( channelSetting.value )
+        if ( !channel || channel.type !== 'text' )
+          return
+
+        let twitterHandles = await this._backend.getGuildSetting( guildID, 'TwitterSubscriptions' )
+        if ( !twitterHandles || !twitterHandles.value )
+          return
+        twitterHandles = JSON.parse( twitterHandles.value )
+        const query = twitterHandles.map( (handle: string) => `from:${handle}` ).join(' OR ')
 
         const latestTweet = await redis.get( redisKey )
         const since = latestTweet ? `&since_id=${latestTweet}` : ''

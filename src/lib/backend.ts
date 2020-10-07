@@ -92,13 +92,13 @@ export class Backend
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSetting( guild: string, settingKey: string )
+  async getGuildSetting( guild: number, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.findOne({ where: cond })
   }
 
-  async setGuildSetting( guild: string, settingKey: string, settingValue: string )
+  async setGuildSetting( guild: number, settingKey: string, settingValue: string )
   {
     const cond = { guildID: guild, key: settingKey }
     const vals = {
@@ -115,7 +115,7 @@ export class Backend
       })
   }
 
-  async removeGuildSetting( guild: string, settingKey: string )
+  async removeGuildSetting( guild: number, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.destroy({ where: cond })
@@ -204,7 +204,7 @@ export class Backend
   /*  Returns a setting primarily from guild settings, if it it set there,
    *  and secondarily from global settings.
    */
-  async getSetting( settingKey: string, guild?: string )
+  async getSetting( settingKey: string, guild?: number )
   {
     let guildSetting
     if ( guild )

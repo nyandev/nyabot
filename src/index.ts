@@ -24,7 +24,6 @@ async function run( configuration: any )
 
   nya.initialize().then( async () =>
   {
-    await nya.start()
     logSprintf( 'core', 'Bot started!' )
     let link = await nya.generateInvite()
     logSprintf( 'core', 'Invite link: %s', link )
