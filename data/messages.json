@@ -35,7 +35,10 @@
   "twitterchannel_show": "Twitter notifications are currently being posted to <#%s>.",
   "twitterchannel_unset": "No channel has been set for Twitter notifications.",
   "twitterfollow_already_following": "@%s is already being followed.",
+  "twitterfollow_list": "Currently following: %s",
+  "twitterfollow_list_empty": "Currently following no one.",
   "twitterfollow_nonexistent": "The Twitter account @%s does not exist.",
+  "twitterfollow_query_too_long": "Cannot follow @%s: length of search query would exceed Twitter\u2019s limit.",
   "twitterfollow_success": "Now following @%s.",
   "twitterunfollow_not_following": "@%s wasn\u2019t being followed.",
   "twitterunfollow_success": "Stopped following @%s."

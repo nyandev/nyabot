@@ -5,6 +5,11 @@ import { Message, TextChannel } from 'discord.js'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
+function usersQuery( users: string[] ) {
+  return users.map( (username: string) => `from:${username}` ).join(' OR ')
+}
+
+
 class TwitterChannelCommand extends Commando.Command
 {
   protected _service: ModuleBase
@@ -41,7 +46,7 @@ class TwitterChannelCommand extends Commando.Command
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
     if ( !args.channel ) {
-      const channelSetting = ( await backend.getGuildSetting( guild.id, settingKey ) )
+      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
       if ( !channelSetting || !channelSetting.value )
         return host.respondTo( message, 'twitterchannel_unset' )
 
@@ -76,7 +81,8 @@ class TwitterFollowCommand extends Commando.Command
       args: [{
         key: 'username',
         prompt: "Which Twitter account?",
-        type: 'string'
+        type: 'string',
+        default: ''
       }],
       argsPromptLimit: 1
     } )
@@ -86,13 +92,32 @@ class TwitterFollowCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const host = this._service.getHost()
+    const backend = host.getBackend()
 
-    if ( false ) // TODO: if account is already being followed
-      return host.respondTo( message, 'twitterfollow_already_following', 'username' )
+    const settingKey = 'TwitterSubscriptions'
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+
+    let subsSetting = await backend.getGuildSetting( guild.id, settingKey )
+    let subs: string[]
+    if ( subsSetting && subsSetting.value )
+      subs = JSON.parse( subsSetting.value )
+    else
+      subs = []
+
+    if ( !args.username ) {
+      if ( !subs.length )
+        return host.respondTo( message, 'twitterfollow_list_empty' )
+      return host.respondTo( message, 'twitterfollow_list',
+        subs.map( (username: string) => `@${username}` ).join(', ') )
+    }
 
     let username = args.username
     if ( username.startsWith( '@' ) )
       username = username.substr( 1 )
+
+    if ( subs.includes( username ) )
+      return host.respondTo( message, 'twitterfollow_already_following', username )
+
     if ( !/^\w+$/.test( username ) )
       return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
@@ -109,7 +134,11 @@ class TwitterFollowCommand extends Commando.Command
     if ( !accountExists )
       return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
-    // TODO: actually commit changes to DB
+    subs.push( username )
+    if ( usersQuery( subs ).length > backend._config.twitter.queryLengthMax )
+      return host.respondTo( message, 'twitterfollow_query_too_long', username )
+
+    await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitterfollow_success', username )
   }
 }
@@ -127,7 +156,7 @@ class TwitterUnfollowCommand extends Commando.Command
       memberName: 'twitterunfollow',
       description: "Stop following a Twitter account.",
       args: [{
-        key: 'handle',
+        key: 'username',
         prompt: "Which Twitter account?",
         type: 'string'
       }],
@@ -136,13 +165,30 @@ class TwitterUnfollowCommand extends Commando.Command
     this._service = service
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
+  async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
     const host = this._service.getHost()
-    if ( false ) // TODO: if account wasn't being followed
-      return host.respondTo( message, 'twitterunfollow_not_following' )
-    return host.respondTo( message, 'twitterunfollow_success' )
+    const backend = host.getBackend()
+
+    const settingKey = 'TwitterSubscriptions'
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+
+    let username = args.username
+    if ( username.startsWith( '@' ) )
+      username = username.substr( 1 )
+
+    const subsSetting = await backend.getGuildSetting( guild.id, settingKey )
+    if ( !subsSetting || !subsSetting.value )
+      return host.respondTo( message, 'twitterunfollow_not_following', username )
+
+    let subs = JSON.parse( subsSetting.value )
+    if ( !subs.includes( username ) )
+      return host.respondTo( message, 'twitterunfollow_not_following', username )
+
+    subs = subs.filter( (x: string) => x !== username )
+    await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
+    return host.respondTo( message, 'twitterunfollow_success', username )
   }
 }
 
@@ -165,7 +211,9 @@ export class TwitterModule extends ModuleBase
     }
     const redis = this._backend._redis
 
-    for ( const guildID of [1] ) { // TODO: iterate over all guilds
+    this._backend._models.Guild.findAll( { attributes: ['id'] } )
+    .then( ( guilds: any[] ) => guilds.forEach( (guild: any) => {
+      const guildID = guild.id
       const redisKey = `latesttweet_${guildID}`
 
       setInterval( async () => {
@@ -215,7 +263,7 @@ export class TwitterModule extends ModuleBase
           } )
         } )
       }, this.config.interval * 1000 )
-    }
+    } ) )
   }
 
   async onMessage( msg: Message ): Promise<void>
