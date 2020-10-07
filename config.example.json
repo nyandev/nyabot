@@ -15,12 +15,12 @@
       // Replace host and port with "path": "/path/to/socket" if connecting via socket.
       "db": 0
     },
-    "http": {
-      "domain": "example.com",
-      "port": 8090
-    },
     "twitch": {
       "enabled": true,
+      "hostname": "nya.aho.ge",
+      "ssl": true,
+      "port": 443,
+      "listenerPort": 8090,
       "path": "/webhooks/twitch"
     },
     "twitter": {

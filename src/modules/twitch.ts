@@ -1,6 +1,8 @@
 import fetch from 'node-fetch'
 import Commando = require( 'discord.js-commando' )
 import { Message, TextChannel } from 'discord.js'
+import { ApiClient } from 'twitch'
+import { ReverseProxyAdapter, WebHookListener } from 'twitch-webhooks'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
 
@@ -199,14 +201,24 @@ export class TwitchModule extends ModuleBase
         Authorization: `Bearer ${this.config.bearerToken}`
       }
     }
-    const redis = this._backend._redis
+    const apiClient = new ApiClient({
+      authProvider: null
+    })
 
     this._backend._models.Guild.findAll( { attributes: ['id'] } )
     .then( ( guilds: any[] ) => guilds.forEach( (guild: any) => {
       const guildID = guild.id
 
-      // Magic happens
+      const listener = new WebHookListener( apiClient, new ReverseProxyAdapter( {
+        hostName: config.hostname,
+        listenerPort: config.listenerPort,
+        pathPrefix: config.path,
+        port: config.port,
+        ssl: config.ssl
+      } ) )
+      listener.listen().then( () => {
 
+      } )
 /*
       setInterval( async () => {
         const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitterChannel' )
