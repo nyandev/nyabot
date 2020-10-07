@@ -232,7 +232,6 @@ export class TwitchModule extends ModuleBase
           const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitchChannel' )
           if ( channelSetting && channelSetting.value ) {
             this.channels.set( guildID, channelSetting.value )
-            console.log(`[DEBUG] set twitch channel for ${guildID} to ${channelSetting.value}`)
           }
 
           const subsSetting = await this._backend.getGuildSetting( guildID, 'TwitchSubscriptions' )
@@ -257,7 +256,6 @@ export class TwitchModule extends ModuleBase
         this.currentStates.set( username, await apiClient.helix.streams.getStreamByUserId( user ) )
         const subscription = await this.listener.subscribeToStreamChanges( user, async (stream: HelixStream) => {
           if ( !this.currentStates.get( username ) ) {
-            console.log(`[DEBUG] something happened with ${username}:`, stream)
             const guilds = this.guildSubscriptions.get( username )
             if ( !guilds )
               return
