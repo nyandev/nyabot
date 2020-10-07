@@ -61,18 +61,17 @@ class TwitterChannelCommand extends Commando.Command
   }
 }
 
-class TwitterAddCommand extends Commando.Command
+class TwitterFollowCommand extends Commando.Command
 {
   protected _service: ModuleBase
 
   constructor( service: ModuleBase, client: Commando.CommandoClient )
   {
-    // TODO: allow following multiple Twitter handles at once?
     super( client,
     {
-      name: 'twitteradd',
+      name: 'twitterfollow',
       group: 'twitter',
-      memberName: 'twitteradd',
+      memberName: 'twitterfollow',
       description: "Add a Twitter account to follow.",
       args: [{
         key: 'username',
@@ -87,15 +86,15 @@ class TwitterAddCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const host = this._service.getHost()
-    console.log("!twitteradd", args)
+
     if ( false ) // TODO: if account is already being followed
-      return host.respondTo( message, 'twitteradd_already_following', 'username' )
+      return host.respondTo( message, 'twitterfollow_already_following', 'username' )
 
     let username = args.username
     if ( username.startsWith( '@' ) )
       username = username.substr( 1 )
     if ( !/^\w+$/.test( username ) )
-      return host.respondTo( message, 'twitteradd_nonexistent', username )
+      return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
     const config = this._service.getBackend()._config.twitter
     const fetchOpts = {
@@ -108,25 +107,24 @@ class TwitterAddCommand extends Commando.Command
       .then( response => !!response.data )
 
     if ( !accountExists )
-      return host.respondTo( message, 'twitteradd_nonexistent', username )
+      return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
     // TODO: actually commit changes to DB
-    return host.respondTo( message, 'twitteradd_success', username )
+    return host.respondTo( message, 'twitterfollow_success', username )
   }
 }
 
-class TwitterDeleteCommand extends Commando.Command
+class TwitterUnfollowCommand extends Commando.Command
 {
   protected _service: ModuleBase
 
   constructor( service: ModuleBase, client: Commando.CommandoClient )
   {
-    // TODO: allow unfollowing multiple Twitter handles at once?
     super( client,
     {
-      name: 'twitterdel',
+      name: 'twitterunfollow',
       group: 'twitter',
-      memberName: 'twitterdel',
+      memberName: 'twitterunfollow',
       description: "Stop following a Twitter account.",
       args: [{
         key: 'handle',
@@ -142,10 +140,9 @@ class TwitterDeleteCommand extends Commando.Command
 null>
   {
     const host = this._service.getHost()
-    console.log("!twitterdel", args)
     if ( false ) // TODO: if account wasn't being followed
-      return host.respondTo( message, 'twitterdel_notfollowing' )
-    return host.respondTo( message, 'twitterdel' )
+      return host.respondTo( message, 'twitterunfollow_not_following' )
+    return host.respondTo( message, 'twitterunfollow_success' )
   }
 }
 
@@ -241,8 +238,8 @@ export class TwitterModule extends ModuleBase
     if ( this.config.enabled ) {
       return [
         new TwitterChannelCommand( this, this.getClient() ),
-        new TwitterAddCommand( this, this.getClient() ),
-        new TwitterDeleteCommand( this, this.getClient() )
+        new TwitterFollowCommand( this, this.getClient() ),
+        new TwitterUnfollowCommand( this, this.getClient() )
       ]
     } else {
       return []
