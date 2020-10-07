@@ -1,10 +1,18 @@
-import fetch from 'node-fetch'
 import Commando = require( 'discord.js-commando' )
 import { Message, TextChannel } from 'discord.js'
-import { ApiClient } from 'twitch'
+import { ApiClient, HelixStream } from 'twitch'
+import { StaticAuthProvider } from 'twitch-auth'
 import { ReverseProxyAdapter, WebHookListener } from 'twitch-webhooks'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
+
+
+/*
+ * TODO:
+ * - apply changes from commands without restarting the bot
+ * - replace StaticAuthProvider with an auto-refreshing one
+ *   (current access token was obtained manually and lasts for 60 days)
+ */
 
 
 class TwitchChannelCommand extends Commando.Command
@@ -188,6 +196,10 @@ null>
 export class TwitchModule extends ModuleBase
 {
   config: any
+  listener: WebHookListener
+  channels: Map<number, string>
+  guildSubscriptions: Map<string, number[]>
+  currentStates: Map<string, HelixStream | null>
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
@@ -196,79 +208,73 @@ export class TwitchModule extends ModuleBase
     if ( !this.config.enabled )
       return
 
-    const fetchOpts = {
-      headers: {
-        Authorization: `Bearer ${this.config.bearerToken}`
-      }
-    }
     const apiClient = new ApiClient({
-      authProvider: null
+      authProvider: new StaticAuthProvider( this.config.clientID, this.config.accessToken )
     })
-
-    this._backend._models.Guild.findAll( { attributes: ['id'] } )
-    .then( ( guilds: any[] ) => guilds.forEach( (guild: any) => {
-      const guildID = guild.id
-
-      const listener = new WebHookListener( apiClient, new ReverseProxyAdapter( {
-        hostName: config.hostname,
-        listenerPort: config.listenerPort,
-        pathPrefix: config.path,
-        port: config.port,
-        ssl: config.ssl
-      } ) )
-      listener.listen().then( () => {
-
-      } )
-/*
-      setInterval( async () => {
-        const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitterChannel' )
-        if ( !channelSetting )
-          return
-        const channel = await client.channels.fetch( channelSetting.value )
-        if ( !channel || channel.type !== 'text' )
-          return
-
-        let twitterHandles = await this._backend.getGuildSetting( guildID, 'TwitterSubscriptions' )
-        if ( !twitterHandles || !twitterHandles.value )
-          return
-        twitterHandles = JSON.parse( twitterHandles.value )
-        const query = usersQuery( twitterHandles )
-
-        const latestTweet = await redis.get( redisKey )
-        const since = latestTweet ? `&since_id=${latestTweet}` : ''
-        fetch(
-          `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}&tweet.fields=author_id${since}`,
-          fetchOpts
-        )
-        .then( (response: any) => response.json() )
-        .then( (response: any) => {
-          if ( response.meta.result_count === 0 )
-            return
-
-          redis.set( redisKey, response.meta.newest_id )
-          const tweetIDs = response.data.map( (tweet: any) => tweet.id ).join(',')
-          fetch(
-            `https://api.twitter.com/2/tweets?ids=${tweetIDs}&tweet.fields=referenced_tweets,created_at&expansions=author_id`,
-            fetchOpts
-          )
-          .then( (response: any) => response.json() )
-          .then( (response: any) => {
-            const users = response.includes.users
-
-            // Filter out tweets that are retweets, quote tweets or replies
-            const tweets = response.data.reverse().filter( (tweet: any) => !tweet.referenced_tweets )
-            for ( const tweet of tweets ) {
-              const user = users.find( (user: any) => user.id === tweet.author_id )
-              const username = user ? user.name : tweet.author_id
-              const handle = user ? user.username : 'i'
-              const message: string = `**${username}** tweeted: https://twitter.com/${handle}/status/${tweet.id}`;
-              ( channel as TextChannel ).send( message )
-            }
-          } )
-        } )
-      }, this.config.interval * 1000 )
-*/
+    this.listener = new WebHookListener( apiClient, new ReverseProxyAdapter( {
+      hostName: this.config.hostname,
+      listenerPort: this.config.listenerPort,
+      pathPrefix: this.config.path,
+      port: this.config.port,
+      ssl: this.config.ssl
     } ) )
+
+    this.channels = new Map()
+    this.currentStates = new Map()
+    this.guildSubscriptions = new Map()
+
+    this.listener.listen().then( async () => {
+
+      await this._backend._models.Guild.findAll( { attributes: ['id'] } ).then( async ( guilds: any[] ) => {
+        for ( const guild of guilds ) {
+          const guildID = guild.id
+
+          const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitchChannel' )
+          if ( channelSetting && channelSetting.value ) {
+            this.channels.set( guildID, channelSetting.value )
+            console.log(`[DEBUG] set twitch channel for ${guildID} to ${channelSetting.value}`)
+          }
+
+          const subsSetting = await this._backend.getGuildSetting( guildID, 'TwitchSubscriptions' )
+          if ( !subsSetting || !subsSetting.value )
+            continue
+          const subs = JSON.parse( subsSetting.value )
+
+          subs.forEach( ( username: string ) => {
+            if ( this.guildSubscriptions.has( username ) )
+              ( this.guildSubscriptions.get( username ) as number[] ).push( guildID )
+            else
+              this.guildSubscriptions.set( username, [guildID] )
+          } )
+        }
+      } )
+
+      for ( const username of this.guildSubscriptions.keys() ) {
+        const user = await apiClient.helix.users.getUserByName( username )
+        if ( !user )
+          continue
+
+        this.currentStates.set( username, await apiClient.helix.streams.getStreamByUserId( user ) )
+        const subscription = await this.listener.subscribeToStreamChanges( user, async (stream: HelixStream) => {
+          if ( !this.currentStates.get( username ) ) {
+            console.log(`[DEBUG] something happened with ${username}:`, stream)
+            const guilds = this.guildSubscriptions.get( username )
+            if ( !guilds )
+              return
+            for ( const guildID of guilds ) {
+              const channelSnowflake = this.channels.get( guildID )
+              if ( !channelSnowflake )
+                return
+              const channel = await client.channels.fetch( channelSnowflake )
+              if ( !channel || channel.type !== 'text' )
+                return
+              ( channel as TextChannel ).send( `**${stream.userDisplayName}** went live: https://www.twitch.tv/${username}` )
+            }
+          }
+          this.currentStates.set( username, stream )
+        } )
+      }
+    } )
   }
 
   async onMessage( msg: Message ): Promise<void>

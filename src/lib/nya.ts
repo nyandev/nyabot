@@ -18,6 +18,7 @@ import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
 import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
+import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
 import { XPModule } from '../modules/xp'
 
@@ -373,6 +374,7 @@ export class Nya implements NyaInterface
           ClubModule,
           CurrencyModule,
           GamesModule,
+          TwitchModule,
           TwitterModule,
           XPModule
       ] )

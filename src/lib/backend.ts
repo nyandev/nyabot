@@ -231,6 +231,12 @@ export class Backend
     return owners
   }
 
+  async getGuildByID( gid: number )
+  {
+    const cond = { id: gid }
+    return this._models.Guild.findOne( { where: cond } )
+  }
+
   async getGuildBySnowflake( flake: string )
   {
     let cond = { snowflake: flake }

@@ -17,6 +17,7 @@
     },
     "twitch": {
       "enabled": true,
+      "accessToken": "<your token here>",
       "hostname": "nya.aho.ge",
       "ssl": true,
       "port": 443,

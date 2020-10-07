@@ -43,6 +43,7 @@
     "sequelize": "^6.3.3",
     "sprintf-js": "^1.1.2",
     "twitch": "^4.2.6",
+    "twitch-auth": "^4.2.6",
     "twitch-webhooks": "^4.2.6",
     "unicode-13.0.0": "^0.8.0",
     "utf-8-validate": "^5.0.2",
