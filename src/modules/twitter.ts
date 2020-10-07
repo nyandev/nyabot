@@ -9,7 +9,6 @@ function usersQuery( users: string[] ) {
   return users.map( (username: string) => `from:${username}` ).join(' OR ')
 }
 
-
 class TwitterChannelCommand extends Commando.Command
 {
   protected _service: ModuleBase
@@ -228,7 +227,7 @@ export class TwitterModule extends ModuleBase
         if ( !twitterHandles || !twitterHandles.value )
           return
         twitterHandles = JSON.parse( twitterHandles.value )
-        const query = twitterHandles.map( (handle: string) => `from:${handle}` ).join(' OR ')
+        const query = usersQuery( twitterHandles )
 
         const latestTweet = await redis.get( redisKey )
         const since = latestTweet ? `&since_id=${latestTweet}` : ''
