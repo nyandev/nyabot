@@ -1,7 +1,7 @@
 import Commando = require( 'discord.js-commando' )
 import { Message, TextChannel } from 'discord.js'
 import { ApiClient, HelixStream } from 'twitch'
-import { StaticAuthProvider } from 'twitch-auth'
+import { ClientCredentialsAuthProvider } from 'twitch-auth'
 import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webhooks'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
@@ -123,32 +123,19 @@ class TwitchFollowCommand extends Commando.Command
     if ( !/^\w+$/.test( username ) )
       return host.respondTo( message, 'twitchfollow_nonexistent', username )
 
-// TODO: account existence check? not totally necessary
-/*
-    const config = this._service.getBackend()._config.twitch
-    const fetchOpts = {
-      headers: {
-        Authorization: `Bearer ${config.bearerToken}`
-      }
+    const guilds = this._service.guildsFollowing.get( username )
+    if ( !guilds || !guilds.length ) {
+      const subscription = await this._service.subscribe( username )
+      if ( !subscription )
+        return host.respondTo( message, 'twitchfollow_nonexistent', username )
     }
-    const accountExists = await fetch( `https://api.twitter.com/2/users/by/username/${username}`, fetchOpts )
-      .then( response => response.json() )
-      .then( response => !!response.data )
 
-    if ( !accountExists )
-      return host.respondTo( message, 'twitchfollow_nonexistent', username )
-*/
+    if ( guilds )
+      guilds.push( guild.id )
+    else
+      this._service.guildsFollowing.set( username, [guild.id] )
 
     subs.push( username )
-    const guildSubs = this._service.guildSubscriptions.get( username )
-    if ( guildSubs ) {
-      guildSubs.push( username )
-      if ( guildSubs.length === 1 )
-        await this._service.subscribe( username )
-    } else {
-      this._service.guildSubscriptions.set( username, [guild.id] )
-      await this._service.subscribe( username )
-    }
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
     return host.respondTo( message, 'twitchfollow_success', username )
   }
@@ -197,10 +184,10 @@ null>
       return host.respondTo( message, 'twitchunfollow_not_following', username )
 
     subs = subs.filter( (x: string) => x !== username )
-    let guildSubs = this._service.guildSubscriptions.get( username )
-    if ( guildSubs ) {
-      guildSubs = guildSubs.filter( ( x: number ) => x !== guild.id )
-      if ( !guildSubs.length )
+    let guilds = this._service.guildsFollowing.get( username )
+    if ( guilds ) {
+      guilds = guilds.filter( ( x: number ) => x !== guild.id )
+      if ( !guilds.length )
         await this._service.unsubscribe( username )
     }
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
@@ -212,10 +199,11 @@ null>
 export class TwitchModule extends ModuleBase
 {
   config: any
+  authProvider: ClientCredentialsAuthProvider
   apiClient: ApiClient
   listener: WebHookListener
   channels: Map<number, string>
-  guildSubscriptions: Map<string, number[]>
+  guildsFollowing: Map<string, number[]>
   webhookSubscriptions: Map<string, Subscription>
   currentStates: Map<string, HelixStream | null>
 
@@ -226,9 +214,8 @@ export class TwitchModule extends ModuleBase
     if ( !this.config.enabled )
       return
 
-    this.apiClient = new ApiClient({
-      authProvider: new StaticAuthProvider( this.config.clientID, this.config.accessToken )
-    })
+    this.authProvider = new ClientCredentialsAuthProvider( this.config.clientID, this.config.clientSecret )
+    this.apiClient = new ApiClient( { authProvider: this.authProvider } )
     this.listener = new WebHookListener( this.apiClient, new ReverseProxyAdapter( {
       hostName: this.config.hostname,
       listenerPort: this.config.listenerPort,
@@ -239,7 +226,7 @@ export class TwitchModule extends ModuleBase
 
     this.channels = new Map()
     this.currentStates = new Map()
-    this.guildSubscriptions = new Map()
+    this.guildsFollowing = new Map()
     this.webhookSubscriptions = new Map()
 
     this.listener.listen().then( async () => {
@@ -259,15 +246,20 @@ export class TwitchModule extends ModuleBase
           const subs = JSON.parse( subsSetting.value )
 
           subs.forEach( ( username: string ) => {
-            if ( this.guildSubscriptions.has( username ) )
-              ( this.guildSubscriptions.get( username ) as number[] ).push( guildID )
+            if ( this.guildsFollowing.has( username ) )
+              ( this.guildsFollowing.get( username ) as number[] ).push( guildID )
             else
-              this.guildSubscriptions.set( username, [guildID] )
+              this.guildsFollowing.set( username, [guildID] )
           } )
         }
       } )
 
-      for ( const username of this.guildSubscriptions.keys() )
+      setInterval( () => {
+        // TODO: ideally we'd refresh in the case of auth failure but this should work
+        this.authProvider.refresh()
+      }, 24 * 3600 * 1000 )
+
+      for ( const username of this.guildsFollowing.keys() )
         this.subscribe( username )
     } )
   }
@@ -308,22 +300,18 @@ export class TwitchModule extends ModuleBase
 
   async subscribe( username: string )
   {
-    console.log('DEBUG 0')
     if ( this.webhookSubscriptions.has( username ) )
       return
-    console.log('DEBUG 1')
     const user = await this.apiClient.helix.users.getUserByName( username )
     if ( !user )
       return
-    console.log('DEBUG', user)
-    this.currentStates.set( username, await this.apiClient.helix.streams.getStreamByUserId( user ) )
     const subscription = await this.listener.subscribeToStreamChanges( user, async ( stream?: HelixStream ) => {
       // subscribeToStreamChanges() fires in a number of scenarios, e.g. if the stream title changes,
       // so we identify going-live events by checking that `stream` was previously undefined
       if ( !stream )
         return
       if ( !this.currentStates.get( username ) ) {
-        const guilds = this.guildSubscriptions.get( username )
+        const guilds = this.guildsFollowing.get( username )
         if ( !guilds )
           return
         for ( const guildID of guilds ) {
@@ -337,21 +325,20 @@ export class TwitchModule extends ModuleBase
           ( channel as TextChannel ).send( message )
         }
       }
-      this.currentStates.set( username, stream )
     } )
-    this.webhookSubscriptions.set( username, subscription )
-    console.log('DEBUG webhookSubscriptions', this.webhookSubscriptions)
+    if ( subscription ) {
+      this.currentStates.set( username, await this.apiClient.helix.streams.getStreamByUserId( user ) )
+      this.webhookSubscriptions.set( username, subscription )
+    }
+    return subscription
   }
 
-  unsubscribe( username: string )
+  async unsubscribe( username: string )
   {
-    console.log('DEBUG: unsubscribing from', username)
     const subscription = this.webhookSubscriptions.get( username )
-    console.log('DEBUG: subscription:', subscription)
     if ( !subscription )
       return
-    subscription.stop()
+    await subscription.stop()
     this.webhookSubscriptions.delete( username )
-    console.log('DEBUG webhookSubscriptions', this.webhookSubscriptions)
   }
 }

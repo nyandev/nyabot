@@ -17,7 +17,8 @@
     },
     "twitch": {
       "enabled": true,
-      "accessToken": "<your token here>",
+      "clientID": "<your id here>",
+      "clientSecret": "<your secret here>",
       "hostname": "nya.aho.ge",
       "ssl": true,
       "port": 443,
