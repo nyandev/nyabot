@@ -241,23 +241,26 @@ export class TwitterModule extends ModuleBase
             return
 
           redis.set( redisKey, response.meta.newest_id )
-          const tweetIDs = response.data.map( (tweet: any) => tweet.id ).join(',')
+          const tweetIDs = response.data.map( ( tweet: any ) => tweet.id ).join( ',' )
           fetch(
             `https://api.twitter.com/2/tweets?ids=${tweetIDs}&tweet.fields=referenced_tweets,created_at&expansions=author_id`,
             fetchOpts
           )
-          .then( (response: any) => response.json() )
-          .then( (response: any) => {
+          .then( ( response: any ) => response.json() )
+          .then( ( response: any ) => {
             const users = response.includes.users
 
             // Filter out tweets that are retweets, quote tweets or replies
-            const tweets = response.data.reverse().filter( (tweet: any) => !tweet.referenced_tweets )
+            const tweets = response.data.reverse().filter( ( tweet: any ) => !tweet.referenced_tweets )
             for ( const tweet of tweets ) {
               const user = users.find( (user: any) => user.id === tweet.author_id )
               const username = user ? user.name : tweet.author_id
               const handle = user ? user.username : 'i'
               const message: string = `**${username}** tweeted: https://twitter.com/${handle}/status/${tweet.id}`;
-              ( channel as TextChannel ).send( message )
+              ( channel as TextChannel ).send( message ).catch( error => {
+                if ( error.message !== 'Missing Permissions' )
+                  throw error
+              } )
             }
           } )
         } )

@@ -7,12 +7,6 @@ import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webho
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
-/*
- * TODO: replace StaticAuthProvider with an auto-refreshing one
- *       (current access token was obtained manually and lasts for 60 days)
- */
-
-
 class TwitchChannelCommand extends Commando.Command
 {
   protected _service: TwitchModule
@@ -322,7 +316,10 @@ export class TwitchModule extends ModuleBase
           if ( !channel || channel.type !== 'text' )
             return
           const message = `**${stream.userDisplayName}** went live! https://www.twitch.tv/${username}`;
-          ( channel as TextChannel ).send( message )
+          ( channel as TextChannel ).send( message ).catch( error => {
+            if ( error.message !== 'Missing Permissions' )
+              throw error
+          } )
         }
       }
     } )
