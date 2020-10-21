@@ -30,6 +30,10 @@ export abstract class ModuleBase
     this._client = client
   }
 
+  destroy()
+  {
+  }
+
   getID(): number
   {
     return this._id

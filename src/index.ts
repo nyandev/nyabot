@@ -32,12 +32,8 @@ async function run( configuration: any )
     {
       await nya.stop()
 
-      // TODO: Maybe call module.stop() for each module in Nya.stop()?
-      const speedtypingChannels = await backend._redis.keys( 'speedtyping_*' ) as string[] | null
-      if ( speedtypingChannels !== null ) {
-        for ( const channel of speedtypingChannels )
-          await backend._redis.del( channel )
-      }
+      for ( const module of nya._modules )
+        await module.destroy()
 
       await backend.destroy()
       return nya.stoppedPromise

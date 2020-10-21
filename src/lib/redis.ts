@@ -1,71 +1,46 @@
-import { RedisClient, createClient } from 'redis'
+import * as IORedis from 'ioredis'
 
 export class Redis
 {
-  _redis: RedisClient
+  _ioredis: IORedis.Redis
 
   constructor( config: any )
   {
-    this._redis = createClient( config )
+    this._ioredis = new IORedis( config )
   }
 
-  async incrementFloat( key: string, value: any ): Promise<string>
+  incrementFloat( key: string, value: any ): Promise<number>
   {
-    return new Promise( ( resolve, reject ) =>
-    {
-      this._redis.incrbyfloat( key, value, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
+    return this._ioredis.incrbyfloat( key, value )
   }
 
-  async del( key: string )
+  del( key: string ): Promise<number>
   {
-    return new Promise( ( resolve, reject ) =>
-    {
-      this._redis.del( key, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
+    return this._ioredis.del( key )
   }
 
-  async get( key: string )
+  get( key: string ): Promise<string | null>
   {
-    return new Promise( ( resolve, reject ) =>
-    {
-      this._redis.get( key, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
+    return this._ioredis.get( key )
   }
 
-  async set( key: string, value: any )
+  set( key: string, value: any ): Promise<'OK' | null>
   {
-    return new Promise( ( resolve, reject ) =>
-    {
-      this._redis.set( key, value, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
+    return this._ioredis.set( key, value )
   }
 
-  async keys( query: string )
+  async keys( query?: string ): Promise<Set<string>>
   {
-    return new Promise( ( resolve, reject ) =>
-    {
-      this._redis.keys( query, ( err, res ) => {
-        if ( err )
-          return reject( err )
-        resolve( res )
-      })
-    })
+    if ( !query )
+      query = '*'
+    const keys = new Set<string>()
+    let cursor = '0'
+    do {
+      const response = await this._ioredis.scan( cursor, 'MATCH', query )
+      cursor = response[0]
+      for ( const key of response[1] )
+        keys.add( key )
+    } while ( cursor !== '0' )
+    return keys
   }
 }

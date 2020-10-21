@@ -285,6 +285,13 @@ export class GamesModule extends ModuleBase
     super( id, host, client )
   }
 
+  async destroy()
+  {
+    const speedtypingChannels = await this._backend._redis.keys( 'speedtyping_*' )
+    for ( const channel of speedtypingChannels )
+      await this._backend._redis.del( channel )
+  }
+
   async onMessage( message: Message ): Promise<void>
   {
     const redis = this.getBackend()._redis
