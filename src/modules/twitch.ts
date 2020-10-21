@@ -298,13 +298,9 @@ export class TwitchModule extends ModuleBase
       return
 
     const subscription = await this.listener.subscribeToStreamChanges( user, async ( stream?: HelixStream ) => {
-      this.currentStates.set( user.name, stream || null )
-
       // subscribeToStreamChanges() fires in a number of scenarios, e.g. if the stream title changes,
       // so we identify going-live events by checking that `stream` was previously undefined
-      if ( !stream || stream.type !== HelixStreamType.Live )
-        return
-      if ( !this.currentStates.get( user.name ) ) {
+      if ( stream && stream.type === HelixStreamType.Live && !this.currentStates.get( user.name ) ) {
         const guilds = this.guildsFollowing.get( username )
         if ( !guilds )
           return
@@ -339,6 +335,7 @@ export class TwitchModule extends ModuleBase
           } )
         }
       }
+      this.currentStates.set( user.name, stream || null )
     } )
     if ( subscription ) {
       const stream = await this.apiClient.helix.streams.getStreamByUserId( user )
