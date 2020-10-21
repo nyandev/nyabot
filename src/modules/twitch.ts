@@ -293,18 +293,18 @@ export class TwitchModule extends ModuleBase
 
   async subscribe( username: string )
   {
-    if ( this.webhookSubscriptions.has( username ) )
-      return
     const user = await this.apiClient.helix.users.getUserByName( username )
-    if ( !user )
+    if ( !user || this.webhookSubscriptions.has( user.name ) )
       return
+
     const subscription = await this.listener.subscribeToStreamChanges( user, async ( stream?: HelixStream ) => {
-      console.log('STREAM:', stream)
+      this.currentStates.set( user.name, stream || null )
+
       // subscribeToStreamChanges() fires in a number of scenarios, e.g. if the stream title changes,
       // so we identify going-live events by checking that `stream` was previously undefined
       if ( !stream || stream.type !== HelixStreamType.Live )
         return
-      if ( !this.currentStates.get( username ) ) {
+      if ( !this.currentStates.get( user.name ) ) {
         const guilds = this.guildsFollowing.get( username )
         if ( !guilds )
           return
@@ -316,30 +316,22 @@ export class TwitchModule extends ModuleBase
           if ( !channel || channel.type !== 'text' )
             return
 
-          console.log('user.name:', user.name)
-          console.log('user.displayName:', user.displayName)
-          console.log('user.description:', user.description)
-          console.log('user type:', user.broadcasterType)
-          console.log('user id:', user.id)
-          console.log('user pfp:', user.profilePictureUrl)
-          console.log(user.offlinePlaceholderUrl)
-
           const embed = new MessageEmbed()
             .setTitle( stream.title )
             .setURL( `https://www.twitch.tv/${user.name}` )
             .setAuthor( `${user.displayName} went live!`, user.profilePictureUrl )
-            .setFooter( 'Twitch', 'https://www.twitch.tv/favicon.ico' )
+            .setFooter( 'Twitch', 'https://static.twitchcdn.net/assets/favicon-32-d6025c14e900565d6177.png' )
             .setColor( 0x9147ff )
             .setTimestamp( stream.startDate )
-          if ( user.name === 'neonyaparty' ) { // Dirty hardcoding :^)
-            embed.setImage( 'https://pbs.twimg.com/profile_banners/1254529247630286848/1589539107/600x200' )
-          } else {
-            const imageURL = stream.thumbnailUrl.replace('{width}', '1920').replace('{height}', '1080')
-          }
+
+          if ( user.name === 'neonyaparty' ) // TODO: dirty hardcoding
+            embed.setImage( 'https://pbs.twimg.com/profile_banners/1254529247630286848/1589539107/1500x500')
+          else
+            embed.setImage( stream.thumbnailUrl.replace( '{width}', '1920' ).replace( '{height}', '1080' ) )
 
           const game = await stream.getGame()
           if ( game )
-            embed.addField( 'Playing', game.name );
+            embed.setDescription( `Playing **${game.name}**` );
 
           ( channel as TextChannel ).send( embed ).catch( error => {
             if ( error.message !== 'Missing Permissions' )
@@ -350,9 +342,9 @@ export class TwitchModule extends ModuleBase
     } )
     if ( subscription ) {
       const stream = await this.apiClient.helix.streams.getStreamByUserId( user )
-      this.currentStates.set( username, stream )
-      console.log(`DEBUG set current state for ${username} to`, stream)
-      this.webhookSubscriptions.set( username, subscription )
+      this.currentStates.set( user.name, stream )
+      console.log(`[twitch] set current state for ${user.name} to`, stream)
+      this.webhookSubscriptions.set( user.name, subscription )
     }
     return subscription
   }
