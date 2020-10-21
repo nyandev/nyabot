@@ -43,11 +43,11 @@ class TwitchChannelCommand extends Commando.Command
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
     if ( !args.channel ) {
-      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( !channelSetting || !channelSetting.value )
+      const setting = await backend.getGuildSetting( guild.id, settingKey )
+      if ( !setting || !setting.value )
         return host.respondTo( message, 'twitchchannel_unset' )
 
-      const channel = await client.channels.fetch( channelSetting.value )
+      const channel = await client.channels.fetch( setting.value )
       if ( !channel || channel.type !== 'text' )
         return host.respondTo( message, 'twitchchannel_unset' )
 
@@ -61,6 +61,73 @@ class TwitchChannelCommand extends Commando.Command
     this._service.channels.set( guild.id, channel.id )
     await backend.setGuildSetting( guild.id, settingKey, channel.id )
     return host.respondTo( message, 'twitchchannel_set', channel.id )
+  }
+}
+
+
+class TwitchImageCommand extends Commando.Command
+{
+  protected _service: TwitchModule
+
+  constructor( service: TwitchModule, client: Commando.CommandoClient )
+  {
+    super( client, {
+      name: 'twitchimage',
+      group: 'twitch',
+      memberName: 'twitchimage',
+      description: "Set a custom image for a Twitch account to use in place of the stream preview.",
+      args: [
+        {
+          key: 'username',
+          prompt: "Enter a Twitch username.",
+          type: 'string',
+          default: ''
+        },
+        {
+          key: 'url',
+          prompt: 'Enter an image URL or "clear" to default to the stream preview.',
+          type: 'string',
+          default: ''
+        }
+      ],
+      argsPromptLimit: 1
+    } )
+    this._service = service
+  }
+
+  async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    if ( !message.guild )
+      return null
+
+    const settingKey = 'TwitchImages'
+    const host = this._service.getHost()
+    const backend = host.getBackend()
+
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+
+    const setting = await backend.getGuildSetting( guild.id, settingKey )
+    const images = ( setting && setting.value ) ? JSON.parse( setting.value ) : {}
+
+    if ( !args.url ) {
+      if ( args.username ) {
+        if ( !images[args.username] ) {
+          console.log(args)
+          return host.respondTo( message, 'twitchimage_unset', args.username )
+        }
+        return host.respondTo( message, 'twitchimage_value', args.username, images[args.username] )
+      } else {
+        return host.respondTo( message, 'twitchimage_all', JSON.stringify(images) )
+      }
+    } else if ( args.url === 'clear' ) {
+      delete images[args.username]
+      await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
+      return host.respondTo( message, 'twitchimage_clear', args.username )
+    } else {
+        images[args.username] = args.url
+        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
+        return host.respondTo( message, 'twitchimage_set', args.username, args.url )
+    }
   }
 }
 
@@ -275,10 +342,12 @@ export class TwitchModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     if ( this.config.enabled ) {
+      const client = this.getClient()
       return [
-        new TwitchChannelCommand( this, this.getClient() ),
-        new TwitchFollowCommand( this, this.getClient() ),
-        new TwitchUnfollowCommand( this, this.getClient() )
+        new TwitchChannelCommand( this, client ),
+        new TwitchImageCommand( this, client ),
+        new TwitchFollowCommand( this, client ),
+        new TwitchUnfollowCommand( this, client )
       ]
     } else {
       return []
@@ -320,8 +389,15 @@ export class TwitchModule extends ModuleBase
             .setColor( 0x9147ff )
             .setTimestamp( stream.startDate )
 
-          if ( user.name === 'neonyaparty' ) // TODO: dirty hardcoding
-            embed.setImage( 'https://pbs.twimg.com/profile_banners/1254529247630286848/1589539107/1500x500')
+          let imageURL = null
+          const imagesSetting = await this._backend.getGuildSetting( guildID, 'TwitchImages' )
+          if ( imagesSetting && imagesSetting.value ) {
+            const images = JSON.parse( imagesSetting.value )
+            imageURL = images[user.name] || null
+          }
+
+          if ( imageURL )
+            embed.setImage( imageURL )
           else
             embed.setImage( stream.thumbnailUrl.replace( '{width}', '1920' ).replace( '{height}', '1080' ) )
 
