@@ -412,11 +412,12 @@ export class TwitchModule extends ModuleBase
         }
       }
       this.currentStates.set( user.name, stream || null )
+      console.log(`[twitch] set current state for ${user.name} to`, stream || null)
     } )
     if ( subscription ) {
       const stream = await this.apiClient.helix.streams.getStreamByUserId( user )
-      this.currentStates.set( user.name, stream )
-      console.log(`[twitch] set current state for ${user.name} to`, stream)
+      this.currentStates.set( user.name, stream || null )
+      console.log(`[twitch] set current state for ${user.name} to`, stream || null)
       this.webhookSubscriptions.set( user.name, subscription )
     }
     return subscription
