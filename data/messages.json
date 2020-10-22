@@ -39,7 +39,7 @@
   "twitchfollow_list_empty": "Currently following no one.",
   "twitchfollow_nonexistent": "Twitch user %s does not exist.",
   "twitchfollow_success": "Now following %s.",
-  "twitchimage_all": "All Twitch custom images: ```%s```",
+  "twitchimage_all": "All Twitch custom images: %s",
   "twitchimage_clear": "Custom image for %s cleared.",
   "twitchimage_set": "Custom image URL for %s is set to %s.",
   "twitchimage_unset": "No custom image has been set for %s.",

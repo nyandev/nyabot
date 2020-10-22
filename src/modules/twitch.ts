@@ -117,7 +117,10 @@ class TwitchImageCommand extends Commando.Command
         }
         return host.respondTo( message, 'twitchimage_value', args.username, images[args.username] )
       } else {
-        return host.respondTo( message, 'twitchimage_all', JSON.stringify(images) )
+        let imagesList = ''
+        for ( const [username, url] of Object.entries( images ) )
+          imagesList += `\n\n**${username}**\n${url}`
+        return host.respondTo( message, 'twitchimage_all', imagesList )
       }
     } else if ( args.url === 'clear' ) {
       delete images[args.username]

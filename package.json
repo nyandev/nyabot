@@ -35,7 +35,7 @@
     "ffmpeg": "0.0.4",
     "gemoji": "^5.0.1",
     "ioredis": "^4.17.3",
-    "mariadb": "^2.4.2",
+    "mariadb": "^2.5.0",
     "minimist": "^1.2.5",
     "moment": "^2.27.0",
     "mysql2": "^2.1.0",
