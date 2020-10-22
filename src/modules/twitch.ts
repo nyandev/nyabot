@@ -4,6 +4,7 @@ import { ApiClient, HelixStream, HelixStreamType } from 'twitch'
 import { ClientCredentialsAuthProvider } from 'twitch-auth'
 import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webhooks'
 
+import { debug, log } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
@@ -35,7 +36,7 @@ class TwitchChannelCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = 'TwitchChannel'
+    const settingKey = this._service.settingKeys.channel
     const host = this._service.getHost()
     const backend = host.getBackend()
     const client = host.getClient()
@@ -55,7 +56,7 @@ class TwitchChannelCommand extends Commando.Command
     }
 
     const channel = args.channel
-    if ( channel.type !== 'text' ) // TODO: check that channel can be posted to?
+    if ( channel.type !== 'text' )
       return host.respondTo( message, 'twitchchannel_fail' )
 
     this._service.channels.set( guild.id, channel.id )
@@ -100,14 +101,29 @@ class TwitchImageCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = 'TwitchImages'
+    const settingKey = this._service.settingKeys.images
     const host = this._service.getHost()
     const backend = host.getBackend()
-
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
+    let images
     const setting = await backend.getGuildSetting( guild.id, settingKey )
-    const images = ( setting && setting.value ) ? JSON.parse( setting.value ) : {}
+
+    if ( setting && setting.value ) {
+      try {
+        images = JSON.parse( setting.value )
+        if ( typeof images !== 'object' ) {
+          const message = `${settingKey} must be a JSON object.`
+          log( message )
+          throw new Error( message )
+        }
+      } catch ( error ) {
+        images = {}
+        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
+      }
+    } else {
+      images = {}
+    }
 
     if ( !args.url ) {
       if ( args.username ) {
@@ -117,9 +133,12 @@ class TwitchImageCommand extends Commando.Command
         }
         return host.respondTo( message, 'twitchimage_value', args.username, images[args.username] )
       } else {
-        let imagesList = ''
-        for ( const [username, url] of Object.entries( images ) )
-          imagesList += `\n\n**${username}**\n${url}`
+        const entries = Object.entries( images )
+        if ( !entries.length )
+          return host.respondTo( message, 'twitchimage_none' )
+        const imagesList = entries
+          .map( ( [username, url] ) => `**${username}**\n${url}` )
+          .join( '\n\n' )
         return host.respondTo( message, 'twitchimage_all', imagesList )
       }
     } else if ( args.url === 'clear' ) {
@@ -127,9 +146,9 @@ class TwitchImageCommand extends Commando.Command
       await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
       return host.respondTo( message, 'twitchimage_clear', args.username )
     } else {
-        images[args.username] = args.url
-        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
-        return host.respondTo( message, 'twitchimage_set', args.username, args.url )
+      images[args.username] = args.url
+      await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( images ) )
+      return host.respondTo( message, 'twitchimage_set', args.username, args.url )
     }
   }
 }
@@ -160,18 +179,33 @@ class TwitchFollowCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
+    if ( !message.guild )
+      return null
+
+    const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
 
-    const settingKey = 'TwitchSubscriptions'
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
-    let subsSetting = await backend.getGuildSetting( guild.id, settingKey )
     let subs: string[]
-    if ( subsSetting && subsSetting.value )
-      subs = JSON.parse( subsSetting.value )
-    else
+    let setting = await backend.getGuildSetting( guild.id, settingKey )
+
+    if ( setting && setting.value ) {
+      try {
+        subs = JSON.parse( setting.value )
+        if ( !Array.isArray( subs ) ) {
+          const message = `${settingKey} must be a JSON array.`
+          log( message )
+          throw new Error( message )
+        }
+      } catch ( error ) {
+        subs = []
+        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
+      }
+    } else {
       subs = []
+    }
 
     if ( !args.username ) {
       if ( !subs.length )
@@ -231,12 +265,11 @@ class TwitchUnfollowCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
+    const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
 
-    const settingKey = 'TwitchSubscriptions'
     const guild = await backend.getGuildBySnowflake( message.guild.id )
-
     const username = args.username
 
     const subsSetting = await backend.getGuildSetting( guild.id, settingKey )
@@ -270,10 +303,16 @@ export class TwitchModule extends ModuleBase
   guildsFollowing: Map<string, number[]>
   webhookSubscriptions: Map<string, Subscription>
   currentStates: Map<string, HelixStream | null>
+  settingKeys = {
+    channel: 'TwitchChannel',
+    images: 'TwitchImages',
+    subscriptions: 'TwitchSubscriptions'
+  }
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
+
     this.config = this._backend._config.twitch
     if ( !this.config.enabled )
       return
@@ -298,12 +337,12 @@ export class TwitchModule extends ModuleBase
         for ( const guild of guilds ) {
           const guildID = guild.id
 
-          const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitchChannel' )
+          const channelSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.channel )
           if ( channelSetting && channelSetting.value ) {
             this.channels.set( guildID, channelSetting.value )
           }
 
-          const subsSetting = await this._backend.getGuildSetting( guildID, 'TwitchSubscriptions' )
+          const subsSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.subscriptions )
           if ( !subsSetting || !subsSetting.value )
             continue
           const subs = JSON.parse( subsSetting.value )
@@ -393,7 +432,7 @@ export class TwitchModule extends ModuleBase
             .setTimestamp( stream.startDate )
 
           let imageURL = null
-          const imagesSetting = await this._backend.getGuildSetting( guildID, 'TwitchImages' )
+          const imagesSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.images )
           if ( imagesSetting && imagesSetting.value ) {
             const images = JSON.parse( imagesSetting.value )
             imageURL = images[user.name] || null
@@ -415,12 +454,12 @@ export class TwitchModule extends ModuleBase
         }
       }
       this.currentStates.set( user.name, stream || null )
-      console.log(`[twitch] set current state for ${user.name} to`, stream || null)
+      debug(`[twitch] set current state for ${user.name} to`, stream || null)
     } )
     if ( subscription ) {
       const stream = await this.apiClient.helix.streams.getStreamByUserId( user )
       this.currentStates.set( user.name, stream || null )
-      console.log(`[twitch] set current state for ${user.name} to`, stream || null)
+      debug(`[twitch] set current state for ${user.name} to`, stream || null)
       this.webhookSubscriptions.set( user.name, subscription )
     }
     return subscription
