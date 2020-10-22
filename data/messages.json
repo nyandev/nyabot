@@ -58,5 +58,6 @@
   "twitterfollow_query_too_long": "Cannot follow @%s: length of search query would exceed Twitter\u2019s limit.",
   "twitterfollow_success": "Now following @%s.",
   "twitterunfollow_not_following": "@%s wasn\u2019t being followed.",
-  "twitterunfollow_success": "Stopped following @%s."
+  "twitterunfollow_success": "Stopped following @%s.",
+  "unexpected": "Unexpected failure."
 }

@@ -10,7 +10,10 @@
     "sourceMap": true,
     "strictNullChecks": true,
     "typeRoots": ["node_modules/@types"],
-    "types": ["node"]
+    "types": ["node"],
+    "lib": [
+      "ES2020.Promise"
+    ]
   },
   "include": [
     "src"
