@@ -1,7 +1,8 @@
 import fetch from 'node-fetch'
-import Commando = require( 'discord.js-commando' )
+import * as Commando from 'discord.js-commando'
 import { Message, TextChannel } from 'discord.js'
 
+import { debug, log } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
@@ -9,11 +10,12 @@ function usersQuery( users: string[] ) {
   return users.map( (username: string) => `from:${username}` ).join(' OR ')
 }
 
+
 class TwitterChannelCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitterModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -37,7 +39,7 @@ class TwitterChannelCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = 'TwitterChannel'
+    const settingKey = this._service.settingKeys.channel
     const host = this._service.getHost()
     const backend = host.getBackend()
     const client = host.getClient()
@@ -67,9 +69,9 @@ class TwitterChannelCommand extends Commando.Command
 
 class TwitterFollowCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitterModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -90,18 +92,31 @@ class TwitterFollowCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
+    if ( !message.guild )
+      return null
+
+    const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
-
-    const settingKey = 'TwitterSubscriptions'
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
-    let subsSetting = await backend.getGuildSetting( guild.id, settingKey )
+    let setting = await backend.getGuildSetting( guild.id, settingKey )
     let subs: string[]
-    if ( subsSetting && subsSetting.value )
-      subs = JSON.parse( subsSetting.value )
-    else
+    if ( setting && setting.value ) {
+      try {
+        subs = JSON.parse( setting.value )
+        if ( !Array.isArray( subs ) ) {
+          const message = `${settingKey} must be a JSON array.`
+          log( message )
+          throw new Error( message )
+        }
+      } catch ( error ) {
+        subs = []
+        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
+      }
+    } else {
       subs = []
+    }
 
     if ( !args.username ) {
       if ( !subs.length )
@@ -144,9 +159,9 @@ class TwitterFollowCommand extends Commando.Command
 
 class TwitterUnfollowCommand extends Commando.Command
 {
-  protected _service: ModuleBase
+  protected _service: TwitterModule
 
-  constructor( service: ModuleBase, client: Commando.CommandoClient )
+  constructor( service: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -167,21 +182,35 @@ class TwitterUnfollowCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
+    if ( !message.guild )
+      return null
+
+    const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
 
-    const settingKey = 'TwitterSubscriptions'
     const guild = await backend.getGuildBySnowflake( message.guild.id )
-
     let username = args.username
     if ( username.startsWith( '@' ) )
       username = username.substr( 1 )
 
-    const subsSetting = await backend.getGuildSetting( guild.id, settingKey )
-    if ( !subsSetting || !subsSetting.value )
+    const setting = await backend.getGuildSetting( guild.id, settingKey )
+    if ( !setting || !setting.value )
       return host.respondTo( message, 'twitterunfollow_not_following', username )
 
-    let subs = JSON.parse( subsSetting.value )
+    let subs: string[]
+    try {
+      subs = JSON.parse( setting.value )
+      if ( !Array.isArray( subs ) ) {
+        const message = `${settingKey} must be a JSON array.`
+        log( message )
+        throw new Error( message )
+      }
+    } catch ( error ) {
+      subs = []
+      await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )
+    }
+
     if ( !subs.includes( username ) )
       return host.respondTo( message, 'twitterunfollow_not_following', username )
 
@@ -195,6 +224,10 @@ null>
 export class TwitterModule extends ModuleBase
 {
   config: any
+  settingKeys = {
+    channel: 'TwitterChannel',
+    subscriptions: 'TwitterSubscriptions'
+  }
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
@@ -216,14 +249,14 @@ export class TwitterModule extends ModuleBase
       const redisKey = `latesttweet_${guildID}`
 
       setInterval( async () => {
-        const channelSetting = await this._backend.getGuildSetting( guildID, 'TwitterChannel' )
+        const channelSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.channel )
         if ( !channelSetting )
           return
         const channel = await client.channels.fetch( channelSetting.value )
         if ( !channel || channel.type !== 'text' )
           return
 
-        let twitterHandles = await this._backend.getGuildSetting( guildID, 'TwitterSubscriptions' )
+        let twitterHandles = await this._backend.getGuildSetting( guildID, this.settingKeys.subscriptions )
         if ( !twitterHandles || !twitterHandles.value )
           return
         twitterHandles = JSON.parse( twitterHandles.value )
@@ -286,10 +319,11 @@ export class TwitterModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     if ( this.config.enabled ) {
+      const client = this.getClient()
       return [
-        new TwitterChannelCommand( this, this.getClient() ),
-        new TwitterFollowCommand( this, this.getClient() ),
-        new TwitterUnfollowCommand( this, this.getClient() )
+        new TwitterChannelCommand( this, client ),
+        new TwitterFollowCommand( this, client ),
+        new TwitterUnfollowCommand( this, client )
       ]
     } else {
       return []
