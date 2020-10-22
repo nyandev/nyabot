@@ -492,7 +492,7 @@ export class TwitchModule extends ModuleBase
         this.authProvider.refresh()
       }, 24 * 3600 * 1000 )
 
-      const subPromises = [...this.guildsFollowing.keys()].map( this.subscribe )
+      const subPromises = [...this.guildsFollowing.keys()].map( username => this.subscribe( username ) )
       Promise.allSettled( subPromises ).then( (outcomes: any[]) => {
         for ( const outcome of outcomes ) {
           if ( outcome.status === 'rejected' )
@@ -540,9 +540,10 @@ export class TwitchModule extends ModuleBase
 
   async subscribe( username: string )
   {
+    const apiClient = this.apiClient
     let userOrNull: HelixUser | null
     try {
-      userOrNull = await this.apiClient.helix.users.getUserByName( username )
+      userOrNull = await apiClient.helix.users.getUserByName( username )
     } catch ( error ) {
       log( `Failed to fetch data for Twitch user ${username}:`, error )
       return
