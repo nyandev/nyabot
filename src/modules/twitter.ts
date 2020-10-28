@@ -32,7 +32,7 @@ class TwitterChannelCommand extends Commando.Command
         default: ''
       }],
       argsPromptLimit: 1
-    })
+    } )
     this._service = service
   }
 
@@ -76,7 +76,7 @@ class TwitterChannelCommand extends Commando.Command
     }
 
     const channel = args.channel
-    if ( channel.type !== 'text' )
+    if ( channel.type !== 'text' )  // TODO: redundant check since I found out Commando has a 'text-channel' type
       return host.respondTo( message, 'twitterchannel_fail' )
     // TODO: maybe check that we have permissions to post to this channel
 
@@ -90,6 +90,93 @@ class TwitterChannelCommand extends Commando.Command
   }
 }
 
+
+class TwitterChannelExceptionCommand extends Commando.Command
+{
+  constructor( protected _service: TwitterModule, client: Commando.CommandoClient )
+  {
+    super( client,
+    {
+      name: 'twitterchannelexception',
+      group: 'twitter',
+      memberName: 'twitterchannelexception',
+      description: "Set a channel different from the default for posting a particular user's tweets.",
+      guildOnly: true,
+      ownerOnly: true,
+      args: [{
+        key: 'username',
+        prompt: "Enter a Twitter username.",
+        type: 'string'
+      },
+      {
+        key: 'channel',
+        prompt: "Enter a channel.",
+        type: 'text-channel'
+      }],
+      argsPromptLimit: 1
+    } )
+  }
+
+  async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  {
+    const settingKey = this._service.settingKeys.channelExceptions
+    const host = this._service.getHost()
+    const backend = host.getBackend()
+    const client = host.getClient()
+
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+    } catch ( error ) {
+      log( `Failed to fetch guild ${message.guild.id}:`, error )
+      return host.respondTo( message, 'unexpected' )
+    }
+
+    let username = args.username
+    if ( username.startsWith( '@' ) )
+      username = username.substr( 1 )
+
+    if ( !/^\w+$/.test( username ) )
+      return host.respondTo( message, 'twitterchannelexception_bad_username' )
+
+    const channel = args.channel
+
+    let setting
+    try {
+      setting = await backend.getGuildSetting( guild.id, settingKey )
+    } catch ( error ) {
+      log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
+      return host.respondTo( message, 'twitterchannelexception_fail' )
+    }
+
+    let channels
+    if ( setting && setting.value ) {
+      try {
+        channels = JSON.parse( setting.value )
+        if ( typeof channels !== 'object' )
+          throw new Error( `${settingKey} must be a JSON object.` )
+      } catch ( error ) {
+        log( `The ${settingKey} setting of guild ${guild.id} was not a JSON object.` )
+        channels = {}
+        await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( channels ) )
+      }
+    } else {
+      channels = {}
+    }
+
+    channels[username] = channel.id
+    const jsonString = JSON.stringify( channels )
+    try {
+      await backend.setGuildSetting( guild.id, settingKey, jsonString )
+    } catch ( error ) {
+      log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
+      return host.respondTo( message, 'twitterchannelexception_fail' )
+    }
+    return host.respondTo( message, 'twitterchannelexception_set', username, channel.id )
+  }
+}
+
+
 class TwitterFollowCommand extends Commando.Command
 {
   protected _service: TwitterModule
@@ -102,9 +189,11 @@ class TwitterFollowCommand extends Commando.Command
       group: 'twitter',
       memberName: 'twitterfollow',
       description: "Add a Twitter account to follow.",
+      guildOnly: true,
+      ownerOnly: true,
       args: [{
         key: 'username',
-        prompt: "Which Twitter account?",
+        prompt: "Enter a Twitter account name.",
         type: 'string',
         default: ''
       }],
@@ -115,9 +204,6 @@ class TwitterFollowCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    if ( !message.guild )
-      return null
-
     const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
@@ -192,9 +278,11 @@ class TwitterUnfollowCommand extends Commando.Command
       group: 'twitter',
       memberName: 'twitterunfollow',
       description: "Stop following a Twitter account.",
+      guildOnly: true,
+      ownerOnly: true,
       args: [{
         key: 'username',
-        prompt: "Which Twitter account?",
+        prompt: "Enter Twitter a account name.",
         type: 'string'
       }],
       argsPromptLimit: 1
@@ -205,9 +293,6 @@ class TwitterUnfollowCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
-    if ( !message.guild )
-      return null
-
     const settingKey = this._service.settingKeys.subscriptions
     const host = this._service.getHost()
     const backend = host.getBackend()
@@ -249,6 +334,7 @@ export class TwitterModule extends ModuleBase
   config: any
   settingKeys = {
     channel: 'TwitterChannel',
+    channelExceptions: 'TwitterChannelExceptions',
     subscriptions: 'TwitterSubscriptions'
   }
 
@@ -293,7 +379,7 @@ export class TwitterModule extends ModuleBase
         )
         .then( (response: any) => response.json() )
         .then( (response: any) => {
-          if ( response.meta.result_count === 0 )
+          if ( !response.meta || response.meta.result_count === 0 )
             return
 
           redis.set( redisKey, response.meta.newest_id )
@@ -303,7 +389,17 @@ export class TwitterModule extends ModuleBase
             fetchOpts
           )
           .then( ( response: any ) => response.json() )
-          .then( ( response: any ) => {
+          .then( async ( response: any ) => {
+            let exceptions
+            try {
+              const exceptionsSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.channelExceptions )
+              exceptions = JSON.parse( exceptionsSetting.value )
+              if ( typeof exceptions !== 'object' )
+                exceptions = null
+            } catch ( _ ) {
+              // ignore errors
+            }
+
             const users = response.includes.users
 
             // Filter out tweets that are retweets, quote tweets or replies
@@ -312,8 +408,21 @@ export class TwitterModule extends ModuleBase
               const user = users.find( (user: any) => user.id === tweet.author_id )
               const username = user ? user.name : tweet.author_id
               const handle = user ? user.username : 'i'
+
+              // TODO: Rename the old `channel` variable to `defaultChannel`.
+              //       Or maybe, rather, have a !twitterdefaultchannel command
+              //       instead of the fugly !twitterchannelexception.
+              let realChannel = channel
+              if ( handle !== 'i' && exceptions && exceptions[handle] ) {
+                try {
+                  realChannel = await client.channels.fetch( exceptions[handle] )
+                } catch ( _ ) {
+                  // ignore errors
+                }
+              }
+
               const message: string = `**${username}** tweeted: https://twitter.com/${handle}/status/${tweet.id}`;
-              ( channel as TextChannel ).send( message ).catch( error => {
+              ( realChannel as TextChannel ).send( message ).catch( error => {
                 if ( error.message !== 'Missing Permissions' )
                   throw error
               } )
@@ -345,6 +454,7 @@ export class TwitterModule extends ModuleBase
       const client = this.getClient()
       return [
         new TwitterChannelCommand( this, client ),
+        new TwitterChannelExceptionCommand( this, client ),
         new TwitterFollowCommand( this, client ),
         new TwitterUnfollowCommand( this, client )
       ]

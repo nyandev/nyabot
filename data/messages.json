@@ -51,6 +51,7 @@
   "twitterchannel_set": "Twitter notifications will be posted to <#%s>.",
   "twitterchannel_show": "Twitter notifications are currently being posted to <#%s>.",
   "twitterchannel_unset": "No channel has been set for Twitter notifications.",
+  "twitterchannelexception_set": "Notifications of @%s\u2019s tweets will be posted to <#%s>.",
   "twitterfollow_already_following": "@%s is already being followed.",
   "twitterfollow_list": "Currently following: %s",
   "twitterfollow_list_empty": "Currently following no one.",

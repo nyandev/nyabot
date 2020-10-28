@@ -265,7 +265,7 @@ export class Nya implements NyaInterface
     else if ( replycode === 'club_leave_success' )
       return printf( args[1].map( (clubName: string) => `${args[0]} left ${clubName}.` ).join('\n') )
     else
-      return this._talk.sendPrintfResponse( message, this.messages[replycode], ...args )
+      return this._talk.sendPrintfResponse( message, this.messages[replycode] || replycode, ...args )
     return null
   }
 
