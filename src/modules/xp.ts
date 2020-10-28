@@ -1,17 +1,10 @@
 import { logSprintf } from '../globals'
-import fs = require( 'fs' )
-import { EventEmitter } from 'events'
-import Commando = require( 'discord.js-commando' )
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import * as Commando from 'discord.js-commando'
+import { Message, User } from 'discord.js'
 
-import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
-
-import { Backend } from '../lib/backend'
 import { Parser } from '../lib/parser'
+import { NyaInterface, ModuleBase } from '../modules/module'
 
-import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
 class XPCommand extends Commando.Command
 {

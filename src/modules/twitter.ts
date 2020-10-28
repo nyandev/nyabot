@@ -23,10 +23,12 @@ class TwitterChannelCommand extends Commando.Command
       group: 'twitter',
       memberName: 'twitterchannel',
       description: "Set a channel for posting tweets.",
+      guildOnly: true,
+      ownerOnly: true,
       args: [{
         key: 'channel',
         prompt: "Which channel?",
-        type: 'channel',
+        type: 'text-channel',
         default: ''
       }],
       argsPromptLimit: 1
@@ -36,22 +38,37 @@ class TwitterChannelCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    if ( !message.guild )
-      return null
-
     const settingKey = this._service.settingKeys.channel
     const host = this._service.getHost()
     const backend = host.getBackend()
     const client = host.getClient()
 
-    const guild = await backend.getGuildBySnowflake( message.guild.id )
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+    } catch ( error ) {
+      log( `Failed to fetch guild ${message.guild.id}:`, error )
+      return host.respondTo( message, 'unexpected' )
+    }
 
     if ( !args.channel ) {
-      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( !channelSetting || !channelSetting.value )
+      let setting
+      try {
+        setting = await backend.getGuildSetting( guild.id, settingKey )
+      } catch ( error ) {
+        log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
+        return host.respondTo( message, 'unexpected' )
+      }
+      if ( !setting || !setting.value )
         return host.respondTo( message, 'twitterchannel_unset' )
 
-      const channel = await client.channels.fetch( channelSetting.value )
+      let channel
+      try {
+        channel = await client.channels.fetch( setting.value )
+      } catch ( error ) {
+        log( `Failed to fetch channel ${setting.value}:`, error )
+        return host.respondTo( message, 'unexpected' )
+      }
       if ( !channel || channel.type !== 'text' )
         return host.respondTo( message, 'twitterchannel_unset' )
 
@@ -59,10 +76,16 @@ class TwitterChannelCommand extends Commando.Command
     }
 
     const channel = args.channel
-    if ( channel.type !== 'text' ) // TODO: check that channel can be posted to?
+    if ( channel.type !== 'text' )
       return host.respondTo( message, 'twitterchannel_fail' )
+    // TODO: maybe check that we have permissions to post to this channel
 
-    await backend.setGuildSetting( guild.id, settingKey, channel.id )
+    try {
+      await backend.setGuildSetting( guild.id, settingKey, channel.id )
+    } catch ( error ) {
+      log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
+      return host.respondTo( message, 'unexpected' )
+    }
     return host.respondTo( message, 'twitterchannel_set', channel.id )
   }
 }

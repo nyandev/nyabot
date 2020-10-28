@@ -1,16 +1,9 @@
-import { datetimeNow, debug, logSprintf } from '../globals'
-import fs = require( 'fs' )
-import { EventEmitter } from 'events'
-import Commando = require( 'discord.js-commando' )
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import * as Commando from 'discord.js-commando'
+import { Message } from 'discord.js'
 import { Sequelize } from 'sequelize'
-import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
 
-import { Backend } from '../lib/backend'
+import { datetimeNow, debug, logSprintf } from '../globals'
 import { Parser } from '../lib/parser'
-
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
 
@@ -26,7 +19,7 @@ class NewClubCommand extends Commando.Command
       description: "Create a new club.",
       args: [{
         key: 'name',
-        prompt: 'Pick a name for the club.',
+        prompt: "Enter a name for the club.",
         type: 'string'
       }],
       argsPromptLimit: 1

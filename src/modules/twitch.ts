@@ -1,4 +1,4 @@
-import Commando = require( 'discord.js-commando' )
+import * as Commando from 'discord.js-commando'
 import { Message, MessageEmbed, TextChannel } from 'discord.js'
 import { ApiClient, HelixStream, HelixStreamType, HelixUser } from 'twitch'
 import { ClientCredentialsAuthProvider } from 'twitch-auth'
@@ -20,10 +20,12 @@ class TwitchChannelCommand extends Commando.Command
       group: 'twitch',
       memberName: 'twitchchannel',
       description: "Set a channel for posting stream notifications.",
+      guildOnly: true,
+      ownerOnly: true,
       args: [{
         key: 'channel',
         prompt: "Which channel?",
-        type: 'channel',
+        type: 'text-channel',
         default: ''
       }],
       argsPromptLimit: 1
@@ -532,7 +534,7 @@ export class TwitchModule extends ModuleBase
     }
   }
 
-  registerStuff( id: number, host: NyaInterface ): boolean
+  registerStuff( id: number, host: NyaInterface )
   {
     this._id = id
     return true
@@ -540,10 +542,9 @@ export class TwitchModule extends ModuleBase
 
   async subscribe( username: string )
   {
-    const apiClient = this.apiClient
     let userOrNull: HelixUser | null
     try {
-      userOrNull = await apiClient.helix.users.getUserByName( username )
+      userOrNull = await this.apiClient.helix.users.getUserByName( username )
     } catch ( error ) {
       log( `Failed to fetch data for Twitch user ${username}:`, error )
       return
