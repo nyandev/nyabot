@@ -13,9 +13,7 @@ function usersQuery( users: string[] ) {
 
 class TwitterChannelCommand extends Commando.Command
 {
-  protected _service: TwitterModule
-
-  constructor( service: TwitterModule, client: Commando.CommandoClient )
+  constructor( protected _service: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -33,7 +31,6 @@ class TwitterChannelCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>

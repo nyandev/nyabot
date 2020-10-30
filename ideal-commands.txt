@@ -1,0 +1,46 @@
+CURRENCY
+--------
+
+!currency [<@user>]  // alias !$
+!currency award <amount> <@user|@role>
+!currency take <amount> <@user|@role>
+!currency set <amount> <@user|@role>
+
+
+TWITCH
+------
+
+All of the Twitter commands, plus:
+
+!twitch image list
+!twitch image get <account>
+!twitch image set <account> <url>
+!twitch image clear <account>
+
+
+TWITTER
+-------
+
+Show a message from the TwitterMessage setting (or prompt to set it if unset):
+  !twitter
+
+List all followed Twitter accounts:
+  !twitter list
+
+List all set channels:
+  !twitter channel list
+Get or set default channel:
+  !twitter channel default [<#channel>]
+Clear default channel:
+  !twitter channel default clear
+Get channel for account:
+  !twitter channel get <account>
+Set channel for account:
+  !twitter channel set <account> <#channel>
+Clear channel for account:
+  !twitter channel clear <account>
+
+Follow a Twitter account:
+  !twitter follow <account>
+Unfollow a Twitter account:
+  !twitter unfollow <account>
