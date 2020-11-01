@@ -51,6 +51,7 @@ class ConfigCommand extends Commando.Command
     if ( argstruct.scope === 'global' )
     {
       const gkeys: string[] = host.getGlobalSettingKeys()
+
       if ( !gkeys.includes( argstruct.key ) )
         return host.respondTo( message, 'config_badkey', gkeys )
       if ( argstruct.value === 'get' )

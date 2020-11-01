@@ -54,6 +54,11 @@ export abstract class ModuleBase
     return this._client
   }
 
+  getGlobalSettingKeys(): string[]
+  {
+    return []
+  }
+
   abstract getGroups(): Commando.CommandGroup[]
   abstract getCommands(): Commando.Command[]
   abstract registerStuff( id: number, host: NyaInterface ): boolean

@@ -44,17 +44,18 @@
     "longName": "NyaBot",
     "iconURL": "https://cdn.discordapp.com/avatars/733106710843228221/df67a4e0a11dab524c2ef2fc9fc5a968.png",
     "globalDefaults": {
-        "MessageEditableDuration": 10,
-        "Prefix": "?",
-        "CurrencySymbol": ":cherry_blossom:",
-        "SlotsJoker": ":cherry_blossom:",
-        "SlotsImages": [
-            ":hearts:",
-            ":butterfly:",
-            ":sun_with_face:",
-            ":green_apple:",
-            ":dolphin:"
-        ]
+      "MessageEditableDuration": 10,
+      "Prefix": "?",
+      "CurrencySymbol": ":cherry_blossom:",
+      "SlotsJoker": ":cherry_blossom:",
+      "SlotsImages": [
+        ":hearts:",
+        ":butterfly:",
+        ":sun_with_face:",
+        ":green_apple:",
+        ":dolphin:"
+      ],
+      "TwitterMessage": "**%(username)s** tweeted: %(url)s"
     }
   }
 }

@@ -188,9 +188,9 @@ export class Backend
   async getSetting( settingKey: string, guild?: number )
   {
     let guildSetting
-    if ( guild )
+    if ( guild != null )
       guildSetting = await this.getGuildSetting( guild, settingKey )
-    if ( guildSetting !== undefined)
+    if ( guildSetting )
       return guildSetting
     return await this.getGlobalSetting( settingKey )
   }

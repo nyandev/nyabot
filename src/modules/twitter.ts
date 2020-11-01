@@ -1,6 +1,7 @@
 import fetch from 'node-fetch'
 import * as Commando from 'discord.js-commando'
 import { Message, TextChannel } from 'discord.js'
+import { sprintf } from 'sprintf-js'
 
 import { debug, log } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
@@ -332,6 +333,7 @@ export class TwitterModule extends ModuleBase
   settingKeys = {
     channel: 'TwitterChannel',
     channelExceptions: 'TwitterChannelExceptions',
+    message: 'TwitterMessage',
     subscriptions: 'TwitterSubscriptions'
   }
 
@@ -418,7 +420,14 @@ export class TwitterModule extends ModuleBase
                 }
               }
 
-              const message: string = `**${username}** tweeted: https://twitter.com/${handle}/status/${tweet.id}`;
+              const template = await this._backend.getSetting( this.settingKeys.message, guildID )
+              if ( !template ) {
+                log( `Missing ${this.settingKeys.message}` )
+                return
+              }
+              const url = `https://twitter.com/${handle}/status/${tweet.id}`
+              const message = sprintf( template, { url, username } );
+
               ( realChannel as TextChannel ).send( message ).catch( error => {
                 if ( error.message !== 'Missing Permissions' )
                   throw error
@@ -430,8 +439,13 @@ export class TwitterModule extends ModuleBase
     } ) )
   }
 
-  async onMessage( msg: Message ): Promise<void>
+  async onMessage( message: Message ): Promise<void>
   {
+    console.log( message )
+  }
+
+  getGlobalSettingKeys() {
+    return [this.settingKeys.message]
   }
 
   getGroups(): Commando.CommandGroup[]
