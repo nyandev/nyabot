@@ -611,7 +611,7 @@ export class TwitchModule extends ModuleBase
           if ( game )
             embed.setDescription( `Playing **${game.name}**` );
 
-          ( channel as TextChannel ).send( embed ).catch( error => {
+          ( channel as TextChannel ).send( '@everyone', embed ).catch( error => {
             if ( error.message !== 'Missing Permissions' )
               log( `Failed to send Twitch notification to channel ${channelSnowflake}:`, error )
           } )
