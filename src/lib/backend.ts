@@ -402,7 +402,7 @@ export class Backend
     {
       this._db.sync({
         force: false,
-        alter: true
+        alter: false
       })
     })
   }
