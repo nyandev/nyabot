@@ -625,6 +625,8 @@ export class TwitchModule extends ModuleBase
           } catch ( err ) {
             log( `Couldn't fetch ${this.settingKeys.message} for guild ${guildID}:`, err )
           }
+          if ( !msg )
+            msg = ''
           ( channel as TextChannel ).send( msg, embed ).catch( error => {
             if ( error.message !== 'Missing Permissions' )
               log( `Failed to send Twitch notification to channel ${channelSnowflake}:`, error )
