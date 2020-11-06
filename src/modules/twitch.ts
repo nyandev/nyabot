@@ -420,6 +420,7 @@ export class TwitchModule extends ModuleBase
   settingKeys = {
     channel: 'TwitchChannel',
     images: 'TwitchImages',
+    message: 'TwitchMessage',
     subscriptions: 'TwitchSubscriptions'
   }
 
@@ -534,6 +535,10 @@ export class TwitchModule extends ModuleBase
     }
   }
 
+  getGlobalSettingKeys() {
+    return [this.settingKeys.message]
+  }
+
   registerStuff( id: number, host: NyaInterface )
   {
     this._id = id
@@ -611,7 +616,16 @@ export class TwitchModule extends ModuleBase
           if ( game )
             embed.setDescription( `Playing **${game.name}**` );
 
-          ( channel as TextChannel ).send( '@everyone', embed ).catch( error => {
+          let msg = undefined
+          try {
+            msg = await this._backend.getSetting( this.settingKeys.message, guildID )
+            if ( msg === undefined )
+              throw new Error( `getSetting returned falsy for setting ${this.settingKeys.message} and guild ${guildID}` )
+            msg = msg.value
+          } catch ( err ) {
+            log( `Couldn't fetch ${this.settingKeys.message} for guild ${guildID}:`, err )
+          }
+          ( channel as TextChannel ).send( msg, embed ).catch( error => {
             if ( error.message !== 'Missing Permissions' )
               log( `Failed to send Twitch notification to channel ${channelSnowflake}:`, error )
           } )

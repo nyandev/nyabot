@@ -55,6 +55,7 @@
         ":green_apple:",
         ":dolphin:"
       ],
+      "TwitchMessage": "@everyone",
       "TwitterMessage": "**%(username)s** tweeted: %(url)s"
     }
   }
