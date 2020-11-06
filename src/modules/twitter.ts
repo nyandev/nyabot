@@ -434,6 +434,12 @@ export class TwitterModule extends ModuleBase
               } )
             }
           } )
+          .catch( error => {
+            log( `Failed to fetch information about guild ${guildID}'s tweets:`, error )
+          } )
+        } )
+        .catch( error => {
+          log( `Failed to fetch guild ${guildID}'s Twitter feed:`, error )
         } )
       }, this.config.interval * 1000 )
     } ) )
