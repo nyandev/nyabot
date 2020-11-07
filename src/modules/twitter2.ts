@@ -4,92 +4,12 @@ import { Message, TextChannel } from 'discord.js'
 import { sprintf } from 'sprintf-js'
 
 import { debug, log } from '../globals'
+import { NyaBaseCommand, NyaCommand, SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
 function usersQuery( users: string[] ) {
   return users.map( (username: string) => `from:${username}` ).join(' OR ')
-}
-
-interface BaseCommandInfo {
-  name: string
-  group: string
-  description: string
-  guildOnly?: boolean
-  ownerOnly?: boolean
-  subcommands?: SubcommandList
-}
-
-interface SubcommandInfo {
-  description?: string
-  guildOnly?: boolean
-  ownerOnly?: boolean
-}
-
-interface SubcommandOptions extends SubcommandInfo {
-  subcommands?: SubcommandList
-}
-
-interface SubcommandList {
-  [name: string]: {
-    command: NyaCommand
-    options?: SubcommandInfo
-    subcommands?: SubcommandList
-  }
-}
-
-interface SubcommandSpec {
-  [name: string]: {
-    class: new (module: ModuleBase, subcommands?: SubcommandOptions) => NyaCommand
-    options?: SubcommandInfo
-    subcommands?: SubcommandSpec
-  }
-}
-
-
-abstract class NyaBaseCommand extends Commando.Command
-{
-  protected subcommands: SubcommandList = {}
-  constructor( client: Commando.CommandoClient, options: BaseCommandInfo )
-  {
-    super( client, {...options, memberName: options.name, argsType: 'multiple'} )
-    if ( options.subcommands )
-      this.subcommands = options.subcommands
-  }
-
-  async run(message: Commando.CommandoMessage, args: any[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
-  {
-    debug( 'subcommands', this.subcommands )
-    debug( 'args to base command:', args )
-    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) ) {
-      return this.subcommands[args[0]].command.run( message, args.slice( 1 ) )
-    }
-    return this.runDefault( message, args )
-  }
-
-  abstract async runDefault( message: Commando.CommandoMessage, args: any[] ): Promise<Message | Message[] | null>
-}
-
-
-abstract class NyaCommand
-{
-  protected subcommands: SubcommandList
-
-  constructor ( protected module: ModuleBase, protected options: SubcommandOptions = {} )
-  {
-    this.subcommands = options.subcommands || {}
-    delete this.options.subcommands
-  }
-
-  async run( message: Commando.CommandoMessage, args: any[] ): Promise<Message | Message[] | null>
-  {
-    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) ) {
-      return this.subcommands[args[0]].command.run( message, args.slice( 1 ) )
-    }
-    return this.runDefault( message, args )
-  }
-
-  abstract async runDefault( message: Commando.CommandoMessage, args: any[] ): Promise<Message | Message[] | null>
 }
 
 
@@ -125,7 +45,7 @@ class TwitterCommand extends NyaBaseCommand
       group: 'tw',
       description: "Base for all Twitter commands.",
       guildOnly: true,
-      subcommands: module.subcommands
+      subcommands: module.twitterSubcommands
     } )
   }
 
@@ -147,7 +67,7 @@ export class Twitter2Module extends ModuleBase
     message: 'TwitterMessage',
     subscriptions: 'TwitterSubscriptions'
   }
-  subcommandSpec: SubcommandSpec = {
+  twitterSubcommandSpec: SubcommandSpec = {
     channel: {
       class: TwitterChannelCommand,
       options: {
@@ -160,7 +80,7 @@ export class Twitter2Module extends ModuleBase
       }
     }
   }
-  subcommands: SubcommandList
+  twitterSubcommands: SubcommandList
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
@@ -168,7 +88,7 @@ export class Twitter2Module extends ModuleBase
     this.config = this.backend._config.twitter
     if ( !this.config.enabled )
       return
-    this.subcommands = this.buildSubcommands( this.subcommandSpec )
+    this.twitterSubcommands = this.buildSubcommands( this.twitterSubcommandSpec )
   }
 
   async onMessage( message: Message ): Promise<void>
