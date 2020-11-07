@@ -16,9 +16,9 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
 class AwardCurrencyCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'award',
       group: 'currency',
@@ -42,7 +42,8 @@ class AwardCurrencyCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const backend = this._service.getBackend()
+    const backend = this._service.backend
+    const host = this._service.host
 
     async function awardUser( userID: string, amount: number ) {
       const user = await backend.getUserBySnowflake( userID )
@@ -52,11 +53,11 @@ class AwardCurrencyCommand extends Commando.Command
     if ( args.target instanceof Role ) {
       for ( const userID of args.target.members.keys() )
         awardUser( userID, args.amount )
-      return this._service.getHost().respondTo( message, 'currency_award_role',
+      return host.respondTo( message, 'currency_award_role',
         message.author.username, args.amount, args.target.name )
     } else {
       awardUser( args.target.id, args.amount )
-      return this._service.getHost().respondTo( message, 'currency_award_user',
+      return host.respondTo( message, 'currency_award_user',
         message.author.username, args.amount, args.target.username )
     }
     return null
@@ -66,9 +67,9 @@ class AwardCurrencyCommand extends Commando.Command
 
 class ShowCurrencyCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: '$',
       group: 'currency',
@@ -85,18 +86,18 @@ class ShowCurrencyCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const backend = this._service.getBackend()
+    const backend = this._service.backend
     const user = await backend.getUserBySnowflake( args.target.id )
-    return this._service.getHost().respondTo( message, 'currency_show', user.name, user.currency )
+    return this._service.host.respondTo( message, 'currency_show', user.name, user.currency )
   }
 }
 
 
 class SlotCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'slot',
       group: 'currency',
@@ -119,16 +120,17 @@ class SlotCommand extends Commando.Command
       twoJokers: 4,
       oneJoker: 1
     }
-    const config = this._service.getHost()._config
+    const backend = this._service.backend
+    const host = this._service.host
+    const config = host._config
     const images = [
       config.globalDefaults.SlotsJoker,
       ...config.globalDefaults.SlotsImages
     ]
 
-    const backend = this._service.getBackend()
     const user = await backend.getUserBySnowflake( message.author.id )
     if ( user.currency < args.amount )
-      return this._service.getHost().respondTo( message, 'slot_insufficient_funds' )
+      return host.respondTo( message, 'slot_insufficient_funds' )
 
     await user.decrement( { currency: args.amount } )
 
@@ -150,9 +152,9 @@ class SlotCommand extends Commando.Command
     const winAmount = args.amount * multiplier
     if ( winAmount > 0 ) {
       await user.increment( { currency: winAmount } )
-      return this._service.getHost().respondTo( message, 'slot_win', slotString, winAmount )
+      return host.respondTo( message, 'slot_win', slotString, winAmount )
     } else {
-      return this._service.getHost().respondTo( message, 'slot_no_win', slotString )
+      return host.respondTo( message, 'slot_no_win', slotString )
     }
   }
 }
@@ -172,22 +174,22 @@ export class CurrencyModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'currency', 'Currency', false )
+      new Commando.CommandGroup( this.client, 'currency', 'Currency', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new AwardCurrencyCommand( this, this.getClient() ),
-      new ShowCurrencyCommand( this, this.getClient() ),
-      new SlotCommand( this, this.getClient() )
+      new AwardCurrencyCommand( this ),
+      new ShowCurrencyCommand( this ),
+      new SlotCommand( this )
     ]
   }
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

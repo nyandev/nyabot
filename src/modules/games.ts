@@ -17,9 +17,9 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
 class EightBallCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: '8ball',
       group: 'games',
@@ -50,7 +50,7 @@ class EightBallCommand extends Commando.Command
       data = {
         message: "That\u2019s no good, Onii-chan!"
       }
-    return this._service.getHost().respondTo( message, '8ball', data )
+    return this._service.host.respondTo( message, '8ball', data )
   }
 }
 
@@ -162,13 +162,13 @@ class HangmanCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const arg = args.wordlist.toLowerCase()
-    const redis = this._service.getBackend()._redis
+    const redis = this._service.backend._redis
     const redisKey = `hangman_${message.channel.id}`
     if ( await redis.get( redisKey ) )
-      return this._service.getHost().respondTo( message, 'hangman_exists' )
+      return this._service.host.respondTo( message, 'hangman_exists' )
 
     if ( !Hangman.wordlists.hasOwnProperty( arg ) )
-      return this._service.getHost().respondTo( message, 'hangman_invalid_wordlist', arg )
+      return this._service.host.respondTo( message, 'hangman_invalid_wordlist', arg )
 
     const wordlist = Hangman.wordlists[arg]
     const word = wordlist[Math.floor( Math.random() * wordlist.length )]
@@ -183,7 +183,7 @@ class HangmanCommand extends Commando.Command
     let note
     if ( arg === 'anime' )
       note = "English anime titles are preferred."
-    return this._service.getHost().respondTo( message, 'hangman_start', hangman.draw(), note )
+    return this._service.host.respondTo( message, 'hangman_start', hangman.draw(), note )
   }
 }
 
@@ -203,11 +203,11 @@ class HangmanStopCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const redis = this._service.getBackend()._redis
+    const redis = this._service.backend._redis
     const redisKey = `hangman_${message.channel.id}`
     if ( await redis.get( redisKey ) ) {
       redis.del( redisKey )
-      return this._service.getHost().respondTo( message, 'hangman_stop' )
+      return this._service.host.respondTo( message, 'hangman_stop' )
     }
     return null
   }
@@ -230,22 +230,22 @@ class HangmanListCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const wordlists = Object.keys( Hangman.wordlists )
-    return this._service.getHost().respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
+    return this._service.host.respondTo( message, 'hangman_list', wordlists.join( ', ' ) )
   }
 }
 
 
 class SpeedTyping {
-  static texts =
-    JSON.parse( fs.readFileSync( path.resolve( __dirname, '../../data/speedtyping.json' ), 'utf8' ) )
+  static texts = JSON.parse( fs.readFileSync(
+    path.resolve( __dirname, '../../data/speedtyping.json' ), 'utf8' ) )
 }
 
 
 class SpeedTypingCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'speedtyping',
       group: 'games',
@@ -256,10 +256,10 @@ class SpeedTypingCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const redis = this._service.getBackend()._redis
+    const redis = this._service.backend._redis
     const redisKey = `speedtyping_${message.channel.id}`
     if ( await redis.get( redisKey ) )
-      return this._service.getHost().respondTo( message, 'speedtyping_exists' )
+      return this._service.host.respondTo( message, 'speedtyping_exists' )
     const texts = Object.keys( SpeedTyping.texts )
     const index = Math.floor( Math.random() * texts.length )
     const { time, text } = SpeedTyping.texts[texts[index]]
@@ -273,7 +273,7 @@ class SpeedTypingCommand extends Commando.Command
       redis.del( redisKey )
       message.channel.send( "Speed typing contest ended." )
     }, time * 1000 )
-    return this._service.getHost().respondTo( message, 'speedtyping_start', time, '```' + text + '```' )
+    return this._service.host.respondTo( message, 'speedtyping_start', time, '```' + text + '```' )
   }
 }
 
@@ -287,14 +287,14 @@ export class GamesModule extends ModuleBase
 
   async destroy()
   {
-    const speedtypingChannels = await this._backend._redis.keys( 'speedtyping_*' )
+    const speedtypingChannels = await this.backend._redis.keys( 'speedtyping_*' )
     for ( const channel of speedtypingChannels )
-      await this._backend._redis.del( channel )
+      await this.backend._redis.del( channel )
   }
 
   async onMessage( message: Message ): Promise<void>
   {
-    const redis = this.getBackend()._redis
+    const redis = this.backend._redis
 
     const hangmanRedisKey = `hangman_${message.channel.id}`
     const hangmanState = await redis.get( hangmanRedisKey )
@@ -372,24 +372,24 @@ export class GamesModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'games', 'Games', false )
+      new Commando.CommandGroup( this.client, 'games', 'Games', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new EightBallCommand( this, this.getClient() ),
-      new HangmanCommand( this, this.getClient() ),
-      new HangmanStopCommand( this, this.getClient() ),
-      new HangmanListCommand( this, this.getClient() ),
-      new SpeedTypingCommand( this, this.getClient() )
+      new EightBallCommand( this ),
+      new HangmanCommand( this, this.client ),
+      new HangmanStopCommand( this, this.client ),
+      new HangmanListCommand( this, this.client ),
+      new SpeedTypingCommand( this )
     ]
   }
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

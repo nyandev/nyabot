@@ -14,7 +14,7 @@ function usersQuery( users: string[] ) {
 
 class TwitterChannelCommand extends Commando.Command
 {
-  constructor( protected _service: TwitterModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -36,10 +36,10 @@ class TwitterChannelCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const settingKey = this._service.settingKeys.channel
-    const host = this._service.getHost()
-    const backend = host.getBackend()
-    const client = host.getClient()
+    const settingKey = this.module.settingKeys.channel
+    const host = this.module.host
+    const backend = this.module.backend
+    const client = this.module.client
 
     let guild
     try {
@@ -91,7 +91,7 @@ class TwitterChannelCommand extends Commando.Command
 
 class TwitterChannelExceptionCommand extends Commando.Command
 {
-  constructor( protected _service: TwitterModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -117,10 +117,10 @@ class TwitterChannelExceptionCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const settingKey = this._service.settingKeys.channelExceptions
-    const host = this._service.getHost()
-    const backend = host.getBackend()
-    const client = host.getClient()
+    const settingKey = this.module.settingKeys.channelExceptions
+    const host = this.module.host
+    const backend = this.module.backend
+    const client = this.module.client
 
     let guild
     try {
@@ -177,9 +177,7 @@ class TwitterChannelExceptionCommand extends Commando.Command
 
 class TwitterFollowCommand extends Commando.Command
 {
-  protected _service: TwitterModule
-
-  constructor( service: TwitterModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -197,14 +195,13 @@ class TwitterFollowCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const settingKey = this._service.settingKeys.subscriptions
-    const host = this._service.getHost()
-    const backend = host.getBackend()
+    const settingKey = this.module.settingKeys.subscriptions
+    const host = this.module.host
+    const backend = this.module.backend
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
     let setting = await backend.getGuildSetting( guild.id, settingKey )
@@ -242,7 +239,7 @@ class TwitterFollowCommand extends Commando.Command
     if ( !/^\w+$/.test( username ) )
       return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
-    const config = this._service.getBackend()._config.twitter
+    const config = backend._config.twitter
     const fetchOpts = {
       headers: {
         Authorization: `Bearer ${config.bearerToken}`
@@ -266,9 +263,7 @@ class TwitterFollowCommand extends Commando.Command
 
 class TwitterUnfollowCommand extends Commando.Command
 {
-  protected _service: TwitterModule
-
-  constructor( service: TwitterModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitterModule, client: Commando.CommandoClient )
   {
     super( client,
     {
@@ -285,15 +280,14 @@ class TwitterUnfollowCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
-    const settingKey = this._service.settingKeys.subscriptions
-    const host = this._service.getHost()
-    const backend = host.getBackend()
+    const settingKey = this.module.settingKeys.subscriptions
+    const host = this.module.host
+    const backend = this.module.backend
 
     const guild = await backend.getGuildBySnowflake( message.guild.id )
     let username = args.username
@@ -340,7 +334,7 @@ export class TwitterModule extends ModuleBase
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
-    this.config = this._backend._config.twitter
+    this.config = this.backend._config.twitter
     if ( !this.config.enabled )
       return
 
@@ -349,22 +343,22 @@ export class TwitterModule extends ModuleBase
         Authorization: `Bearer ${this.config.bearerToken}`
       }
     }
-    const redis = this._backend._redis
+    const redis = this.backend._redis
 
-    this._backend._models.Guild.findAll( { attributes: ['id'] } )
+    this.backend._models.Guild.findAll( { attributes: ['id'] } )
     .then( ( guilds: any[] ) => guilds.forEach( (guild: any) => {
       const guildID = guild.id
       const redisKey = `latesttweet_${guildID}`
 
       setInterval( async () => {
-        const channelSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.channel )
+        const channelSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.channel )
         if ( !channelSetting )
           return
         const channel = await client.channels.fetch( channelSetting.value )
         if ( !channel || channel.type !== 'text' )
           return
 
-        let twitterHandles = await this._backend.getGuildSetting( guildID, this.settingKeys.subscriptions )
+        let twitterHandles = await this.backend.getGuildSetting( guildID, this.settingKeys.subscriptions )
         if ( !twitterHandles || !twitterHandles.value )
           return
         twitterHandles = JSON.parse( twitterHandles.value )
@@ -391,7 +385,7 @@ export class TwitterModule extends ModuleBase
           .then( async ( response: any ) => {
             let exceptions
             try {
-              const exceptionsSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.channelExceptions )
+              const exceptionsSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.channelExceptions )
               exceptions = JSON.parse( exceptionsSetting.value )
               if ( typeof exceptions !== 'object' )
                 exceptions = null
@@ -420,7 +414,7 @@ export class TwitterModule extends ModuleBase
                 }
               }
 
-              const template = await this._backend.getSetting( this.settingKeys.message, guildID )
+              const template = await this.backend.getSetting( this.settingKeys.message, guildID )
               if ( !template ) {
                 log( `Missing ${this.settingKeys.message}` )
                 return
@@ -458,7 +452,7 @@ export class TwitterModule extends ModuleBase
   {
     if ( this.config.enabled ) {
       return [
-        new Commando.CommandGroup( this.getClient(), 'twitter', 'Twitter', false )
+        new Commando.CommandGroup( this.client, 'twitter', 'Twitter', false )
       ]
     } else {
       return []
@@ -468,12 +462,11 @@ export class TwitterModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     if ( this.config.enabled ) {
-      const client = this.getClient()
       return [
-        new TwitterChannelCommand( this, client ),
-        new TwitterChannelExceptionCommand( this, client ),
-        new TwitterFollowCommand( this, client ),
-        new TwitterUnfollowCommand( this, client )
+        new TwitterChannelCommand( this, this.client ),
+        new TwitterChannelExceptionCommand( this, this.client ),
+        new TwitterFollowCommand( this, this.client ),
+        new TwitterUnfollowCommand( this, this.client )
       ]
     } else {
       return []
@@ -482,7 +475,7 @@ export class TwitterModule extends ModuleBase
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

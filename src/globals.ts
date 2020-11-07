@@ -38,7 +38,7 @@ export function datetimeNow(): string
 export function debug(...args: any[]): void
 {
   if ( true /* replace with configuration.debug */ )
-    console.log(...args)
+    console.log('[DEBUG]', ...args)
 }
 
 /*  Log for end users (intended to be written to a file in production)

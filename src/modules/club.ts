@@ -9,9 +9,9 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module
 
 class NewClubCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'newclub',
       group: 'clubs',
@@ -28,8 +28,8 @@ class NewClubCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const host = this._service.getHost()
-    const models = this._service.getBackend()._models
+    const host = this._service.host
+    const models = this._service.backend._models
     const existing = await models.Club.findAll({
       where: Sequelize.where(
         Sequelize.fn('lower', Sequelize.col('name')),
@@ -39,7 +39,7 @@ class NewClubCommand extends Commando.Command
     if ( existing.length )
       return host.respondTo( message, 'club_create_exists' )
 
-    const user = await this._service.getBackend().getUserBySnowflake( message.author.id )
+    const user = await this._service.backend.getUserBySnowflake( message.author.id )
     const currentClubs = await models.ClubUser.count({
       where: { userID: user.id }
     })
@@ -68,9 +68,9 @@ class NewClubCommand extends Commando.Command
 
 class JoinClubCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'joinclub',
       group: 'clubs',
@@ -86,7 +86,7 @@ class JoinClubCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const backend = this._service.getBackend()
+    const backend = this._service.backend
     const models = backend._models
     const clubs = await models.Club.findAll({
       where: Sequelize.where(
@@ -94,7 +94,7 @@ class JoinClubCommand extends Commando.Command
         Sequelize.fn( 'lower', args.name )
       )
     })
-    const host = this._service.getHost()
+    const host = this._service.host
     if ( !clubs.length )
       return host.respondTo( message, 'club_join_nonexistent' )
     else if ( clubs.length > 1 )
@@ -119,9 +119,9 @@ class JoinClubCommand extends Commando.Command
 
 class LeaveClubCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'leaveclub',
       group: 'clubs',
@@ -132,8 +132,8 @@ class LeaveClubCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const host = this._service.getHost()
-    const backend = this._service.getBackend()
+    const host = this._service.host
+    const backend = this._service.backend
     const models = backend._models
 
     const user = await backend.getUserBySnowflake( message.author.id )
@@ -158,9 +158,9 @@ class LeaveClubCommand extends Commando.Command
 
 class ListClubsCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'clubs',
       group: 'clubs',
@@ -171,20 +171,20 @@ class ListClubsCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const models = this._service.getBackend()._models
+    const models = this._service.backend._models
     const clubs = await models.Club.findAll({
       attributes: ['name'],
       include: [models.ClubUser]
     })
     if ( !clubs.length )
-      return this._service.getHost().respondTo( message, 'club_list_empty' )
+      return this._service.host.respondTo( message, 'club_list_empty' )
 
     const clubNames = clubs.map( (club: any) => {
       const memberCount = club.clubusers.length
       const plural = memberCount === 1 ? '' : 's'
       return `${club.name} (${memberCount} member${plural})`
     } ).join( '\n' )
-    return this._service.getHost().respondTo( message, 'club_list', clubNames )
+    return this._service.host.respondTo( message, 'club_list', clubNames )
   }
 }
 
@@ -202,7 +202,7 @@ export class ClubModule extends ModuleBase
     const parsed = Parser.parseMessage( message.content )
     if ( parsed.xp !== false )
     {
-      const user = await this._backend.getUserBySnowflake( message.author.id )
+      const user = await this.backend.getUserBySnowflake( message.author.id )
       if ( user )
       {
         // do things and stuff
@@ -231,23 +231,23 @@ export class ClubModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'clubs', 'Clubs', false )
+      new Commando.CommandGroup( this.client, 'clubs', 'Clubs', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new JoinClubCommand( this, this.getClient() ),
-      new LeaveClubCommand( this, this.getClient() ),
-      new ListClubsCommand( this, this.getClient() ),
-      new NewClubCommand( this, this.getClient() )
+      new JoinClubCommand( this ),
+      new LeaveClubCommand( this ),
+      new ListClubsCommand( this ),
+      new NewClubCommand( this )
     ]
   }
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

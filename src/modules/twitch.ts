@@ -10,11 +10,9 @@ import { NyaInterface, ModuleBase } from '../modules/module'
 
 class TwitchChannelCommand extends Commando.Command
 {
-  protected _service: TwitchModule
-
-  constructor( service: TwitchModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitchModule )
   {
-    super( client,
+    super( module.client,
     {
       name: 'twitchchannel',
       group: 'twitch',
@@ -30,7 +28,6 @@ class TwitchChannelCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     })
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -38,10 +35,10 @@ class TwitchChannelCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = this._service.settingKeys.channel
-    const host = this._service.getHost()
-    const backend = host.getBackend()
-    const client = host.getClient()
+    const settingKey = this.module.settingKeys.channel
+    const host = this.module.host
+    const backend = this.module.backend
+    const client = this.module.client
 
     const guild = await backend.getGuildBySnowflake( message.guild.id )
 
@@ -79,7 +76,7 @@ class TwitchChannelCommand extends Commando.Command
       log( `Failed to set Twitch channel to ${channel.id} in guild ${guild.id}:`, error )
       return host.respondTo( message, 'unexpected' )
     }
-    this._service.channels.set( guild.id, channel.id )
+    this.module.channels.set( guild.id, channel.id )
     return host.respondTo( message, 'twitchchannel_set', channel.id )
   }
 }
@@ -87,11 +84,9 @@ class TwitchChannelCommand extends Commando.Command
 
 class TwitchImageCommand extends Commando.Command
 {
-  protected _service: TwitchModule
-
-  constructor( service: TwitchModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitchModule )
   {
-    super( client, {
+    super( module.client, {
       name: 'twitchimage',
       group: 'twitch',
       memberName: 'twitchimage',
@@ -112,7 +107,6 @@ class TwitchImageCommand extends Commando.Command
       ],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -120,9 +114,9 @@ class TwitchImageCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = this._service.settingKeys.images
-    const host = this._service.getHost()
-    const backend = host.getBackend()
+    const settingKey = this.module.settingKeys.images
+    const host = this.module.host
+    const backend = this.module.backend
 
     let guild
     try {
@@ -204,11 +198,9 @@ class TwitchImageCommand extends Commando.Command
 
 class TwitchFollowCommand extends Commando.Command
 {
-  protected _service: TwitchModule
-
-  constructor( service: TwitchModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitchModule )
   {
-    super( client,
+    super( module.client,
     {
       name: 'twitchfollow',
       group: 'twitch',
@@ -222,7 +214,6 @@ class TwitchFollowCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
@@ -230,9 +221,9 @@ class TwitchFollowCommand extends Commando.Command
     if ( !message.guild )
       return null
 
-    const settingKey = this._service.settingKeys.subscriptions
-    const host = this._service.getHost()
-    const backend = host.getBackend()
+    const settingKey = this.module.settingKeys.subscriptions
+    const host = this.module.host
+    const backend = this.module.backend
 
     let guild
     try {
@@ -285,9 +276,9 @@ class TwitchFollowCommand extends Commando.Command
     if ( !/^\w+$/.test( username ) )
       return host.respondTo( message, 'twitchfollow_nonexistent', username )
 
-    const guilds = this._service.guildsFollowing.get( username )
+    const guilds = this.module.guildsFollowing.get( username )
     if ( !guilds || !guilds.length ) {
-      const subscription = await this._service.subscribe( username )
+      const subscription = await this.module.subscribe( username )
       if ( !subscription )
         return host.respondTo( message, 'twitchfollow_nonexistent', username )
     }
@@ -304,7 +295,7 @@ class TwitchFollowCommand extends Commando.Command
     if ( guilds )
       guilds.push( guild.id )
     else
-      this._service.guildsFollowing.set( username, [guild.id] )
+      this.module.guildsFollowing.set( username, [guild.id] )
     return host.respondTo( message, 'twitchfollow_success', username )
   }
 }
@@ -312,11 +303,9 @@ class TwitchFollowCommand extends Commando.Command
 
 class TwitchUnfollowCommand extends Commando.Command
 {
-  protected _service: TwitchModule
-
-  constructor( service: TwitchModule, client: Commando.CommandoClient )
+  constructor( protected module: TwitchModule )
   {
-    super( client,
+    super( module.client,
     {
       name: 'twitchunfollow',
       group: 'twitch',
@@ -329,15 +318,14 @@ class TwitchUnfollowCommand extends Commando.Command
       }],
       argsPromptLimit: 1
     } )
-    this._service = service
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] |
 null>
   {
-    const settingKey = this._service.settingKeys.subscriptions
-    const host = this._service.getHost()
-    const backend = host.getBackend()
+    const settingKey = this.module.settingKeys.subscriptions
+    const host = this.module.host
+    const backend = this.module.backend
 
     let guild: any // TODO: how do I get the model type
     try {
@@ -379,13 +367,13 @@ null>
     if ( !subs.includes( username ) )
       return host.respondTo( message, 'twitchunfollow_not_following', username )
 
-    const guilds = this._service.guildsFollowing.get( username )
+    const guilds = this.module.guildsFollowing.get( username )
     let newGuilds: any[] = []
     if ( guilds ) {
       newGuilds = guilds.filter( ( x: number ) => x !== guild.id )
       if ( !newGuilds.length ) {
         try {
-          await this._service.unsubscribe( username )
+          await this.module.unsubscribe( username )
         } catch ( error ) {
           log( `Failed to unsubscribe from Twitch user ${username}:`, error )
           return host.respondTo( message, 'unexpected' )
@@ -401,7 +389,7 @@ null>
       log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
       return host.respondTo( message, 'unexpected' )
     }
-    this._service.guildsFollowing.set( username, newGuilds )
+    this.module.guildsFollowing.set( username, newGuilds )
     return host.respondTo( message, 'twitchunfollow_success', username )
   }
 }
@@ -428,7 +416,7 @@ export class TwitchModule extends ModuleBase
   {
     super( id, host, client )
 
-    this.config = this._backend._config.twitch
+    this.config = this.backend._config.twitch
     if ( !this.config.enabled )
       return
 
@@ -443,12 +431,12 @@ export class TwitchModule extends ModuleBase
     } ) )
 
     this.listener.listen().then( async () => {
-      await this._backend._models.Guild.findAll( { attributes: ['id'] } )
+      await this.backend._models.Guild.findAll( { attributes: ['id'] } )
       .then( async ( guilds: any[] ) => {
         for ( const guild of guilds ) {
           let channelSetting
           try {
-            channelSetting = await this._backend.getGuildSetting( guild.id, this.settingKeys.channel )
+            channelSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.channel )
           } catch ( error ) {
             log( `Failed to fetch ${this.settingKeys.channel} setting for guild ${guild.id}:`, error )
             continue
@@ -460,7 +448,7 @@ export class TwitchModule extends ModuleBase
 
           let subsSetting
           try {
-            subsSetting = await this._backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
+            subsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
           } catch ( error ) {
             log( `Failed to fetch ${this.settingKeys.subscriptions} setting for guild ${guild.id}:`, error )
             continue
@@ -513,7 +501,7 @@ export class TwitchModule extends ModuleBase
   {
     if ( this.config.enabled ) {
       return [
-        new Commando.CommandGroup( this.getClient(), 'twitch', 'Twitch', false )
+        new Commando.CommandGroup( this.client, 'twitch', 'Twitch', false )
       ]
     } else {
       return []
@@ -523,12 +511,11 @@ export class TwitchModule extends ModuleBase
   getCommands(): Commando.Command[]
   {
     if ( this.config.enabled ) {
-      const client = this.getClient()
       return [
-        new TwitchChannelCommand( this, client ),
-        new TwitchImageCommand( this, client ),
-        new TwitchFollowCommand( this, client ),
-        new TwitchUnfollowCommand( this, client )
+        new TwitchChannelCommand( this ),
+        new TwitchImageCommand( this ),
+        new TwitchFollowCommand( this ),
+        new TwitchUnfollowCommand( this )
       ]
     } else {
       return []
@@ -541,7 +528,7 @@ export class TwitchModule extends ModuleBase
 
   registerStuff( id: number, host: NyaInterface )
   {
-    this._id = id
+    this.id = id
     return true
   }
 
@@ -574,7 +561,7 @@ export class TwitchModule extends ModuleBase
             return
           let channel
           try {
-            channel = await this._client.channels.fetch( channelSnowflake )
+            channel = await this.client.channels.fetch( channelSnowflake )
           } catch ( error ) {
             log( `Failed to fetch channel ${channelSnowflake}`, error )
             return
@@ -593,7 +580,7 @@ export class TwitchModule extends ModuleBase
           let imageURL = null
           let imagesSetting
           try {
-            imagesSetting = await this._backend.getGuildSetting( guildID, this.settingKeys.images )
+            imagesSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.images )
           } catch ( error ) {
             log( `Failed to fetch ${this.settingKeys.images} setting for guild ${guildID}:`, error )
           }
@@ -618,7 +605,7 @@ export class TwitchModule extends ModuleBase
 
           let msg = undefined
           try {
-            msg = await this._backend.getSetting( this.settingKeys.message, guildID )
+            msg = await this.backend.getSetting( this.settingKeys.message, guildID )
             if ( msg === undefined )
               throw new Error( `getSetting returned falsy for setting ${this.settingKeys.message} and guild ${guildID}` )
             msg = msg.value

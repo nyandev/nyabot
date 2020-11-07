@@ -14,9 +14,9 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module
 
 class ConfigCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'config',
       aliases: ['botconfedit', 'botconfig', 'bce'],
@@ -47,7 +47,7 @@ class ConfigCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const argstruct: any = args
-    const host: NyaInterface = this._service.getHost()
+    const host: NyaInterface = this._service.host
     if ( argstruct.scope === 'global' )
     {
       const gkeys: string[] = host.getGlobalSettingKeys()
@@ -56,13 +56,13 @@ class ConfigCommand extends Commando.Command
         return host.respondTo( message, 'config_badkey', gkeys )
       if ( argstruct.value === 'get' )
       {
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
+        const value = await this._service.backend.getGlobalSetting( argstruct.key )
         return host.respondTo( message, 'config_get', argstruct.key, value )
       }
       else
       {
-        await this._service.getBackend().setGlobalSetting( argstruct.key, argstruct.value )
-        const value = await this._service.getBackend().getGlobalSetting( argstruct.key )
+        await this._service.backend.setGlobalSetting( argstruct.key, argstruct.value )
+        const value = await this._service.backend.getGlobalSetting( argstruct.key )
         if ( argstruct.key === 'Prefix')
           this.client.commandPrefix = value
         return host.respondTo( message, 'config_set', argstruct.key, value )
@@ -77,9 +77,9 @@ class ConfigCommand extends Commando.Command
 }
 
 class StatusCommand extends Commando.Command {
-  constructor( protected _service: ModuleBase, client: Commando.CommandoClient )
+  constructor( protected _service: ModuleBase )
   {
-    super( client,
+    super( _service.client,
     {
       name: 'status',
       group: 'admin',
@@ -104,7 +104,7 @@ class StatusCommand extends Commando.Command {
 
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | null>
   {
-    const host: any = this._service.getHost()
+    const host: any = this._service.host
     if ( args.type === 'clear' )
       host._client.user.setActivity()
     else if ( !args.thing )
@@ -125,15 +125,15 @@ export class AdministrationModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'admin', 'Administration', false )
+      new Commando.CommandGroup( this.client, 'admin', 'Administration', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new ConfigCommand( this, this.getClient() ),
-      new StatusCommand( this, this.getClient() )
+      new ConfigCommand( this ),
+      new StatusCommand( this )
     ]
   }
 
@@ -144,7 +144,7 @@ export class AdministrationModule extends ModuleBase
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

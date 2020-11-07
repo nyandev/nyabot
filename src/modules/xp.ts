@@ -41,8 +41,8 @@ class XPCommand extends Commando.Command
       if ( struct.target && struct.target instanceof User )
         target = struct.target
     }
-    const xpstruct = await this._service.getBackend().getUserXP( target, message.guild )
-    return this._service.getHost().respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )
+    const xpstruct = await this._service.backend.getUserXP( target, message.guild )
+    return this._service.host.respondTo( message, 'xp', target, xpstruct.globalXP, xpstruct.serverXP )
   }
 }
 
@@ -60,7 +60,7 @@ export class XPModule extends ModuleBase
     const parsed = Parser.parseMessage( msg.content )
     if ( parsed.xp !== false )
     {
-      this._backend.userAddXP( msg.author, msg.member, parsed.xp )
+      this.backend.userAddXP( msg.author, msg.member, parsed.xp )
     }
     /*const cmd = this._parser.parseCommand( parsed )
     if ( cmd )
@@ -85,20 +85,20 @@ export class XPModule extends ModuleBase
   getGroups(): Commando.CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.getClient(), 'xp', 'XP', false )
+      new Commando.CommandGroup( this.client, 'xp', 'XP', false )
     ]
   }
 
   getCommands(): Commando.Command[]
   {
     return [
-      new XPCommand( this, this.getClient() )
+      new XPCommand( this, this.client )
     ]
   }
 
   registerStuff( id: number, host: NyaInterface ): boolean
   {
-    this._id = id
+    this.id = id
     return true
   }
 }

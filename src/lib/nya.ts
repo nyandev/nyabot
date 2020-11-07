@@ -386,8 +386,6 @@ export class Nya implements NyaInterface
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       const globalKeys = this.getGlobalSettingKeys()
-      console.log('DEBUG', globalKeys)
-
       if ( !await this._backend.initGlobalSettings( this._config.globalDefaults, this.getGlobalSettingKeys() ) )
         return reject( new Error( "Global settings init failed" ) )
 

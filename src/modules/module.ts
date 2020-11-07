@@ -17,41 +17,19 @@ export interface NyaInterface
 
 export abstract class ModuleBase
 {
-  _id: number
-  _host: NyaInterface
-  _backend: Backend
-  _client: Commando.CommandoClient
+  readonly backend: Backend
 
-  constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
+  constructor(
+    protected id: number,
+    public readonly host: NyaInterface,
+    public readonly client: Commando.CommandoClient
+  )
   {
-    this._id = id
-    this._host = host
-    this._backend = this._host.getBackend()
-    this._client = client
+    this.backend = this.host.getBackend()
   }
 
   destroy()
   {
-  }
-
-  getID(): number
-  {
-    return this._id
-  }
-
-  getHost(): NyaInterface
-  {
-    return this._host
-  }
-
-  getBackend(): Backend
-  {
-    return this._backend
-  }
-
-  getClient(): Commando.CommandoClient
-  {
-    return this._client
   }
 
   getGlobalSettingKeys(): string[]
