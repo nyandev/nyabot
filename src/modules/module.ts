@@ -35,6 +35,7 @@ export abstract class ModuleBase
     for ( const [name, command] of Object.entries( data ) ) {
       const options: SubcommandInfo = {}
       if ( command.options ) {
+        options.args = command.options.args
         options.description = command.options.description
         options.guildOnly = command.options.guildOnly
         options.ownerOnly = command.options.ownerOnly
