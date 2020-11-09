@@ -17,7 +17,6 @@ class TwitterChannelCommand extends NyaCommand
 {
   async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    debug( 'args to channel command:', args )
     return message.say( "Usage: !twitter channel list" )
   }
 }
@@ -36,8 +35,11 @@ class TwitterChannelDefaultCommand extends NyaCommand
 {
   async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    if ( args.channel )
+    if ( args.channel ) {
+      if ( typeof args.channel === 'string' )
+        return message.say( args.channel )
       return message.say( `got <#${args.channel.id}>` )
+    }
     if ( args.channel === null )
       return message.say( "Couldn't resolve channel" )
     return message.say( "Default channel is ..." )

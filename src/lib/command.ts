@@ -103,7 +103,6 @@ export abstract class NyaCommand
 
   async delegate( message: Commando.CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
   {
-    debug('options is', this.options)
     if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
       return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
 
@@ -131,7 +130,7 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: Commando.Co
     const spec = args[i]
     if ( !spec )
       return
-    debug('Now parsing arg', val, 'with spec', spec)
+
     let parsedValue
     if ( spec.type === 'string' )
       parsedValue = val
@@ -158,7 +157,7 @@ function textChannelFilter( search: string )
 }
 
 
-export function parseTextChannel( arg: string, message: Commando.CommandoMessage ): TextChannel | null
+export function parseTextChannel( arg: string, message: Commando.CommandoMessage ): TextChannel | string | null
 {
   if ( !arg || !message )
     return null
@@ -173,8 +172,9 @@ export function parseTextChannel( arg: string, message: Commando.CommandoMessage
     return null
 
   const channels = message.guild.channels.cache.filter( textChannelFilter( arg ) )
+  if ( !channels.size )
+    return null
   if ( channels.size === 1)
     return ( channels.first() as TextChannel )
-  // TODO: return more descriptive help if multiple channels have the same name
-  return null
+  return "Multiple channels with the same name found. Use #channel to discriminate."
 }
