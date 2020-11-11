@@ -5,6 +5,7 @@ import { SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
 import { Parser, ParsedStruct } from '../lib/parser'
 import { Backend } from '../lib/backend'
 
+
 export interface CommandCallbackType { (): boolean }
 
 export interface NyaInterface
@@ -30,17 +31,20 @@ export abstract class ModuleBase
     this.backend = this.host.getBackend()
   }
 
-  buildSubcommands( data: SubcommandSpec ) {
+  buildSubcommands( baseName: string, data: SubcommandSpec ) {
     const commands: SubcommandList = {}
     for ( const [name, command] of Object.entries( data ) ) {
-      const options: SubcommandInfo = {}
+      const options: SubcommandInfo = {
+        name: `${baseName} ${name}`
+      }
       if ( command.options ) {
         options.args = command.options.args
         options.description = command.options.description
         options.guildOnly = command.options.guildOnly
         options.ownerOnly = command.options.ownerOnly
       }
-      const subcommands = this.buildSubcommands( command.subcommands || {} )
+      const subcommands = this.buildSubcommands(
+        options.name as string, command.subcommands || {} )
       commands[name] = {
         command: new command.class( this, {...options, subcommands} ),
         options,

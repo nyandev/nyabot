@@ -1,5 +1,6 @@
 import fetch from 'node-fetch'
 import * as Commando from 'discord.js-commando'
+import { CommandoMessage } from 'discord.js-commando'
 import { Message, TextChannel } from 'discord.js'
 import { sprintf } from 'sprintf-js'
 
@@ -51,6 +52,7 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 {
   async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    console.log(this.options)
     return message.say( "default twitter channel cleared" )
   }
 }
@@ -72,8 +74,8 @@ class TwitterCommand extends NyaBaseCommand
     super( module,
     {
       name: 'twitter',
-      group: 'tw',
-      description: "Base for all Twitter commands.",
+      group: 'twitter2',
+      description: "Show this server\u2019s Twitter account(s).",
       guildOnly: true,
       subcommandSpec: {
         list: {
@@ -82,13 +84,14 @@ class TwitterCommand extends NyaBaseCommand
         channel: {
           class: TwitterChannelCommand,
           options: {
-            description: "!twitter channel"
+            dummy: true,
+            description: "See subcommands."
           },
           subcommands: {
             default: {
               class: TwitterChannelDefaultCommand,
               options: {
-                description: "!twitter channel default",
+                description: "Get or set the default channel for posting tweet notifications.",
                 args: [{
                   key: 'channel',
                   optional: true,
@@ -99,7 +102,7 @@ class TwitterCommand extends NyaBaseCommand
                 clear: {
                   class: TwitterChannelDefaultClearCommand,
                   options: {
-                    description: "!twitter channel default clear"
+                    description: "Clear the default channel for posting tweet notifications."
                   }
                 }
               }
@@ -107,7 +110,7 @@ class TwitterCommand extends NyaBaseCommand
             list: {
               class: TwitterChannelListCommand,
               options: {
-                description: "!twitter channel list"
+                description: "List channels that tweet notifications are being posted to."
               }
             }
           }
@@ -118,8 +121,24 @@ class TwitterCommand extends NyaBaseCommand
 
   async runDefault( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    // Run without extra arguments: respond with TwitterDefaultMessage
-    return message.say( "TwitterDefaultMessage" )
+    const backend = this.module.backend
+    let setting
+    try {
+      const guild = await backend.getGuildBySnowflake( message.guild.id )
+      setting = await this.module.backend.getSetting(
+        this.module.settingKeys.defaultMessage, guild.id )
+      if ( setting == null )
+        throw new Error( `getSetting(...) == null` )
+    } catch ( error ) {
+      log( `Couldn't fetch ${this.module.settingKeys.defaultMessage} setting, globally or for guild ${message.guild.id}:`, error )
+      return null
+    }
+
+    // An empty string is fine, but we can't send that
+    if ( !setting )
+      return null
+
+    return message.say( setting )
   }
 }
 
@@ -155,7 +174,7 @@ export class Twitter2Module extends ModuleBase
   {
     if ( this.config.enabled ) {
       return [
-        new Commando.CommandGroup( this.client, 'tw', 'tw', false )
+        new Commando.CommandGroup( this.client, 'twitter2', 'Twitter', false )
       ]
     } else {
       return []

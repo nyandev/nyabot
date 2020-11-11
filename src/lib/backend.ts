@@ -191,7 +191,10 @@ export class Backend
     if ( guild != null )
       guildSetting = await this.getGuildSetting( guild, settingKey )
     if ( guildSetting )
-      return guildSetting
+      // TODO: changed `guildSetting` to `guildSetting.value` here so that the actual value
+      //       (instead of a GuildSetting object) is always returned, to be consistent with
+      //       getGlobalSetting's return value. This will undoubtedly cause much breakage.
+      return guildSetting.value
     return await this.getGlobalSetting( settingKey )
   }
 

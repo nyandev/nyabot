@@ -16,9 +16,11 @@ export interface Arguments {
 }
 
 export interface SubcommandInfo {
+  name?: string
   description?: string
   guildOnly?: boolean
   ownerOnly?: boolean
+  dummy?: boolean
   args?: ArgumentSpec[]
 }
 
@@ -69,7 +71,7 @@ export abstract class NyaBaseCommand extends Commando.Command
       argsType: 'multiple'
     } )
     if ( options.subcommandSpec )
-      this.subcommands = this.module.buildSubcommands( options.subcommandSpec )
+      this.subcommands = this.module.buildSubcommands( options.name, options.subcommandSpec )
   }
 
   async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult<object>): Promise<Message | Message[] | null>

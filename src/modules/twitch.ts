@@ -606,11 +606,10 @@ export class TwitchModule extends ModuleBase
           let msg = undefined
           try {
             msg = await this.backend.getSetting( this.settingKeys.message, guildID )
-            if ( msg === undefined )
-              throw new Error( `getSetting returned falsy for setting ${this.settingKeys.message} and guild ${guildID}` )
-            msg = msg.value
+            if ( msg == null )
+              throw new Error( `getSetting(...) == null` )
           } catch ( err ) {
-            log( `Couldn't fetch ${this.settingKeys.message} for guild ${guildID}:`, err )
+            log( `Couldn't fetch ${this.settingKeys.message} globally nor for guild ${guildID}:`, err )
           }
           if ( !msg )
             msg = '';

@@ -416,7 +416,8 @@ export class TwitterModule extends ModuleBase
 
               const template = await this.backend.getSetting( this.settingKeys.message, guildID )
               if ( !template ) {
-                log( `Missing ${this.settingKeys.message}` )
+                if ( template == null )
+                  log( `Couldn't fetch ${this.settingKeys.message} setting, globally or for guild ${guildID}` )
                 return
               }
               const url = `https://twitter.com/${handle}/status/${tweet.id}`

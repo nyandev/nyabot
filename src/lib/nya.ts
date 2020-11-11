@@ -20,6 +20,7 @@ import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
 import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
+import { Twitter2Module } from '../modules/twitter2'
 import { XPModule } from '../modules/xp'
 
 import SettingsProvider = require( './settingsprovider' )
@@ -381,6 +382,7 @@ export class Nya implements NyaInterface
           GamesModule,
           TwitchModule,
           TwitterModule,
+          Twitter2Module,
           XPModule
       ] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
