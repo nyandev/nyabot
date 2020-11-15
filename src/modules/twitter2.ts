@@ -1,6 +1,5 @@
 import fetch from 'node-fetch'
-import * as Commando from 'discord.js-commando'
-import { CommandoMessage } from 'discord.js-commando'
+import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Message, TextChannel } from 'discord.js'
 import { sprintf } from 'sprintf-js'
 
@@ -16,17 +15,18 @@ function usersQuery( users: string[] ) {
 
 class TwitterChannelCommand extends NyaCommand
 {
-  async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( "Usage: !twitter channel list" )
+    return message.say( "This command should be used through its subcommands." )
   }
 }
 
 
 class TwitterListCommand extends NyaCommand
 {
-  async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    debug('ARGS', args)
     return message.say( "<list of followed accounts>" )
   }
 }
@@ -34,14 +34,15 @@ class TwitterListCommand extends NyaCommand
 
 class TwitterChannelDefaultCommand extends NyaCommand
 {
-  async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    if ( args.channel ) {
-      if ( typeof args.channel === 'string' )
-        return message.say( args.channel )
-      return message.say( `got <#${args.channel.id}>` )
+    const namedArgs = args[0]
+    if ( namedArgs.channel ) {
+      if ( typeof namedArgs.channel === 'string' )
+        return message.say( namedArgs.channel )
+      return message.say( `got <#${namedArgs.channel.id}>` )
     }
-    if ( args.channel === null )
+    if ( namedArgs.channel === null )
       return message.say( "Couldn't resolve channel" )
     return message.say( "Default channel is ..." )
   }
@@ -50,48 +51,68 @@ class TwitterChannelDefaultCommand extends NyaCommand
 
 class TwitterChannelDefaultClearCommand extends NyaCommand
 {
-  async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    console.log(this.options)
     return message.say( "default twitter channel cleared" )
+  }
+}
+
+
+class TwitterChannelGetCommand extends NyaCommand
+{
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return message.say( `Twitter notifications for @${args[0].account} are being posted to...` )
   }
 }
 
 
 class TwitterChannelListCommand extends NyaCommand
 {
-  async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     return message.say( "<list of channels>" )
   }
 }
 
 
+class TwitterChannelSetCommand extends NyaCommand
+{
+  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(args)}\`` )
+  }
+}
+
+
 class TwitterCommand extends NyaBaseCommand
 {
-  constructor( protected module: Twitter2Module )
+  constructor( public module: Twitter2Module )
   {
     super( module,
     {
       name: 'twitter',
       group: 'twitter2',
-      description: "Show this server\u2019s Twitter account(s).",
+      description: "Shows this server\u2019s Twitter account(s).",
       guildOnly: true,
       subcommandSpec: {
         list: {
-          class: TwitterListCommand
+          class: TwitterListCommand,
+          options: {
+            description: "Lists all Twitter accounts followed on this server."
+          }
         },
         channel: {
           class: TwitterChannelCommand,
           options: {
             dummy: true,
-            description: "See subcommands."
+            description: "Shows or modifies the channels used for Twitter notifications."
           },
           subcommands: {
             default: {
               class: TwitterChannelDefaultCommand,
               options: {
-                description: "Get or set the default channel for posting tweet notifications.",
+                description: "Shows or modifies the default channel for Twitter notifications.",
                 args: [{
                   key: 'channel',
                   optional: true,
@@ -102,15 +123,41 @@ class TwitterCommand extends NyaBaseCommand
                 clear: {
                   class: TwitterChannelDefaultClearCommand,
                   options: {
-                    description: "Clear the default channel for posting tweet notifications."
+                    description: "Clears the default channel for Twitter notifications."
                   }
                 }
+              }
+            },
+            get: {
+              class: TwitterChannelGetCommand,
+              options: {
+                description: "Shows which channel a Twitter account\u2019s notifications are being posted to.",
+                args: [{
+                  key: 'account',
+                  type: 'string'
+                }]
               }
             },
             list: {
               class: TwitterChannelListCommand,
               options: {
-                description: "List channels that tweet notifications are being posted to."
+                description: "Lists channels that Twitter notifications are being posted to."
+              }
+            },
+            set: {
+              class: TwitterChannelSetCommand,
+              options: {
+                description: "Sets a channel for posting notifications from a particular Twitter user.",
+                args: [
+                  {
+                    key: 'account',
+                    type: 'string'
+                  },
+                  {
+                    key: 'channel',
+                    type: 'text-channel'
+                  }
+                ]
               }
             }
           }
@@ -119,7 +166,7 @@ class TwitterCommand extends NyaBaseCommand
     } )
   }
 
-  async runDefault( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async runDefault( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     let setting
@@ -137,7 +184,6 @@ class TwitterCommand extends NyaBaseCommand
     // An empty string is fine, but we can't send that
     if ( !setting )
       return null
-
     return message.say( setting )
   }
 }
@@ -154,7 +200,7 @@ export class Twitter2Module extends ModuleBase
     subscriptions: 'TwitterSubscriptions'
   }
 
-  constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
+  constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
     this.config = this.backend._config.twitter
@@ -170,18 +216,18 @@ export class Twitter2Module extends ModuleBase
     return [this.settingKeys.defaultMessage, this.settingKeys.message]
   }
 
-  getGroups(): Commando.CommandGroup[]
+  getGroups(): CommandGroup[]
   {
     if ( this.config.enabled ) {
       return [
-        new Commando.CommandGroup( this.client, 'twitter2', 'Twitter', false )
+        new CommandGroup( this.client, 'twitter2', 'Twitter', false )
       ]
     } else {
       return []
     }
   }
 
-  getCommands(): Commando.Command[]
+  getCommands(): Command[]
   {
     if ( this.config.enabled ) {
       return [

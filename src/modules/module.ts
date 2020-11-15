@@ -31,7 +31,8 @@ export abstract class ModuleBase
     this.backend = this.host.getBackend()
   }
 
-  buildSubcommands( baseName: string, data: SubcommandSpec ) {
+  buildSubcommands( baseName: string, data: SubcommandSpec ): SubcommandList
+  {
     const commands: SubcommandList = {}
     for ( const [name, command] of Object.entries( data ) ) {
       const options: SubcommandInfo = {
@@ -40,11 +41,14 @@ export abstract class ModuleBase
       if ( command.options ) {
         options.args = command.options.args
         options.description = command.options.description
+        options.dummy = command.options.dummy
         options.guildOnly = command.options.guildOnly
         options.ownerOnly = command.options.ownerOnly
       }
       const subcommands = this.buildSubcommands(
         options.name as string, command.subcommands || {} )
+      if ( options.dummy && !Object.keys( subcommands ).length )
+        throw new Error( `Dummy command "${options.name}" must have at least one subcommand specified.` )
       commands[name] = {
         command: new command.class( this, {...options, subcommands} ),
         options,

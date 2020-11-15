@@ -1,7 +1,7 @@
-import * as Commando from 'discord.js-commando'
+import { ArgumentCollectorResult, Command, CommandoMessage } from 'discord.js-commando'
 import { Channel, Message, TextChannel } from 'discord.js'
 
-import { debug } from '../globals'
+import { debug, log } from '../globals'
 import { ModuleBase } from '../modules/module'
 
 
@@ -9,11 +9,14 @@ interface ArgumentSpec {
   key: string
   type: 'string' | 'number' | 'text-channel'
   optional?: boolean
+  catchAll?: boolean
 }
 
-export interface Arguments {
+interface NamedArguments {
   [key: string]: any
 }
+
+export type Arguments = [NamedArguments, any[]]
 
 export interface SubcommandInfo {
   name?: string
@@ -48,6 +51,7 @@ interface BaseCommandInfo {
   name: string
   group: string
   description: string
+  dummy?: boolean
   args?: ArgumentSpec[]
   guildOnly?: boolean
   ownerOnly?: boolean
@@ -55,11 +59,11 @@ interface BaseCommandInfo {
 }
 
 
-export abstract class NyaBaseCommand extends Commando.Command
+export abstract class NyaBaseCommand extends Command
 {
-  protected subcommands: SubcommandList = {}
+  subcommands: SubcommandList = {}
 
-  constructor( protected module: ModuleBase, protected options: BaseCommandInfo )
+  constructor( public module: ModuleBase, public options: BaseCommandInfo )
   {
     super( module.client, {
       name: options.name,
@@ -74,78 +78,168 @@ export abstract class NyaBaseCommand extends Commando.Command
       this.subcommands = this.module.buildSubcommands( options.name, options.subcommandSpec )
   }
 
-  async run( message: Commando.CommandoMessage, args: string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: string[], fromPattern: boolean, result?: ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
   {
     if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
       return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
 
-    let parsedArgs = {}
-    if ( this.options.args ) {
-      parsedArgs = parseArgs( args, this.options.args, message )
-      if ( !parsedArgs )
-        return message.say( "Usage: ...?" )
-    }
+    if ( this.options.dummy )
+      return message.say( await this.help( message ) )
+
+    const parsedArgs = parseArgs( args, this.options.args || [], message )
+    if ( !parsedArgs )
+      return message.say( await this.help( message ) )
+
     return this.runDefault( message, parsedArgs )
   }
 
-  abstract async runDefault( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  abstract async runDefault( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+
+  async help( message: CommandoMessage ): Promise<string>
+  {
+    return help( this, message )
+  }
 }
 
 
 export abstract class NyaCommand
 {
-  protected subcommands: SubcommandList = {}
+  subcommands: SubcommandList = {}
 
-  constructor( protected module: ModuleBase, protected options: SubcommandOptions = {} )
+  constructor( public module: ModuleBase, public options: SubcommandOptions = {} )
   {
     if ( options.subcommands )
       this.subcommands = options.subcommands
     delete this.options.subcommands
   }
 
-  async delegate( message: Commando.CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
+  async delegate( message: CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
   {
     if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
       return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
 
-    let parsedArgs = {}
-    if ( this.options.args ) {
-      parsedArgs = parseArgs( args, this.options.args, message )
-      if ( !parsedArgs )
-        return message.say( "Usage: ..." )
-    }
+    if ( this.options.dummy )
+      return message.say( await this.help( message ) )
+
+    const parsedArgs = parseArgs( args, this.options.args || [], message )
+    if ( !parsedArgs )
+      return message.say( await this.help( message ) )
     return this.run( message, parsedArgs )
   }
 
-  abstract async run( message: Commando.CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  abstract async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+
+  async help( message: CommandoMessage ): Promise<string>
+  {
+    return help( this, message )
+  }
 }
 
 
-function parseArgs( values: string[], args: ArgumentSpec[], message: Commando.CommandoMessage ): Arguments | false
+function usageArgs( args: ArgumentSpec[] ): string
+{
+  const argStrings = []
+  for ( const arg of args ) {
+    let s = arg.key
+    if ( arg.optional )
+      s = `[${s}]`
+    if ( arg.type.startsWith( '...' ) )
+      s = `${s}...`
+    argStrings.push( s )
+  }
+  return argStrings.join( ' ' )
+}
+
+
+async function help( self: NyaBaseCommand | NyaCommand, message: CommandoMessage ): Promise<string>
+{
+  const subcommands = Object.keys( self.subcommands )
+  const subcommandList = subcommands.join( ', ' )
+
+  let prefix
+  try {
+    if ( message.guild ) {
+      const guild = await self.module.backend.getGuildBySnowflake( message.guild.id )
+      prefix = await self.module.backend.getSetting( 'Prefix', guild.id )
+    } else {
+      prefix = await self.module.backend.getSetting( 'Prefix' )
+    }
+  } catch ( error ) {
+    if ( message.guild )
+      log( `Failed to fetch prefix for guild ${message.guild.id}:`, error )
+    else
+      log( `Failed to fetch global prefix` )
+    throw new Error( "Failed to fetch prefix" )
+  }
+
+  let reply = `**${prefix}${self.options.name}**`
+  if ( self.options.description )
+  reply += `: ${self.options.description}`
+
+  reply += '\n'
+  if ( self.options.dummy ) {
+    if ( subcommands.length )
+      reply += `This command is not usable by itself, but through one of its subcommands: ${subcommandList}`
+    else
+      throw new Error( `Command "${self.options.name}" is marked as dummy but has no specified subcommands.` )
+  } else {
+    const args = usageArgs( self.options.args || [] )
+    reply += `Usage: \`${prefix}${self.options.name}`
+    if ( args )
+      reply += ` ${args}`
+    reply += '`'
+    if ( subcommands.length )
+      reply += `\nSubcommands: ${subcommandList}`
+  }
+  return reply
+}
+
+
+function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Arguments | false
 {
   const requiredArgs = args.map( ( arg, i ) => [arg, i] ).filter( ([arg, i]) => !( arg as ArgumentSpec ).optional )
   if ( requiredArgs.length && requiredArgs.length <= requiredArgs[requiredArgs.length - 1][1] )
     throw new Error( "Required arguments must precede optional arguments" )
 
-  const parsed: Arguments = {}
+  if ( values.length < requiredArgs.length )
+    return false
+
+  const catchAll = args.length && args[args.length - 1].catchAll
+  const catchAllType = catchAll ? args[args.length - 1].type : 'string'
+  const rest: any[] = []
+  let error = false
+  const parsed: NamedArguments = {}
+
   values.forEach( ( val, i ) => {
     const spec = args[i]
-    if ( !spec )
+    if ( !spec && !catchAll ) {
+      error = true
       return
+    }
+    let type = spec.type
+    let addToRest = false
+    if ( !spec || spec.catchAll ) {
+      addToRest = true
+      type = catchAllType
+    }
 
     let parsedValue
-    if ( spec.type === 'string' )
+    if ( type === 'string' )
       parsedValue = val
-    else if ( spec.type === 'number' )
+    else if ( type === 'number' )
       parsedValue = parseFloat( val )
-    else if ( spec.type === 'text-channel' )
+    else if ( type === 'text-channel' )
       parsedValue = parseTextChannel( val, message )
     else
       throw new Error( `Unknown argument type: ${spec.type}` )
-
-    parsed[spec.key] = parsedValue
+    if ( addToRest )
+      rest.push( parsedValue )
+    else
+      parsed[spec.key] = parsedValue
   } )
-  return parsed
+  if ( error )
+    return false
+  return [parsed, rest]
 }
 
 
@@ -159,7 +253,7 @@ function textChannelFilter( search: string )
 }
 
 
-export function parseTextChannel( arg: string, message: Commando.CommandoMessage ): TextChannel | string | null
+export function parseTextChannel( arg: string, message: CommandoMessage ): TextChannel | string | null
 {
   if ( !arg || !message )
     return null
