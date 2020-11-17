@@ -15,7 +15,7 @@ function usersQuery( users: string[] ) {
 
 class TwitterChannelCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     return message.say( "This command should be used through its subcommands." )
   }
@@ -24,9 +24,8 @@ class TwitterChannelCommand extends NyaCommand
 
 class TwitterListCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    debug('ARGS', args)
     return message.say( "<list of followed accounts>" )
   }
 }
@@ -34,7 +33,7 @@ class TwitterListCommand extends NyaCommand
 
 class TwitterChannelDefaultCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const namedArgs = args[0]
     if ( namedArgs.channel ) {
@@ -51,7 +50,7 @@ class TwitterChannelDefaultCommand extends NyaCommand
 
 class TwitterChannelDefaultClearCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     return message.say( "default twitter channel cleared" )
   }
@@ -60,7 +59,7 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 
 class TwitterChannelGetCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     return message.say( `Twitter notifications for @${args[0].account} are being posted to...` )
   }
@@ -69,7 +68,7 @@ class TwitterChannelGetCommand extends NyaCommand
 
 class TwitterChannelListCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     return message.say( "<list of channels>" )
   }
@@ -78,9 +77,12 @@ class TwitterChannelListCommand extends NyaCommand
 
 class TwitterChannelSetCommand extends NyaCommand
 {
-  async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(args)}\`` )
+    const namedArgs = args[0]
+    if ( typeof namedArgs.channel === 'string' )
+      return message.say( namedArgs.channel )
+    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(namedArgs)}\`` )
   }
 }
 
@@ -166,7 +168,7 @@ class TwitterCommand extends NyaBaseCommand
     } )
   }
 
-  async runDefault( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     let setting

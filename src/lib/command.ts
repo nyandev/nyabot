@@ -58,8 +58,74 @@ interface BaseCommandInfo {
   subcommandSpec?: SubcommandSpec
 }
 
+type CommandConstructor = new ( ...args: any[] ) => any
 
-export abstract class NyaBaseCommand extends Command
+function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
+{
+  return class CommandMixin extends Base
+  {
+    async delegate( message: CommandoMessage, args: string[] )
+    {
+      if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
+        return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
+
+      const usageMsg = async () => message.say( await this.help( message ) )
+      if ( this.options.dummy )
+        return await usageMsg()
+
+      const parsedArgs = parseArgs( args, this.options.args || [], message )
+      if ( !parsedArgs )
+        return await usageMsg()
+      return this.execute( message, parsedArgs )
+    }
+
+    async help( message: CommandoMessage ): Promise<string>
+    {
+      const subcommands = Object.keys( this.subcommands )
+      const subcommandList = subcommands.join( ', ' )
+
+      let prefix
+      try {
+        if ( message.guild ) {
+          const guild = await this.module.backend.getGuildBySnowflake( message.guild.id )
+          prefix = await this.module.backend.getSetting( 'Prefix', guild.id )
+        } else {
+          prefix = await this.module.backend.getSetting( 'Prefix' )
+        }
+      } catch ( error ) {
+        if ( message.guild )
+          log( `Failed to fetch prefix for guild ${message.guild.id}:`, error )
+        else
+          log( `Failed to fetch global prefix:`, error )
+        throw new Error( "Failed to fetch prefix" )
+      }
+
+      let reply = `**${prefix}${this.options.name}**`
+      if ( this.options.description )
+        reply += `: ${this.options.description}`
+
+      reply += '\n'
+      if ( this.options.dummy ) {
+        if ( subcommands.length )
+          reply +=`This command is not usable by itself, but through one of its subcommands: ${subcommandList}`
+        else
+          throw new Error( `Command "${this.options.name}" is marked as dummy but has no specified subcommands.` )
+      } else {
+        const args = usageArgs( this.options.args || [] )
+        reply += `Usage: \`${prefix}${this.options.name}`
+        if ( args )
+          reply += ` ${args}`
+        reply += '`'
+        if ( subcommands.length )
+          reply += `\nSubcommands: ${subcommandList}`
+      }
+      return reply
+    }
+  }
+}
+
+
+export abstract class NyaBaseCommand extends CommandMixin(Command)
 {
   subcommands: SubcommandList = {}
 
@@ -80,59 +146,27 @@ export abstract class NyaBaseCommand extends Command
 
   async run( message: CommandoMessage, args: string[], fromPattern: boolean, result?: ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
   {
-    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
-      return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
-
-    if ( this.options.dummy )
-      return message.say( await this.help( message ) )
-
-    const parsedArgs = parseArgs( args, this.options.args || [], message )
-    if ( !parsedArgs )
-      return message.say( await this.help( message ) )
-
-    return this.runDefault( message, parsedArgs )
+    return this.delegate( message, args )
   }
 
-  abstract async runDefault( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-
-  async help( message: CommandoMessage ): Promise<string>
-  {
-    return help( this, message )
-  }
+  // I'd prefer to call this `run` but Commando uses that method name
+  abstract async execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
 }
 
 
-export abstract class NyaCommand
+export abstract class NyaCommand extends CommandMixin(Object)
 {
   subcommands: SubcommandList = {}
 
   constructor( public module: ModuleBase, public options: SubcommandOptions = {} )
   {
+    super()
     if ( options.subcommands )
       this.subcommands = options.subcommands
     delete this.options.subcommands
   }
 
-  async delegate( message: CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
-  {
-    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
-      return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
-
-    if ( this.options.dummy )
-      return message.say( await this.help( message ) )
-
-    const parsedArgs = parseArgs( args, this.options.args || [], message )
-    if ( !parsedArgs )
-      return message.say( await this.help( message ) )
-    return this.run( message, parsedArgs )
-  }
-
-  abstract async run( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-
-  async help( message: CommandoMessage ): Promise<string>
-  {
-    return help( this, message )
-  }
+  abstract async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
 }
 
 
@@ -140,7 +174,7 @@ function usageArgs( args: ArgumentSpec[] ): string
 {
   const argStrings = []
   for ( const arg of args ) {
-    let s = arg.key
+    let s = `<${arg.key}>`
     if ( arg.optional )
       s = `[${s}]`
     if ( arg.type.startsWith( '...' ) )
@@ -150,7 +184,7 @@ function usageArgs( args: ArgumentSpec[] ): string
   return argStrings.join( ' ' )
 }
 
-
+/*
 async function help( self: NyaBaseCommand | NyaCommand, message: CommandoMessage ): Promise<string>
 {
   const subcommands = Object.keys( self.subcommands )
@@ -193,7 +227,7 @@ async function help( self: NyaBaseCommand | NyaCommand, message: CommandoMessage
   }
   return reply
 }
-
+*/
 
 function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Arguments | false
 {
