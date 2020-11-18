@@ -452,7 +452,7 @@ export class Twitter2Module extends ModuleBase
       const author = getTwitterUserByID( tweet.author_id, users )
       if ( !author )
         continue
-      const handle = author.username
+      const handle = author.username.toLowerCase()
       const date = new Date( tweet.created_at )
       if ( !newestTweets.has( handle ) || newestTweets.get( handle ) < date )
         newestTweets.set( handle, date )
@@ -518,7 +518,7 @@ export class Twitter2Module extends ModuleBase
           continue
         }
 
-        const url = `https://twitter.com/${handle}/status/${tweet.id}`
+        const url = `https://twitter.com/${author.username}/status/${tweet.id}`
         const message = sprintf( template, { url, username: author.name } )
 
         try {
