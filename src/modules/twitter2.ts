@@ -238,6 +238,7 @@ export class Twitter2Module extends ModuleBase
     defaultChannel: 'TwitterDefaultChannel',
     defaultMessage: 'TwitterDefaultMessage',
     message: 'TwitterMessage',
+    retweetMessage: 'TwitterRetweetMessage'
   }
   subscriptions: Map<string, Map<number, TwitterSubscriptionOptions>> = new Map()
 
@@ -263,7 +264,11 @@ export class Twitter2Module extends ModuleBase
   }
 
   getGlobalSettingKeys() {
-    return [this.settingKeys.defaultMessage, this.settingKeys.message]
+    return [
+      this.settingKeys.defaultMessage,
+      this.settingKeys.message,
+      this.settingKeys.retweetMessage
+    ]
   }
 
   getGroups(): CommandGroup[]
@@ -502,13 +507,14 @@ export class Twitter2Module extends ModuleBase
           continue
         }
 
+        const messageSetting = retweet ? this.settingKeys.retweetMessage : this.settingKeys.message
         let template
         try {
-          template = await this.backend.getSetting( this.settingKeys.message, guildID )
+          template = await this.backend.getSetting( messageSetting, guildID )
           if ( template == null )
-            throw new Error( `getSetting(${this.settingKeys.message}, ${guildID}) returned ${template}` )
+            throw new Error( `getSetting(${messageSetting}, ${guildID}) returned ${template}` )
         } catch ( error ) {
-          log( `Couldn't fetch ${this.settingKeys.message} setting for guild ${guildID} or globally:`, error )
+          log( `Couldn't fetch ${messageSetting} setting for guild ${guildID} or globally:`, error )
           continue
         }
 
