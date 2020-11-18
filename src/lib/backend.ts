@@ -130,7 +130,6 @@ export class Backend
 
   async getGlobalSetting( settingKey: string ): Promise<any>
   {
-    debug( this._settingCache )
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
       return value
@@ -165,7 +164,6 @@ export class Backend
 
   async setGlobalSetting( settingKey: string, settingValue: any )
   {
-    debug(this._settingCache)
     const cond: any = { guildID: null, key: settingKey }
     const vals: any = {
       guildID: null,
@@ -232,6 +230,12 @@ export class Backend
         owners.push( row.snowflake )
     })
     return owners
+  }
+
+  async getChannelByID( id: number )
+  {
+    const cond = { id: id }
+    return this._models.Channel.findOne( { where: cond } )
   }
 
   async getGuildByID( gid: number )

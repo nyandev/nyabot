@@ -381,7 +381,7 @@ export class Nya implements NyaInterface
           CurrencyModule,
           GamesModule,
           TwitchModule,
-          TwitterModule,
+          //TwitterModule,
           Twitter2Module,
           XPModule
       ] )

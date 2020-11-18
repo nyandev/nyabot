@@ -253,7 +253,7 @@ class TwitterFollowCommand extends Commando.Command
       return host.respondTo( message, 'twitterfollow_nonexistent', username )
 
     subs.push( username )
-    if ( usersQuery( subs ).length > backend._config.twitter.queryLengthMax )
+    if ( usersQuery( subs ).length > backend._config.twitter.maxQueryLength )
       return host.respondTo( message, 'twitterfollow_query_too_long', username )
 
     await backend.setGuildSetting( guild.id, settingKey, JSON.stringify( subs ) )

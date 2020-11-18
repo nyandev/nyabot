@@ -29,9 +29,9 @@
       "enabled": true,
       "bearerToken": "<your token here>",
       "interval": 60,
-      // You shouldn't change maxResults or queryLengthMax unless Twitter changes the corresponding value
+      // You shouldn't change maxQueryLength or maxResults unless Twitter changes the corresponding value
+      "maxQueryLength": 512,
       "maxResults": 100,
-      "queryLengthMax": 512
     }
   },
   "bot": {
