@@ -457,7 +457,7 @@ export class Twitter2Module extends ModuleBase
       if ( !newestTweets.has( handle ) || newestTweets.get( handle ) < date )
         newestTweets.set( handle, date )
 
-      let newestSeen = new Date( 0 )
+      let newestSeen = new Date()
       try {
         const dateString = await redis.get( redisKey( handle ) )
         if ( dateString ) {
