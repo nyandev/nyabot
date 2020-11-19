@@ -8,6 +8,18 @@ import { Arguments, NyaBaseCommand, NyaCommand, parseTextChannel, SubcommandInfo
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
+function joinStrings( strings: string[] ): string
+{
+  const parts = []
+  const firstPart = strings.slice( 0, -2 ).join( ', ' )
+  const lastPart = strings.slice( -2 ).join( ' and ' )
+  if ( firstPart )
+    parts.push( firstPart )
+  parts.push( lastPart )
+  return parts.join( ', ' )
+}
+
+
 function queryString( accounts: string[] ) {
   return accounts.map( ( account: string ) => `from:${account}` ).join(' OR ')
 }
@@ -89,7 +101,7 @@ class TwitterListCommand extends NyaCommand
       } else {
         channelText = defaultChannelText
       }
-      lines.push( `**@${account}**: Posting ${types.join( ', ' )} ${channelText}` )
+      lines.push( `**@${account}**: Posting ${joinStrings( types )} ${channelText}` )
     }
     return message.say( lines.join( '\n' ) )
   }
