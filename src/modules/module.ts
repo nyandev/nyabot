@@ -21,6 +21,7 @@ export interface NyaInterface
 export abstract class ModuleBase
 {
   readonly backend: Backend
+  readonly settingKeys: Record<string, string>
 
   constructor(
     protected id: number,

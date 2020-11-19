@@ -8,8 +8,8 @@ import { Arguments, NyaBaseCommand, NyaCommand, parseTextChannel, SubcommandInfo
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
-function usersQuery( users: string[] ) {
-  return users.map( (username: string) => `from:${username}` ).join(' OR ')
+function queryString( accounts: string[] ) {
+  return accounts.map( ( account: string ) => `from:${account}` ).join(' OR ')
 }
 
 
@@ -17,7 +17,7 @@ class TwitterChannelCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( "This command should be used through its subcommands." )
+    return null // This command should be used through its subcommands.
   }
 }
 
@@ -26,7 +26,72 @@ class TwitterListCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( "<list of followed accounts>" )
+    const backend = this.module.backend
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+      if ( !guild )
+        throw new Error( `getGuildBySnowflake returned ${guild}` )
+    } catch ( error ) {
+      log( `Couldn't fetch guild ${message.guild.id}:`, error )
+      return null
+    }
+
+    let subscriptions
+    try {
+      const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.subscriptions )
+      subscriptions = JSON.parse( setting.value || '{}' )
+    } catch ( error ) {
+      log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
+      return null
+    }
+    const sortedSubscriptions: [string, TwitterSubscriptionOptions][] = Object.entries( subscriptions )
+    sortedSubscriptions.sort( ( a, b ) => {
+      if ( a[0].toLowerCase() < b[0].toLowerCase() ) return -1
+      if ( a[0].toLowerCase() > b[0].toLowerCase() ) return 1
+      return 0
+    } )
+
+    let defaultChannel = null
+    try {
+      const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.defaultChannel )
+      if ( setting && setting.value != null ) {
+        const channel = await backend.getChannelByID( setting.value )
+        if ( channel )
+          defaultChannel = channel.snowflake
+      }
+    } catch ( _ ) {
+      // Ignore
+    }
+    const defaultChannelText = defaultChannel
+      ? `to <#${defaultChannel}> (default channel)`
+      : "(but no channel or default channel has been set)"
+
+    const lines = []
+    for ( const [account, options] of sortedSubscriptions ) {
+      const types = ['tweets']
+      if ( options.retweets )
+        types.push( 'retweets' )
+      if ( options.quoteTweets )
+        types.push( 'quote tweets' )
+
+      let channelText
+      if ( options.channel != null ) {
+        try {
+          const channel = await backend.getChannelByID( options.channel )
+          if ( !channel )
+            throw new Error( `getChannelByID returned ${channel}` )
+          channelText = `to <#${channel.snowflake}>`
+        } catch ( error ) {
+          log( `Couldn't fetch channel ${options.channel}:`, error )
+          channelText = "but the channel setting is invalid"
+        }
+      } else {
+        channelText = defaultChannelText
+      }
+      lines.push( `**@${account}**: Posting ${types.join( ', ' )} ${channelText}` )
+    }
+    return message.say( lines.join( '\n' ) )
   }
 }
 
@@ -201,6 +266,7 @@ interface IntervalStatus {
 interface TwitterSubscriptionOptions {
   channel?: number
   retweets?: boolean
+  quoteTweets?: boolean
 }
 
 interface TwitterConfigDisabled {
@@ -234,11 +300,11 @@ export class Twitter2Module extends ModuleBase
   config: TwitterConfig
   intervals: IntervalStatus[] = []
   settingKeys = {
-    channels: 'TwitterChannels',
     defaultChannel: 'TwitterDefaultChannel',
     defaultMessage: 'TwitterDefaultMessage',
     message: 'TwitterMessage',
-    retweetMessage: 'TwitterRetweetMessage'
+    retweetMessage: 'TwitterRetweetMessage',
+    subscriptions: 'TwitterSubscriptions'
   }
   subscriptions: Map<string, Map<number, TwitterSubscriptionOptions>> = new Map()
 
@@ -314,17 +380,17 @@ export class Twitter2Module extends ModuleBase
     const guilds = await this.backend._models.Guild.findAll( { attributes: ['id'] } )
     for ( const guild of guilds ) {
       const redisKey = `latesttweet_${guild.id}`
-      const channelsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.channels )
-      if ( !channelsSetting || !channelsSetting.value )
+      const subscriptionsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
+      if ( !subscriptionsSetting || !subscriptionsSetting.value )
         continue
 
       let channels
       try {
-        channels = JSON.parse( channelsSetting.value )
+        channels = JSON.parse( subscriptionsSetting.value )
         if ( typeof channels !== 'object' )
-          throw new Error( `The ${this.settingKeys.channels} setting for guild ${guild.id} was not a JSON object.` )
+          throw new Error( `The ${this.settingKeys.subscriptions} setting for guild ${guild.id} was not a JSON object.` )
       } catch ( error ) {
-        log( `Couldn't parse ${this.settingKeys.channels} setting for guild ${guild.id}:`, error )
+        log( `Couldn't parse ${this.settingKeys.subscriptions} setting for guild ${guild.id}:`, error )
         continue
       }
 
@@ -336,11 +402,6 @@ export class Twitter2Module extends ModuleBase
         this.subscriptions.set( account, guildOptions )
       }
     }
-  }
-
-  queryString( accounts: string[] ): string
-  {
-    return accounts.map( ( account: string ) => `from:${account}` ).join( ' OR ' )
   }
 
   refreshIntervals(): void
@@ -367,7 +428,7 @@ export class Twitter2Module extends ModuleBase
           id: null,
           cleared: false,
           accounts: newAccounts,
-          queryLength: this.queryString( newAccounts ).length
+          queryLength: queryString( newAccounts ).length
         }
         const index = this.intervals.push( newStatus ) - 1
         newStatus.id = setInterval( () => {
@@ -410,7 +471,7 @@ export class Twitter2Module extends ModuleBase
         Authorization: `Bearer ${this.config.bearerToken}`
       }
     }
-    const query = this.queryString( interval.accounts )
+    const query = queryString( interval.accounts )
     const redisKey = (account: string) => `latesttweet:${account}`
 
     let recentTweets
