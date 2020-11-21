@@ -549,8 +549,12 @@ export class Twitter2Module extends ModuleBase
         continue
 
       for ( const [guildID, options] of subscriptions ) {
-        const retweet = tweet.referenced_tweets && tweet.referenced_tweets.some( (ref: any) => ref.type === 'retweeted' )
+        const retweet = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'retweeted' )
         if ( retweet && !options.retweets )
+          continue
+
+        const quoteTweet = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'quoted' )
+        if ( quoteTweet && !options.quoteTweets )
           continue
 
         let channelID = options.channel
