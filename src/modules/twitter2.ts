@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.
 import { Message, TextChannel } from 'discord.js'
 import { sprintf } from 'sprintf-js'
 
-import { debug, log } from '../globals'
+import { apos, debug, log } from '../globals'
 import { Arguments, NyaBaseCommand, NyaCommand, parseTextChannel, SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
@@ -118,14 +118,59 @@ class TwitterChannelDefaultCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    const settingKey = this.module.settingKeys.defaultChannel
+    const backend = this.module.backend
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+    } catch ( error ) {
+      log( `Couldn't fetch guild ${message.guild.id}:`, error )
+      return message.say( "Unexpected error." )
+    }
+
+    let oldChannel = null
+    try {
+      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
+      if ( channelSetting && channelSetting.value ) {
+        oldChannel = await backend.getChannelByID( channelSetting.value )
+        if ( !oldChannel )
+          throw new Error( `Couldn't fetch channel ${channelSetting.value}` )
+      }
+    } catch ( error ) {
+      log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
+    }
+    const oldChannelString = oldChannel ? `<#${oldChannel.snowflake}>` : "unset"
+    const errorMsg = `Unexpected error. Default Twitter channel remains ${oldChannelString}.`
+
     if ( args.channel ) {
+      // If args.channel is a string, it contains an error message
       if ( typeof args.channel === 'string' )
         return message.say( args.channel )
-      return message.say( `got <#${args.channel.id}>` )
+
+      let channel
+      try {
+        channel = await backend.getChannelBySnowflake( args.channel.id )
+        if ( !channel )
+          throw new Error( `getChannelBySnowflake returned ${channel}` )
+      } catch ( error ) {
+        log( `Couldn't fetch channel ${args.channel.id}:`, error )
+        return message.say( errorMsg )
+      }
+
+      try {
+        // TODO: check return value
+        await backend.setGuildSetting( guild.id, settingKey, channel.id )
+      } catch ( error ) {
+        log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
+        return message.say( errorMsg )
+      }
+      return message.say( `Default channel for Twitter notifications has been set to <#${channel.snowflake}> (was previously ${oldChannelString}).` )
     }
     if ( args.channel === null )
-      return message.say( "Couldn't resolve channel" )
-    return message.say( "Default channel is ..." )
+      return message.say( `Couldn${apos}t find a channel with that name.` )
+
+    const channelString = oldChannel ? `is <#${oldChannel.snowflake}>` : "has not been set"
+    return message.say( `Default channel for Twitter notifications ${channelString}.` )
   }
 }
 
@@ -134,7 +179,36 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( "default twitter channel cleared" )
+    const settingKey = this.module.settingKeys.defaultChannel
+    const backend = this.module.backend
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+    } catch ( error ) {
+      log( `Couldn't fetch guild ${message.guild.id}:`, error )
+      return null
+    }
+
+    let oldChannel = "unset"
+    try {
+      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
+      if ( channelSetting && channelSetting.value ) {
+        const channel = await backend.getChannelByID( channelSetting.value )
+        if ( channel )
+          oldChannel = `<#${channel.snowflake}>`
+      }
+    } catch ( error ) {
+      log( `Couldn't fetch default Twitter channel of guild ${guild.id}:`, error )
+    }
+
+    try {
+      // TODO: check return value
+      await backend.removeGuildSetting( guild.id, settingKey )
+    } catch ( error ) {
+      log( `Failed to remove ${settingKey} setting of guild ${guild.id}:`, error )
+      return message.say( `Command failed; default Twitter channel remains ${oldChannel}.` )
+    }
+    return message.say( `Default Twitter channel cleared (was ${oldChannel}).` )
   }
 }
 
@@ -491,12 +565,13 @@ export class Twitter2Module extends ModuleBase
     const redisKey = ( account: string ) => `latesttweet:${account}`
 
     let startTime = null
+    const now = new Date()
     if ( interval.lastCheck ) {
       // start_time cannot be more than a week old
-      if ( ( new Date() ).getTime() - interval.lastCheck.getTime() < 7 * 24 * 60 * 60 * 1000 )
+      if ( now.getTime() - interval.lastCheck.getTime() < 7 * 24 * 60 * 60 * 1000 )
         startTime = interval.lastCheck
     }
-    interval.lastCheck = new Date()
+    interval.lastCheck = now
 
     const query = queryString( interval.accounts )
     let recentsURL = `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}`
@@ -507,7 +582,6 @@ export class Twitter2Module extends ModuleBase
     try {
       const response = await fetch( recentsURL, fetchOptions )
       recentTweets = await response.json()
-      debug('RECENT TWEETS', recentTweets)
       if ( !recentTweets.meta )
         throw new Error( "Response for recent tweet lookup has no `meta` field." )
     } catch ( error ) {

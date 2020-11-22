@@ -1,6 +1,8 @@
 import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
+import { sprintf } from 'sprintf-js'
+
+
+export const apos = '\u2019'
 
 export function logSprintf( from: string, ...args: any[] ): void
 {

@@ -234,25 +234,31 @@ export class Backend
 
   async getChannelByID( id: number )
   {
-    const cond = { id: id }
+    const cond = { id }
     return this._models.Channel.findOne( { where: cond } )
   }
 
-  async getGuildByID( gid: number )
+  async getChannelBySnowflake( snowflake: string )
   {
-    const cond = { id: gid }
+    const cond = { snowflake }
+    return this._models.Channel.findOne( { where: cond } )
+  }
+
+  async getGuildByID( id: number )
+  {
+    const cond = { id }
     return this._models.Guild.findOne( { where: cond } )
   }
 
-  async getGuildBySnowflake( flake: string )
+  async getGuildBySnowflake( snowflake: string )
   {
-    let cond = { snowflake: flake }
+    let cond = { snowflake }
     return this._models.Guild.findOne({ where: cond })
   }
 
-  async getSnowflakeByGuildID( gid: number )
+  async getSnowflakeByGuildID( id: number )
   {
-    let cond = { id: gid }
+    let cond = { id }
     const guild = await this._models.Guild.findOne({ where: cond })
     return ( guild ? guild.snowflake : undefined )
   }
