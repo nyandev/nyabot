@@ -71,6 +71,7 @@
   "twitter_channel_default_error_previously_unset": "Unexpected error. The default Twitter channel remains unset.",
   "twitter_channel_default_get": "The default channel for Twitter notifications is <#%s>.",
   "twitter_channel_default_get_unset": "A default channel for Twitter notifications has not been set.",
+  "twitter_channel_default_set_no_change": "The default channel for Twitter notifications was already <#%s>.",
   "twitter_channel_default_set_previously_set": "The default channel for Twitter notifications has been set to <#%s> (was previously <#%s>).",
   "twitter_channel_default_set_previously_unset": "The default channel for Twitter notifications has been set to <#%s> (was previously unset).",
   "twitter_channel_get": "Tweets from @%s are being posted to <#%s>.",

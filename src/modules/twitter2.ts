@@ -177,8 +177,11 @@ class TwitterChannelDefaultCommand extends NyaCommand
         log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
         return errorMessage()
       }
-      if ( oldChannel )
+      if ( oldChannel ) {
+        if ( channel.snowflake === oldChannel.snowflake )
+          return host.respondTo( message, 'twitter_channel_default_set_no_change', channel.snowflake )
         return host.respondTo( message, 'twitter_channel_default_set_previously_set', channel.snowflake, oldChannel.snowflake )
+      }
       return host.respondTo( message, 'twitter_channel_default_set_previously_unset', channel.snowflake )
     }
     if ( args.channel === null )
