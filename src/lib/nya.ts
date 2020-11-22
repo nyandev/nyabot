@@ -249,7 +249,7 @@ export class Nya implements NyaInterface
     else if ( replycode === 'config_badkey' )
       return this._talk.sendPrintfResponse( message, 'Unknown global setting. Available keys are: %s', [args[0]].join( ', ' ) )
     else if ( replycode === '8ball' )
-      return this._talk.sendPlainResponse( message,  args[0] )
+      return this._talk.sendPlainResponse( message, args[0] )
     else if ( replycode === 'hangman_start' ) {
       if ( !args[1] )
         return this._talk.sendPrintfResponse( message, "```%s```", ...args )

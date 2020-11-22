@@ -262,5 +262,5 @@ export function parseTextChannel( arg: string, message: CommandoMessage ): TextC
     return null
   if ( channels.size === 1)
     return ( channels.first() as TextChannel )
-  return "Multiple channels with the same name found. Use #channel to discriminate."
+  return 'multiple_channels_same_name'
 }

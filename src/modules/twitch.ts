@@ -48,7 +48,7 @@ class TwitchChannelCommand extends Commando.Command
         setting = await backend.getGuildSetting( guild.id, settingKey )
       } catch ( error ) {
         log( `Failed to fetch Twitch channel setting for guild ${guild.id}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       if ( !setting || !setting.value )
         return host.respondTo( message, 'twitchchannel_unset' )
@@ -58,7 +58,7 @@ class TwitchChannelCommand extends Commando.Command
         channel = await client.channels.fetch( setting.value )
       } catch ( error ) { 
         log( `Failed to fetch channel ${setting.value}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       if ( !channel || channel.type !== 'text' )
         return host.respondTo( message, 'twitchchannel_unset' )
@@ -74,7 +74,7 @@ class TwitchChannelCommand extends Commando.Command
       await backend.setGuildSetting( guild.id, settingKey, channel.id )
     } catch ( error ) {
       log( `Failed to set Twitch channel to ${channel.id} in guild ${guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
     this.module.channels.set( guild.id, channel.id )
     return host.respondTo( message, 'twitchchannel_set', channel.id )
@@ -123,7 +123,7 @@ class TwitchImageCommand extends Commando.Command
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     let setting
@@ -148,7 +148,7 @@ class TwitchImageCommand extends Commando.Command
           await backend.setGuildSetting( guild.id, settingKey, jsonString )
         } catch ( error ) {
           log( `Failed to set ${settingKey} for guild ${guild.id} to ${jsonString}:`, error )
-          return host.respondTo( message, 'unexpected' )
+          return host.respondTo( message, 'unexpected_error' )
         }
       }
     } else {
@@ -178,7 +178,7 @@ class TwitchImageCommand extends Commando.Command
         await backend.setGuildSetting( guild.id, settingKey, jsonString )
       } catch ( error ) {
         log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       return host.respondTo( message, 'twitchimage_clear', args.username )
     } else {
@@ -188,7 +188,7 @@ class TwitchImageCommand extends Commando.Command
         await backend.setGuildSetting( guild.id, settingKey, jsonString )
       } catch ( error ) {
         log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       return host.respondTo( message, 'twitchimage_set', args.username, args.url )
     }
@@ -230,7 +230,7 @@ class TwitchFollowCommand extends Commando.Command
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     let setting
@@ -255,7 +255,7 @@ class TwitchFollowCommand extends Commando.Command
           await backend.setGuildSetting( guild.id, settingKey, jsonString )
         } catch ( error ) {
           log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-          return host.respondTo( message, 'unexpected' )
+          return host.respondTo( message, 'unexpected_error' )
         }
       }
     } else {
@@ -289,7 +289,7 @@ class TwitchFollowCommand extends Commando.Command
       await backend.setGuildSetting( guild.id, settingKey, jsonString )
     } catch ( error ) {
       log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     if ( guilds )
@@ -332,7 +332,7 @@ null>
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     let setting
@@ -360,7 +360,7 @@ null>
         await backend.setGuildSetting( guild.id, settingKey, jsonString )
       } catch ( error ) {
         log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
     }
 
@@ -376,7 +376,7 @@ null>
           await this.module.unsubscribe( username )
         } catch ( error ) {
           log( `Failed to unsubscribe from Twitch user ${username}:`, error )
-          return host.respondTo( message, 'unexpected' )
+          return host.respondTo( message, 'unexpected_error' )
         }
       }
     }
@@ -387,7 +387,7 @@ null>
       await backend.setGuildSetting( guild.id, settingKey, jsonString )
     } catch ( error ) {
       log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${jsonString}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
     this.module.guildsFollowing.set( username, newGuilds )
     return host.respondTo( message, 'twitchunfollow_success', username )

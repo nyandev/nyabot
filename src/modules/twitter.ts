@@ -46,7 +46,7 @@ class TwitterChannelCommand extends Commando.Command
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     if ( !args.channel ) {
@@ -55,7 +55,7 @@ class TwitterChannelCommand extends Commando.Command
         setting = await backend.getGuildSetting( guild.id, settingKey )
       } catch ( error ) {
         log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       if ( !setting || !setting.value )
         return host.respondTo( message, 'twitterchannel_unset' )
@@ -65,7 +65,7 @@ class TwitterChannelCommand extends Commando.Command
         channel = await client.channels.fetch( setting.value )
       } catch ( error ) {
         log( `Failed to fetch channel ${setting.value}:`, error )
-        return host.respondTo( message, 'unexpected' )
+        return host.respondTo( message, 'unexpected_error' )
       }
       if ( !channel || channel.type !== 'text' )
         return host.respondTo( message, 'twitterchannel_unset' )
@@ -82,7 +82,7 @@ class TwitterChannelCommand extends Commando.Command
       await backend.setGuildSetting( guild.id, settingKey, channel.id )
     } catch ( error ) {
       log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
     return host.respondTo( message, 'twitterchannel_set', channel.id )
   }
@@ -127,7 +127,7 @@ class TwitterChannelExceptionCommand extends Commando.Command
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}:`, error )
-      return host.respondTo( message, 'unexpected' )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
     let username = args.username

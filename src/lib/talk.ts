@@ -11,11 +11,8 @@ import { Nya } from './nya'
 // That way changing, reformatting or maybe even translating later is easier.
 export class TalkModule
 {
-  _parent: Nya
-
-  constructor( parent: Nya )
+  constructor( private host: Nya )
   {
-    this._parent = parent
   }
 
   async sendXPResponse( message: Commando.CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null>

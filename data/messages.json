@@ -19,6 +19,7 @@
   "slot_no_win": "%s Better luck next time!",
   "link": "TODO",
   "link_fail": "Sorry! Couldn\u2019t fetch that.",
+  "channel_not_found_by_name": "Couldn\u2019t find a channel with that name.",
   "club_create_success": "Club created!",
   "club_create_exists": "A club with that name already exists.",
   "club_create_fail": "Failed to create the club.",
@@ -28,6 +29,7 @@
   "club_already_in_club": "You must leave your current club first.",
   "club_leave_not_in_club": "You are not in a club!",
   "club_leave_success": "%s left %s.",
+  "multiple_channels_same_name": "Multiple channels with the same name found. Use a #channel mention to discriminate.",
   "speedtyping_start": "Speed typing contest started! Time limit is %d seconds. The text is\n%s",
   "speedtyping_exists": "A speed typing contest is already running on this channel.",
   "twitchchannel_fail": "Failed to change the channel for Twitch notifications.",
@@ -60,5 +62,21 @@
   "twitterfollow_success": "Now following @%s.",
   "twitterunfollow_not_following": "@%s wasn\u2019t being followed.",
   "twitterunfollow_success": "Stopped following @%s.",
-  "unexpected": "Unexpected failure."
+
+  "twitter_channel_default_clear_error_previously_set": "Unexpected error. The default Twitter channel remains <#%s>.",
+  "twitter_channel_default_clear_error_previously_unset": "Unexpected error (but the default Twitter channel was already unset).",
+  "twitter_channel_default_clear_previously_set": "The default Twitter channel has been cleared (was previously <#%s>).",
+  "twitter_channel_default_clear_previously_unset": "The default Twitter channel remains unset.",
+  "twitter_channel_default_error_previously_set": "Unexpected error. The default Twitter channel remains <#%s>.",
+  "twitter_channel_default_error_previously_unset": "Unexpected error. The default Twitter channel remains unset.",
+  "twitter_channel_default_get": "The default channel for Twitter notifications is <#%s>.",
+  "twitter_channel_default_get_unset": "A default channel for Twitter notifications has not been set.",
+  "twitter_channel_default_set_previously_set": "The default channel for Twitter notifications has been set to <#%s> (was previously <#%s>).",
+  "twitter_channel_default_set_previously_unset": "The default channel for Twitter notifications has been set to <#%s> (was previously unset).",
+  "twitter_channel_get": "Tweets from @%s are being posted to <#%s>.",
+  "twitter_channel_set": "Tweets from @%s will be posted to <#%s>.",
+  "twitter_list": "%s",
+  "twitter_list_empty": "Not following any Twitter accounts.",
+
+  "unexpected_error": "Unexpected error."
 }

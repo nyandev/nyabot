@@ -14,6 +14,7 @@ function isValidDate( date: Date ): boolean
 }
 
 
+// TODO: not i18n-friendly
 function joinStrings( strings: string[] ): string
 {
   const parts = []
@@ -44,8 +45,8 @@ class TwitterListCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    const errorMsg = "Unexpected error."
     const backend = this.module.backend
+    const host = this.module.host
     let guild
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
@@ -53,7 +54,7 @@ class TwitterListCommand extends NyaCommand
         throw new Error( `getGuildBySnowflake returned ${guild}` )
     } catch ( error ) {
       log( `Couldn't fetch guild ${message.guild.id}:`, error )
-      return message.say( errorMsg )
+      host.respondTo( message, 'unexpected_error' )
     }
 
     let subscriptions
@@ -62,7 +63,7 @@ class TwitterListCommand extends NyaCommand
       subscriptions = JSON.parse( setting.value || '{}' )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
-      return message.say( errorMsg )
+      return host.respondTo( message, 'unexpected_error' )
     }
     const sortedSubscriptions: [string, TwitterSubscriptionOptions][] = Object.entries( subscriptions )
     sortedSubscriptions.sort( ( a, b ) => {
@@ -86,6 +87,7 @@ class TwitterListCommand extends NyaCommand
       ? `to <#${defaultChannel}> (default channel)`
       : "(but no channel or default channel has been set)"
 
+    // TODO: Figure out how to i18n the message
     const lines = []
     for ( const [account, options] of sortedSubscriptions ) {
       const types = ['tweets']
@@ -112,8 +114,8 @@ class TwitterListCommand extends NyaCommand
     }
 
     if ( lines.length === 0 )
-      return message.say( "Not following any Twitter accounts." )
-    return message.say( lines.join( '\n' ) )
+      return host.respondTo( message, 'twitter_list_empty' )
+    return host.respondTo( message, lines.join( '\n' ) )
   }
 }
 
@@ -122,17 +124,20 @@ class TwitterChannelDefaultCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    const settingKey = this.module.settingKeys.defaultChannel
     const backend = this.module.backend
+    const host = this.module.host
+    const settingKey = this.module.settingKeys.defaultChannel
+
     let guild
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Couldn't fetch guild ${message.guild.id}:`, error )
-      return message.say( "Unexpected error." )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
-    let oldChannel = null
+    // TODO: how to specify a DB model type
+    let oldChannel: any = null
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
       if ( channelSetting && channelSetting.value ) {
@@ -143,13 +148,17 @@ class TwitterChannelDefaultCommand extends NyaCommand
     } catch ( error ) {
       log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
     }
-    const oldChannelString = oldChannel ? `<#${oldChannel.snowflake}>` : "unset"
-    const errorMsg = `Unexpected error. Default Twitter channel remains ${oldChannelString}.`
+
+    const errorMessage = () => {
+      if ( oldChannel )
+       return host.respondTo( message, 'twitter_channel_default_error_previously_set', oldChannel.snowflake )
+      return host.respondTo( message, 'twitter_channel_default_error_previously_unset' )
+    }
 
     if ( args.channel ) {
-      // If args.channel is a string, it contains an error message
+      // If args.channel is a string, it contains an error message ID
       if ( typeof args.channel === 'string' )
-        return message.say( args.channel )
+        return host.respondTo( message, args.channel )
 
       let channel
       try {
@@ -158,7 +167,7 @@ class TwitterChannelDefaultCommand extends NyaCommand
           throw new Error( `getChannelBySnowflake returned ${channel}` )
       } catch ( error ) {
         log( `Couldn't fetch channel ${args.channel.id}:`, error )
-        return message.say( errorMsg )
+        return errorMessage()
       }
 
       try {
@@ -166,15 +175,18 @@ class TwitterChannelDefaultCommand extends NyaCommand
         await backend.setGuildSetting( guild.id, settingKey, channel.id )
       } catch ( error ) {
         log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
-        return message.say( errorMsg )
+        return errorMessage()
       }
-      return message.say( `Default channel for Twitter notifications has been set to <#${channel.snowflake}> (was previously ${oldChannelString}).` )
+      if ( oldChannel )
+        return host.respondTo( message, 'twitter_channel_default_set_previously_set', channel.snowflake, oldChannel.snowflake )
+      return host.respondTo( message, 'twitter_channel_default_set_previously_unset', channel.snowflake )
     }
     if ( args.channel === null )
-      return message.say( `Couldn${apos}t find a channel with that name.` )
+      return host.respondTo( message, 'channel_not_found_by_name' )
 
-    const channelString = oldChannel ? `is <#${oldChannel.snowflake}>` : "has not been set"
-    return message.say( `Default channel for Twitter notifications ${channelString}.` )
+    if ( oldChannel )
+      return host.respondTo( message, 'twitter_channel_default_get', oldChannel.snowflake )
+    return host.respondTo( message, 'twitter_channel_default_get_unset' )
   }
 }
 
@@ -183,23 +195,23 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    const settingKey = this.module.settingKeys.defaultChannel
     const backend = this.module.backend
+    const host = this.module.host
+    const settingKey = this.module.settingKeys.defaultChannel
+
     let guild
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Couldn't fetch guild ${message.guild.id}:`, error )
-      return message.say( "Unexpected error." )
+      return host.respondTo( message, 'unexpected_error' )
     }
 
-    let oldChannel = "unset"
+    let oldChannel = null
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
       if ( channelSetting && channelSetting.value ) {
-        const channel = await backend.getChannelByID( channelSetting.value )
-        if ( channel )
-          oldChannel = `<#${channel.snowflake}>`
+        oldChannel = await backend.getChannelByID( channelSetting.value )
       }
     } catch ( error ) {
       log( `Couldn't fetch default Twitter channel of guild ${guild.id}:`, error )
@@ -210,9 +222,13 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
       await backend.removeGuildSetting( guild.id, settingKey )
     } catch ( error ) {
       log( `Failed to remove ${settingKey} setting of guild ${guild.id}:`, error )
-      return message.say( `Command failed; default Twitter channel remains ${oldChannel}.` )
+      if ( oldChannel )
+        return host.respondTo( message, 'twitter_channel_default_clear_error_previously_set', oldChannel.snowflake )
+      return host.respondTo( message, 'twitter_channel_default_clear_error_previously_unset' )
     }
-    return message.say( `Default Twitter channel cleared (was ${oldChannel}).` )
+    if ( oldChannel )
+      return host.respondTo( message, 'twitter_channel_default_clear_previously_set', oldChannel.snowflake )
+    return host.respondTo( message, 'twitter_channel_default_clear_previously_unset' )
   }
 }
 
@@ -221,7 +237,9 @@ class TwitterChannelGetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( `Twitter notifications for @${args.account} are being posted to...` )
+    const host = this.module.host
+
+    return host.respondTo( message, 'twitter_channel_get', args.account, '763153624552702032' )
   }
 }
 
@@ -239,9 +257,13 @@ class TwitterChannelSetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    const host = this.module.host
+
+    // If args.channel is a string, it contains an error message ID
     if ( typeof args.channel === 'string' )
-      return message.say( args.channel )
-    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(args)}\`` )
+      return host.respondTo( message, args.channel )
+
+    return host.respondTo( message, 'twitter_channel_set', args.account, args.channel )
   }
 }
 
