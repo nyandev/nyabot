@@ -8,6 +8,12 @@ import { Arguments, NyaBaseCommand, NyaCommand, parseTextChannel, SubcommandInfo
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
+function isValidDate( date: Date ): boolean
+{
+  return !Number.isNaN( date.getTime() )
+}
+
+
 function joinStrings( strings: string[] ): string
 {
   const parts = []
@@ -112,13 +118,12 @@ class TwitterChannelDefaultCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    const namedArgs = args[0]
-    if ( namedArgs.channel ) {
-      if ( typeof namedArgs.channel === 'string' )
-        return message.say( namedArgs.channel )
-      return message.say( `got <#${namedArgs.channel.id}>` )
+    if ( args.channel ) {
+      if ( typeof args.channel === 'string' )
+        return message.say( args.channel )
+      return message.say( `got <#${args.channel.id}>` )
     }
-    if ( namedArgs.channel === null )
+    if ( args.channel === null )
       return message.say( "Couldn't resolve channel" )
     return message.say( "Default channel is ..." )
   }
@@ -138,7 +143,7 @@ class TwitterChannelGetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return message.say( `Twitter notifications for @${args[0].account} are being posted to...` )
+    return message.say( `Twitter notifications for @${args.account} are being posted to...` )
   }
 }
 
@@ -156,10 +161,9 @@ class TwitterChannelSetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    const namedArgs = args[0]
-    if ( typeof namedArgs.channel === 'string' )
-      return message.say( namedArgs.channel )
-    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(namedArgs)}\`` )
+    if ( typeof args.channel === 'string' )
+      return message.say( args.channel )
+    return message.say( `Setting Twitter channel with arguments:\n\`${JSON.stringify(args)}\`` )
   }
 }
 
@@ -273,6 +277,7 @@ interface IntervalStatus {
   cleared: boolean
   accounts: string[]
   queryLength: number
+  lastCheck?: Date
 }
 
 interface TwitterSubscriptionOptions {
@@ -483,16 +488,26 @@ export class Twitter2Module extends ModuleBase
         Authorization: `Bearer ${this.config.bearerToken}`
       }
     }
+    const redisKey = ( account: string ) => `latesttweet:${account}`
+
+    let startTime = null
+    if ( interval.lastCheck ) {
+      // start_time cannot be more than a week old
+      if ( ( new Date() ).getTime() - interval.lastCheck.getTime() < 7 * 24 * 60 * 60 * 1000 )
+        startTime = interval.lastCheck
+    }
+    interval.lastCheck = new Date()
+
     const query = queryString( interval.accounts )
-    const redisKey = (account: string) => `latesttweet:${account}`
+    let recentsURL = `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}`
+    if ( startTime )
+      recentsURL += `&start_time=${startTime.toISOString()}`
 
     let recentTweets
     try {
-      const response = await fetch(
-        `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}`,
-        fetchOptions
-      )
+      const response = await fetch( recentsURL, fetchOptions )
       recentTweets = await response.json()
+      debug('RECENT TWEETS', recentTweets)
       if ( !recentTweets.meta )
         throw new Error( "Response for recent tweet lookup has no `meta` field." )
     } catch ( error ) {
@@ -535,7 +550,7 @@ export class Twitter2Module extends ModuleBase
         const dateString = await redis.get( redisKey( handle ) )
         if ( dateString ) {
           const date = new Date( dateString )
-          if ( !Number.isNaN( date.getTime() ) )
+          if ( isValidDate( date ) )
             newestSeen = date
         }
       } catch ( error ) {

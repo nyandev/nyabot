@@ -12,11 +12,10 @@ interface ArgumentSpec {
   catchAll?: boolean
 }
 
-interface NamedArguments {
+export interface Arguments {
+  _: any[]
   [key: string]: any
 }
-
-export type Arguments = [NamedArguments, any[]]
 
 export interface SubcommandInfo {
   name?: string
@@ -184,50 +183,6 @@ function usageArgs( args: ArgumentSpec[] ): string
   return argStrings.join( ' ' )
 }
 
-/*
-async function help( self: NyaBaseCommand | NyaCommand, message: CommandoMessage ): Promise<string>
-{
-  const subcommands = Object.keys( self.subcommands )
-  const subcommandList = subcommands.join( ', ' )
-
-  let prefix
-  try {
-    if ( message.guild ) {
-      const guild = await self.module.backend.getGuildBySnowflake( message.guild.id )
-      prefix = await self.module.backend.getSetting( 'Prefix', guild.id )
-    } else {
-      prefix = await self.module.backend.getSetting( 'Prefix' )
-    }
-  } catch ( error ) {
-    if ( message.guild )
-      log( `Failed to fetch prefix for guild ${message.guild.id}:`, error )
-    else
-      log( `Failed to fetch global prefix` )
-    throw new Error( "Failed to fetch prefix" )
-  }
-
-  let reply = `**${prefix}${self.options.name}**`
-  if ( self.options.description )
-  reply += `: ${self.options.description}`
-
-  reply += '\n'
-  if ( self.options.dummy ) {
-    if ( subcommands.length )
-      reply += `This command is not usable by itself, but through one of its subcommands: ${subcommandList}`
-    else
-      throw new Error( `Command "${self.options.name}" is marked as dummy but has no specified subcommands.` )
-  } else {
-    const args = usageArgs( self.options.args || [] )
-    reply += `Usage: \`${prefix}${self.options.name}`
-    if ( args )
-      reply += ` ${args}`
-    reply += '`'
-    if ( subcommands.length )
-      reply += `\nSubcommands: ${subcommandList}`
-  }
-  return reply
-}
-*/
 
 function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Arguments | false
 {
@@ -240,9 +195,10 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
 
   const catchAll = args.length && args[args.length - 1].catchAll
   const catchAllType = catchAll ? args[args.length - 1].type : 'string'
-  const rest: any[] = []
+  const parsed: Arguments = {
+    _: []
+  }
   let error = false
-  const parsed: NamedArguments = {}
 
   values.forEach( ( val, i ) => {
     const spec = args[i]
@@ -267,13 +223,13 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
     else
       throw new Error( `Unknown argument type: ${spec.type}` )
     if ( addToRest )
-      rest.push( parsedValue )
+      parsed._.push( parsedValue )
     else
       parsed[spec.key] = parsedValue
   } )
   if ( error )
     return false
-  return [parsed, rest]
+  return parsed
 }
 
 
