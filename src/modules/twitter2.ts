@@ -281,6 +281,7 @@ class TwitterCommand extends NyaBaseCommand
       group: 'twitter2',
       description: "Shows this server\u2019s Twitter account(s).",
       guildOnly: true,
+      ownerOnly: true,
       subcommandSpec: {
         list: {
           class: TwitterListCommand,
