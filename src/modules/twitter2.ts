@@ -385,8 +385,9 @@ interface IntervalStatus {
 
 interface TwitterSubscriptionOptions {
   channel?: number
-  retweets?: boolean
   quoteTweets?: boolean
+  replies?: boolean
+  retweets?: boolean
 }
 
 interface TwitterConfigDisabled {
@@ -673,6 +674,10 @@ export class Twitter2Module extends ModuleBase
 
         const quoteTweet = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'quoted' )
         if ( quoteTweet && !options.quoteTweets )
+          continue
+
+        const reply = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'replied_to' )
+        if ( reply && !options.replies )
           continue
 
         let channelID = options.channel
