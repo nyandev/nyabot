@@ -44,6 +44,7 @@ class TwitterListCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    const errorMsg = "Unexpected error."
     const backend = this.module.backend
     let guild
     try {
@@ -52,7 +53,7 @@ class TwitterListCommand extends NyaCommand
         throw new Error( `getGuildBySnowflake returned ${guild}` )
     } catch ( error ) {
       log( `Couldn't fetch guild ${message.guild.id}:`, error )
-      return null
+      return message.say( errorMsg )
     }
 
     let subscriptions
@@ -61,7 +62,7 @@ class TwitterListCommand extends NyaCommand
       subscriptions = JSON.parse( setting.value || '{}' )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
-      return null
+      return message.say( errorMsg )
     }
     const sortedSubscriptions: [string, TwitterSubscriptionOptions][] = Object.entries( subscriptions )
     sortedSubscriptions.sort( ( a, b ) => {
@@ -109,6 +110,9 @@ class TwitterListCommand extends NyaCommand
       }
       lines.push( `**@${account}**: Posting ${joinStrings( types )} ${channelText}` )
     }
+
+    if ( lines.length === 0 )
+      return message.say( "Not following any Twitter accounts." )
     return message.say( lines.join( '\n' ) )
   }
 }
@@ -186,7 +190,7 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
       log( `Couldn't fetch guild ${message.guild.id}:`, error )
-      return null
+      return message.say( "Unexpected error." )
     }
 
     let oldChannel = "unset"
@@ -335,7 +339,7 @@ class TwitterCommand extends NyaBaseCommand
         throw new Error( `getSetting(...) == null` )
     } catch ( error ) {
       log( `Couldn't fetch ${this.module.settingKeys.defaultMessage} setting, globally or for guild ${message.guild.id}:`, error )
-      return null
+      return message.say( "Unexpected error." )
     }
 
     // An empty string is fine, but we can't send that
