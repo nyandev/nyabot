@@ -1,9 +1,7 @@
+import { Message, MessageAttachment, MessageEmbed, User } from 'discord.js'
 import { CommandoMessage } from 'discord.js-commando'
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
-
 import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
+import { sprintf } from 'sprintf-js'
 
 import { Nya } from './nya'
 
@@ -36,8 +34,10 @@ export class TalkModule
   }
 
   joinList = {
+    de: this.joinListFactory( 'und' ),
     en: this.joinListFactory( 'and' ),
-    fi: this.joinListFactory( 'ja' )
+    fi: this.joinListFactory( 'ja' ),
+    sv: this.joinListFactory( 'och' )
   }
 
   async sendMultilineResponse( message: CommandoMessage, lines: MultilineParams[] )
@@ -64,10 +64,9 @@ export class TalkModule
     return message.embed( embed )
   }
 
-  async sendPrintfResponse( message: CommandoMessage, print: string, ...args: any[] ): Promise<Message | Message[] | null>
+  async sendPrintfResponse( message: CommandoMessage, template: string, ...args: string[] ): Promise<Message | Message[] | null>
   {
-    const embed = new MessageEmbed()
-      .setDescription( sprintf.apply( this, [print].concat( args ) ) )
+    const embed = new MessageEmbed().setDescription( sprintf( template, ...args ) )
     return message.embed( embed )
   }
 

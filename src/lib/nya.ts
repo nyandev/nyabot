@@ -39,7 +39,7 @@ export class Nya implements NyaInterface
   stoppedPromise: any
   _stoppedResolve: any
   _modules: ModuleBase[]
-  _talk: TalkModule
+  talk: TalkModule
   messages: Record<string, string>
 
   makePresence(): PresenceData
@@ -70,7 +70,7 @@ export class Nya implements NyaInterface
     }
     this._backend = backend
     this._emitter = new EventEmitter()
-    this._talk = new TalkModule( this )
+    this.talk = new TalkModule( this )
     this.messages = JSON.parse( fs.readFileSync( 'data/messages.json', 'utf8' ) )
   }
 
@@ -239,38 +239,42 @@ export class Nya implements NyaInterface
     })
   }
 
+  // TODO: maybe remove this method entirely and send responses directly via TalkModule methods
   async respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null>
   {
     const currencySymbol = this._config.globalDefaults.CurrencySymbol
-    const printf = (print: string, ...args: any[]) => this._talk.sendPrintfResponse( message, print, ...args )
+    const printf = ( template: string, ...args: any[]) => this.talk.sendPrintfResponse( message, template, ...args )
+
     // oh god
     if ( replycode === 'xp' )
-      return this._talk.sendXPResponse( message, args[0], args[1], args[2] )
+      return this.talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
-      return this._talk.sendPrintfResponse( message, 'Unknown global setting. Available keys are: %s', [args[0]].join( ', ' ) )
+      return printf( "Unknown global setting. Available keys are: %s", [args[0]].join( ', ' ) )
     else if ( replycode === '8ball' )
-      return this._talk.sendPlainResponse( message, args[0] )
+      return this.talk.sendPlainResponse( message, args[0] )
     else if ( replycode === 'hangman_start' ) {
       if ( !args[1] )
-        return this._talk.sendPrintfResponse( message, "```%s```", ...args )
+        return printf( "```%s```", ...args )
       else
-        return this._talk.sendPrintfResponse( message, "**Note**: %s\n```%s```", args[1], args[0] )
+        return printf( "**Note**: %s\n```%s```", args[1], args[0] )
     }
     else if ( replycode === 'currency_award_user' )
-      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to %s.`, ...args)
+      return printf( `%s awarded %d ${currencySymbol} to %s.`, ...args )
     else if ( replycode === 'currency_award_role' )
-      return this._talk.sendPrintfResponse( message, `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args)
+      return printf( `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args )
     else if ( replycode === 'currency_show' )
-      return this._talk.sendPrintfResponse( message, `%s has %d ${currencySymbol}.`, ...args )
+      return printf( `%s has %d ${currencySymbol}.`, ...args )
     else if ( replycode === 'slot_win' )
-      return this._talk.sendPrintfResponse( message, `%s You won %d ${currencySymbol}!`, ...args )
+      return printf( `%s You won %d ${currencySymbol}!`, ...args )
     else if ( replycode === 'link' )
-      return this._talk.sendAttachmentResponse( message, args[0] )
+      return this.talk.sendAttachmentResponse( message, args[0] )
     else if ( replycode === 'club_leave_success' )
       return printf( args[1].map( (clubName: string) => `${args[0]} left ${clubName}.` ).join('\n') )
     else
-      return this._talk.sendPrintfResponse( message, this.messages[replycode] || replycode, ...args )
-    return null
+      return printf( this.messages[replycode] || replycode, ...args )
+
+    // When all else fails
+    return printf( this.messages['unexpected_error'] )
   }
 
   async onGuildUnavailable( guild: Guild )

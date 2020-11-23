@@ -13,7 +13,7 @@ export interface NyaInterface
 {
   _config: any
   messages: Record<string, string>
-  _talk: TalkModule
+  talk: TalkModule
 
   getBackend(): Backend
   getClient(): Commando.CommandoClient

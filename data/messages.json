@@ -81,10 +81,10 @@
   "twitter_channel_default_set_previously_unset": "The default channel for Twitter notifications has been set to <#%s> (was previously unset).",
   "twitter_channel_get": "Tweets from @%s are being posted to <#%s>.",
   "twitter_channel_set": "Tweets from @%s will be posted to <#%s>.",
-  "twitter_list_line": "**@%s**: Posting %s to <#%s>",
-  "twitter_list_line_default_channel": "**@%s**: Posting %s to <#%s> (default channel)",
-  "twitter_list_line_default_channel_unset": "**@%s**: Would post %s, but no channel has been set",
-  "twitter_list_line_invalid_channel": "**@%s**: Would post %s, but the channel setting is invalid",
+  "twitter_list_line": "**[@%s](%s)**: Posting %s to <#%s>",
+  "twitter_list_line_default_channel": "**[@%s](%s)**: Posting %s to <#%s> (default channel)",
+  "twitter_list_line_default_channel_unset": "**[@%s](%s)**: Would post %s, but no channel has been set",
+  "twitter_list_line_invalid_channel": "**[@%s](%s)**: Would post %s, but the channel setting is invalid",
   "twitter_list_empty": "Not following any Twitter accounts.",
 
   "unexpected_error": "Unexpected error."

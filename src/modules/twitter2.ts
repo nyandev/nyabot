@@ -14,6 +14,12 @@ function isValidDate( date: Date ): boolean
 }
 
 
+function profileURL( account: string )
+{
+  return `https://twitter.com/${account}`
+}
+
+
 function queryString( accounts: string[] ) {
   return accounts.map( ( account: string ) => `from:${account}` ).join(' OR ')
 }
@@ -84,9 +90,9 @@ class TwitterListCommand extends NyaCommand
         types.push( host.messages['tweet_type_quotetweets'] )
       if ( options.replies )
         types.push( host.messages['tweet_type_replies'] )
-      const typesString = host._talk.joinList[language]( types )
+      const typesString = host.talk.joinList[language]( types )
 
-      const args = [account, typesString]
+      const args = [account, profileURL( account ), typesString]
       if ( options.channel != null ) {
         try {
           const channel = await backend.getChannelByID( options.channel )
@@ -119,7 +125,7 @@ class TwitterListCommand extends NyaCommand
         }
       }
     }
-    return host._talk.sendMultilineResponse( message, lines )
+    return host.talk.sendMultilineResponse( message, lines )
   }
 }
 
