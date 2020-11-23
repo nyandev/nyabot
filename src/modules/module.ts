@@ -17,7 +17,7 @@ export interface NyaInterface
 
   getBackend(): Backend
   getClient(): Commando.CommandoClient
-  respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+  respondTo( message: Commando.CommandoMessage, messageID: string, ...args: any[] ): Promise<Message | Message[] | null> | null
   getGlobalSettingKeys(): string[]
 }
 

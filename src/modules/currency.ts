@@ -1,4 +1,4 @@
-import { debug, logSprintf } from '../globals'
+import { debug, log, logSprintf } from '../globals'
 import fs = require( 'fs' )
 import { EventEmitter } from 'events'
 import Commando = require( 'discord.js-commando' )
@@ -36,6 +36,7 @@ class AwardCurrencyCommand extends Commando.Command
         type: 'user|role'
       }],
       argsPromptLimit: 1,
+      guildOnly: true,
       ownerOnly: true
     })
   }
@@ -45,22 +46,38 @@ class AwardCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
 
+    let currencySymbol = 'currency'
+    try {
+      const guild = await backend.getGuildBySnowflake( message.guild.id )
+      currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
+    } catch ( error ) {
+      log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
+    }
+
     async function awardUser( userID: string, amount: number ) {
       const user = await backend.getUserBySnowflake( userID )
-      user.increment( { currency: amount } )
+      await user.increment( { currency: amount } )
     }
 
     if ( args.target instanceof Role ) {
-      for ( const userID of args.target.members.keys() )
-        awardUser( userID, args.amount )
-      return host.respondTo( message, 'currency_award_role',
-        message.author.username, args.amount, args.target.name )
+      for ( const userID of args.target.members.keys() ) {
+        try {
+          await awardUser( userID, args.amount )
+        } catch ( error ) {
+          log( `Failed to award currency to user ${userID} of role ${args.target.name}:`, error )
+          return host.talk.sendError( message, 'unexpected_error' )
+        }
+      }
+      return host.talk.sendText( message, 'currency_award_role', message.author.username, args.amount, currencySymbol, args.target.name )
     } else {
-      awardUser( args.target.id, args.amount )
-      return host.respondTo( message, 'currency_award_user',
-        message.author.username, args.amount, args.target.username )
+      try {
+        await awardUser( args.target.id, args.amount )
+      } catch ( error ) {
+        log( `Failed to award currency to user ${args.target.id}:`, error )
+        return host.talk.sendError( message, 'unexpected_error' )
+      }
+      return host.talk.sendText( message, 'currency_award_user', message.author.username, args.amount, currencySymbol, args.target.username )
     }
-    return null
   }
 }
 
@@ -80,15 +97,25 @@ class ShowCurrencyCommand extends Commando.Command
         prompt: "Who?",
         type: 'user',
         default: ( msg: Commando.CommandoMessage ) => msg.author
-      }]
+      }],
+      guildOnly: true
     })
   }
 
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const backend = this._service.backend
+    const host = this._service.host
     const user = await backend.getUserBySnowflake( args.target.id )
-    return this._service.host.respondTo( message, 'currency_show', user.name, user.currency )
+
+    let currencySymbol = 'currency'
+    try {
+      const guild = await backend.getGuildBySnowflake( message.guild.id )
+      currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
+    } catch ( error ) {
+      log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
+    }
+    return host.talk.sendText( message, 'currency_show', user.name, user.currency, currencySymbol )
   }
 }
 
@@ -162,6 +189,10 @@ class SlotCommand extends Commando.Command
 
 export class CurrencyModule extends ModuleBase
 {
+  settingKeys = {
+    currencySymbol: 'CurrencySymbol'
+  }
+
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
@@ -169,6 +200,12 @@ export class CurrencyModule extends ModuleBase
 
   async onMessage( msg: Message ): Promise<void>
   {
+  }
+
+  getGlobalSettingKeys() {
+    return [
+      this.settingKeys.currencySymbol
+    ]
   }
 
   getGroups(): Commando.CommandGroup[]

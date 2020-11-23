@@ -120,6 +120,11 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
       }
       return reply
     }
+
+    async unexpectedError( message: CommandoMessage )
+    {
+      return this.host.talk.sendError( message, 'unexpected_error' )
+    }
   }
 }
 
@@ -128,7 +133,7 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
 {
   subcommands: SubcommandList = {}
 
-  constructor( public module: ModuleBase, public options: BaseCommandInfo )
+  constructor( protected module: ModuleBase, private options: BaseCommandInfo )
   {
     super( module.client, {
       name: options.name,

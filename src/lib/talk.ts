@@ -1,15 +1,32 @@
-import { Message, MessageAttachment, MessageEmbed, User } from 'discord.js'
+import { ColorResolvable, Message, MessageAttachment, MessageEmbed, User } from 'discord.js'
 import { CommandoMessage } from 'discord.js-commando'
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
 
+import { log } from '../globals'
 import { Nya } from './nya'
 
 
-interface MultilineParams {
-  replycode: string
+interface EmbedData {
+  title?: string | PrintfParams
+  description?: string | PrintfParams
+  color?: ColorResolvable
+  fields?: FieldData[]
+  url?: string
+  imageURL?: string
+}
+
+interface FieldData {
+  name: string | PrintfParams
+  value: string | PrintfParams
+  inline?: boolean
+}
+
+interface PrintfParams {
+  messageID: string
   args?: string[]
 }
+
 
 // This class should contain practically all chat output and formatting for the bot.
 // That way changing, reformatting or maybe even translating later is easier.
@@ -17,6 +34,24 @@ export class TalkModule
 {
   constructor( private host: Nya )
   {
+  }
+
+  format( data: string | PrintfParams )
+  {
+    const messageID = ( typeof data === 'string' ) ? data : data.messageID
+    const template = this.getTemplate( messageID )
+    const args = ( typeof data === 'string' ) ? [] : ( data.args || [] )
+    return sprintf( template, ...args )
+  }
+
+  getTemplate( messageID: string )
+  {
+    const template = this.host.messages[messageID]
+    if ( !template ) {
+      log( `Unknown message ID "${messageID}"` )
+      return messageID
+    }
+    return template
   }
 
   joinListFactory( and: string )
@@ -40,18 +75,55 @@ export class TalkModule
     sv: this.joinListFactory( 'och' )
   }
 
-  async sendMultilineResponse( message: CommandoMessage, lines: MultilineParams[] )
+  async sendEmbed( message: CommandoMessage, data: EmbedData ): Promise<Message | Message[] | null>
+  {
+    const embed = new MessageEmbed()
+
+    if ( data.title )
+      embed.setTitle( this.format( data.title ) )
+    if ( data.description )
+      embed.setDescription( this.format( data.description ) )
+    if ( data.color )
+      embed.setColor( data.color )
+    if ( data.fields ) {
+      for ( const field of data.fields )
+        embed.addField( this.format( field.name ), this.format( field.value ), field.inline )
+    }
+    if ( data.url )
+      embed.setURL( data.url )
+    if ( data.imageURL )
+      embed.setImage( data.imageURL )
+
+    return message.embed( embed )
+  }
+
+  async sendError( message: CommandoMessage, data: string | PrintfParams )
+  {
+    return this.sendEmbed( message, {
+      description: data,
+      color: 'RED'
+    } )
+  }
+
+  async sendMultilineResponse( message: CommandoMessage, lines: PrintfParams[] ): Promise<Message | Message[] | null>
   {
     const formattedLines = []
     for ( const line of lines ) {
       if ( !line.args )
         line.args = []
-      const template = this.host.messages[line.replycode] || line.replycode
+      const template = this.getTemplate( line.messageID )
       formattedLines.push( sprintf( template, ...line.args ) )
     }
 
     const embed = new MessageEmbed().setDescription( formattedLines.join( '\n' ) )
     return message.embed( embed )
+  }
+
+  async sendText( message: CommandoMessage, messageID: string, ...args: string[] )
+  {
+    return this.sendEmbed( message, {
+      description: { messageID, args }
+    } )
   }
 
   async sendXPResponse( message: CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null>
@@ -70,13 +142,19 @@ export class TalkModule
     return message.embed( embed )
   }
 
-  async sendPlainResponse( message: CommandoMessage, data: any ): Promise<Message | Message[] | null>
+/*
+  async sendPlainResponse( message: CommandoMessage, data: EmbedData ): Promise<Message | Message[] | null>
   {
     const embed = new MessageEmbed()
 
     let template = ''
-    if ( data.template )
-      template = this.host.messages[data.template] || data.template
+    if ( data.messageID ) {
+      template = this.host.messages[data.template] || data.messageID
+      if ( !template ) {
+        log( `Missing message ID ${data.messageID}` )
+        template = data.messageID
+      }
+    }
     if ( !data.args )
       data.args = []
     embed.setDescription( sprintf( template, ...data.args ) )
@@ -84,6 +162,7 @@ export class TalkModule
       embed.setImage( data.imageURL )
     return message.embed( embed )
   }
+*/
 
   async sendAttachmentResponse( message: CommandoMessage, data: Record<string, any> )
   {

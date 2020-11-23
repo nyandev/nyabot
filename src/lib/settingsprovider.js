@@ -1,6 +1,7 @@
-const SettingProvider = require( '../../node_modules/discord.js-commando/src/providers/base' )
+import { SettingProvider } from 'discord.js-commando'
+//const SettingProvider = require( '../../node_modules/discord.js-commando/src/providers/base' )
 
-class SettingsProvider extends SettingProvider
+export class SettingsProvider extends SettingProvider
 {
   constructor( backend )
   {
@@ -235,4 +236,4 @@ class SettingsProvider extends SettingProvider
   }
 }
 
-module.exports = SettingsProvider;
+//module.exports = SettingsProvider

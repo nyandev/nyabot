@@ -47,9 +47,9 @@ class EightBallCommand extends Commando.Command
       }
     else
       data = {
-        message: "That\u2019s no good, Onii-chan!"
+        description: "That\u2019s no good, Onii-chan!"
       }
-    return this._service.host.respondTo( message, '8ball', data )
+    return this._service.host.talk.sendEmbed( message, data )
   }
 }
 

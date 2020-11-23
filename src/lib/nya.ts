@@ -1,29 +1,24 @@
-import { debug, logSprintf } from '../globals'
-import fs = require( 'fs' )
+import * as fs from 'fs'
 import { EventEmitter } from 'events'
 
-import Commando = require( 'discord.js-commando' )
+import * as Commando  from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
 import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
+import { sprintf } from 'sprintf-js'
 
 import { Backend } from './backend'
+import { SettingsProvider } from './settingsprovider'
 import { TalkModule } from './talk'
-
+import { log, debug, logSprintf } from '../globals'
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
-
 import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
 import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
 import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
-import { Twitter2Module } from '../modules/twitter2'
 import { XPModule } from '../modules/xp'
-
-import SettingsProvider = require( './settingsprovider' )
 
 
 // Nya is the bot main class.
@@ -250,31 +245,25 @@ export class Nya implements NyaInterface
       return this.talk.sendXPResponse( message, args[0], args[1], args[2] )
     else if ( replycode === 'config_badkey' )
       return printf( "Unknown global setting. Available keys are: %s", [args[0]].join( ', ' ) )
-    else if ( replycode === '8ball' )
-      return this.talk.sendPlainResponse( message, args[0] )
     else if ( replycode === 'hangman_start' ) {
       if ( !args[1] )
         return printf( "```%s```", ...args )
       else
         return printf( "**Note**: %s\n```%s```", args[1], args[0] )
     }
-    else if ( replycode === 'currency_award_user' )
-      return printf( `%s awarded %d ${currencySymbol} to %s.`, ...args )
-    else if ( replycode === 'currency_award_role' )
-      return printf( `%s awarded %d ${currencySymbol} to everyone with the %s role.`, ...args )
-    else if ( replycode === 'currency_show' )
-      return printf( `%s has %d ${currencySymbol}.`, ...args )
     else if ( replycode === 'slot_win' )
-      return printf( `%s You won %d ${currencySymbol}!`, ...args )
+      return printf( `%s You won %d %s}!`, ...args )
     else if ( replycode === 'link' )
       return this.talk.sendAttachmentResponse( message, args[0] )
     else if ( replycode === 'club_leave_success' )
       return printf( args[1].map( (clubName: string) => `${args[0]} left ${clubName}.` ).join('\n') )
-    else
-      return printf( this.messages[replycode] || replycode, ...args )
-
-    // When all else fails
-    return printf( this.messages['unexpected_error'] )
+    else {
+      if ( !this.messages[replycode] ) {
+        log( `Unknown message ID ${replycode}` )
+        return printf( replycode )
+      }
+      return printf( this.messages[replycode], ...args )
+    }
   }
 
   async onGuildUnavailable( guild: Guild )
@@ -385,8 +374,7 @@ export class Nya implements NyaInterface
           CurrencyModule,
           GamesModule,
           TwitchModule,
-          //TwitterModule,
-          Twitter2Module,
+          TwitterModule,
           XPModule
       ] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
