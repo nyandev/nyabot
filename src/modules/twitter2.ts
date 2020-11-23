@@ -79,7 +79,7 @@ class TwitterListCommand extends NyaCommand
       // Ignore
     }
 
-    // TODO: get language from config or something
+    // TODO: get language from a guild/global setting or something
     const language = 'en'
     const lines = []
     for ( const [account, options] of sortedSubscriptions ) {
@@ -252,7 +252,7 @@ class TwitterChannelGetCommand extends NyaCommand
   {
     const host = this.module.host
 
-    return host.respondTo( message, 'twitter_channel_get', args.account, '763153624552702032' )
+    return host.respondTo( message, 'twitter_channel_get', args.account, profileURL( args.account ), '763153624552702032' )
   }
 }
 
@@ -276,7 +276,7 @@ class TwitterChannelSetCommand extends NyaCommand
     if ( typeof args.channel === 'string' )
       return host.respondTo( message, args.channel )
 
-    return host.respondTo( message, 'twitter_channel_set', args.account, args.channel )
+    return host.respondTo( message, 'twitter_channel_set', args.account, profileURL( args.account ), args.channel.id )
   }
 }
 
