@@ -1,9 +1,10 @@
 import Commando = require( 'discord.js-commando' )
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
+import { Backend } from '../lib/backend'
 import { SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
 import { Parser, ParsedStruct } from '../lib/parser'
-import { Backend } from '../lib/backend'
+import { TalkModule } from '../lib/talk'
 
 
 export interface CommandCallbackType { (): boolean }
@@ -11,6 +12,9 @@ export interface CommandCallbackType { (): boolean }
 export interface NyaInterface
 {
   _config: any
+  messages: Record<string, string>
+  _talk: TalkModule
+
   getBackend(): Backend
   getClient(): Commando.CommandoClient
   respondTo( message: Commando.CommandoMessage, replycode: string, ...args: any[] ): Promise<Message | Message[] | null> | null

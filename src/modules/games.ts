@@ -43,7 +43,6 @@ class EightBallCommand extends Commando.Command
     const index = Math.floor( Math.random() * choices.length )
     if ( choices[index] === 'yes' )
       data = {
-        message: ' ',
         imageURL: 'https://i.pinimg.com/originals/ce/68/ac/ce68ac827852aec0f097e58d930c2032.gif'
       }
     else

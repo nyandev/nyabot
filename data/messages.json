@@ -63,6 +63,11 @@
   "twitterunfollow_not_following": "@%s wasn\u2019t being followed.",
   "twitterunfollow_success": "Stopped following @%s.",
 
+  "tweet_type_quotetweets": "quote tweets",
+  "tweet_type_replies": "replies",
+  "tweet_type_retweets": "retweets",
+  "tweet_type_tweets": "tweets",
+
   "twitter_channel_default_clear_error_previously_set": "Unexpected error. The default Twitter channel remains <#%s>.",
   "twitter_channel_default_clear_error_previously_unset": "Unexpected error (but the default Twitter channel was already unset).",
   "twitter_channel_default_clear_previously_set": "The default Twitter channel has been cleared (was previously <#%s>).",
@@ -76,7 +81,10 @@
   "twitter_channel_default_set_previously_unset": "The default channel for Twitter notifications has been set to <#%s> (was previously unset).",
   "twitter_channel_get": "Tweets from @%s are being posted to <#%s>.",
   "twitter_channel_set": "Tweets from @%s will be posted to <#%s>.",
-  "twitter_list": "%s",
+  "twitter_list_line": "**@%s**: Posting %s to <#%s>",
+  "twitter_list_line_default_channel": "**@%s**: Posting %s to <#%s> (default channel)",
+  "twitter_list_line_default_channel_unset": "**@%s**: Would post %s, but no channel has been set",
+  "twitter_list_line_invalid_channel": "**@%s**: Would post %s, but the channel setting is invalid",
   "twitter_list_empty": "Not following any Twitter accounts.",
 
   "unexpected_error": "Unexpected error."

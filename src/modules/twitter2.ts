@@ -14,19 +14,6 @@ function isValidDate( date: Date ): boolean
 }
 
 
-// TODO: not i18n-friendly
-function joinStrings( strings: string[] ): string
-{
-  const parts = []
-  const firstPart = strings.slice( 0, -2 ).join( ', ' )
-  const lastPart = strings.slice( -2 ).join( ' and ' )
-  if ( firstPart )
-    parts.push( firstPart )
-  parts.push( lastPart )
-  return parts.join( ', ' )
-}
-
-
 function queryString( accounts: string[] ) {
   return accounts.map( ( account: string ) => `from:${account}` ).join(' OR ')
 }
@@ -71,6 +58,8 @@ class TwitterListCommand extends NyaCommand
       if ( a[0].toLowerCase() > b[0].toLowerCase() ) return 1
       return 0
     } )
+    if ( sortedSubscriptions.length === 0 )
+      return host.respondTo( message, 'twitter_list_empty' )
 
     let defaultChannel = null
     try {
@@ -83,39 +72,54 @@ class TwitterListCommand extends NyaCommand
     } catch ( _ ) {
       // Ignore
     }
-    const defaultChannelText = defaultChannel
-      ? `to <#${defaultChannel}> (default channel)`
-      : "(but no channel or default channel has been set)"
 
-    // TODO: Figure out how to i18n the message
+    // TODO: get language from config or something
+    const language = 'en'
     const lines = []
     for ( const [account, options] of sortedSubscriptions ) {
-      const types = ['tweets']
+      const types = [host.messages['tweet_type_tweets']]
       if ( options.retweets )
-        types.push( 'retweets' )
+        types.push( host.messages['tweet_type_retweets'] )
       if ( options.quoteTweets )
-        types.push( 'quote tweets' )
+        types.push( host.messages['tweet_type_quotetweets'] )
+      if ( options.replies )
+        types.push( host.messages['tweet_type_replies'] )
+      const typesString = host._talk.joinList[language]( types )
 
-      let channelText
+      const args = [account, typesString]
       if ( options.channel != null ) {
         try {
           const channel = await backend.getChannelByID( options.channel )
           if ( !channel )
             throw new Error( `getChannelByID returned ${channel}` )
-          channelText = `to <#${channel.snowflake}>`
+          args.push( channel.snowflake )
+          lines.push( {
+            replycode: 'twitter_list_line',
+            args
+          } )
         } catch ( error ) {
           log( `Couldn't fetch channel ${options.channel}:`, error )
-          channelText = "but the channel setting is invalid"
+          lines.push( {
+            replycode: 'twitter_list_line_invalid_channel',
+            args
+          } )
         }
       } else {
-        channelText = defaultChannelText
+        if ( defaultChannel ) {
+          args.push( defaultChannel )
+          lines.push( {
+            replycode: 'twitter_list_line_default_channel',
+            args
+          } )
+        } else {
+          lines.push( {
+            replycode: 'twitter_list_line_default_channel_unset',
+            args
+          } )
+        }
       }
-      lines.push( `**@${account}**: Posting ${joinStrings( types )} ${channelText}` )
     }
-
-    if ( lines.length === 0 )
-      return host.respondTo( message, 'twitter_list_empty' )
-    return host.respondTo( message, lines.join( '\n' ) )
+    return host._talk.sendMultilineResponse( message, lines )
   }
 }
 
