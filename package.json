@@ -43,7 +43,6 @@
     "node-graceful": "^3.0.0",
     "sequelize": "^6.3.3",
     "sprintf-js": "^1.1.2",
-    "tsc": "^1.20150623.0",
     "twitch": "^4.2.6",
     "twitch-auth": "^4.2.6",
     "twitch-webhooks": "^4.2.6",
