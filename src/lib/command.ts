@@ -201,7 +201,7 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
 
   const catchAll = args.length && args[args.length - 1].catchAll
   const catchAllKey = catchAll ? args[args.length - 1].key : ''
-  const catchAllType = catchAll ? args[args.length - 1].type : 'string'
+  const catchAllType = catchAll ? args[args.length - 1].type : null
   const catchAllList: Argument[] = []
 
   const parsed: Arguments = {}
@@ -209,15 +209,23 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
 
   values.forEach( ( val, i ) => {
     const spec = args[i]
-    if ( !spec && !catchAll ) {
+    let type
+    let addToCatchAll
+
+    if ( !spec ) {
+      if ( !catchAll ) {
+        error = true
+        return
+      }
+      addToCatchAll = true
+      type = catchAllType
+    } else {
+      addToCatchAll = spec.catchAll
+      type = spec.type
+    }
+    if ( !type ) {
       error = true
       return
-    }
-    let type = spec.type
-    let addToRest = false
-    if ( !spec || spec.catchAll ) {
-      addToRest = true
-      type = catchAllType
     }
 
     let parsedValue
@@ -229,7 +237,7 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
       parsedValue = parseTextChannel( val, message )
     else
       throw new Error( `Unknown argument type: ${spec.type}` )
-    if ( addToRest )
+    if ( addToCatchAll )
       catchAllList.push( parsedValue )
     else
       parsed[spec.key] = parsedValue
