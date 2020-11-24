@@ -155,7 +155,7 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
   }
 
   // I'd prefer to call this `run` but Commando uses that method name
-  abstract async execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
+  abstract execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
 }
 
 
@@ -171,7 +171,7 @@ export abstract class NyaCommand extends CommandMixin(Object)
     delete this.options.subcommands
   }
 
-  abstract async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  abstract execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
 }
 
 
