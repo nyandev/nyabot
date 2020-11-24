@@ -28,6 +28,7 @@
     "anchorme": "^2.1.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
+    "d3-format": "^2.0.0",
     "discord.js": "^12.3.1",
     "discord.js-commando": "git+https://github.com/nyandev/Commando.git",
     "erlpack": "github:discord/erlpack",
@@ -52,6 +53,7 @@
     "zlib-sync": "^0.1.7"
   },
   "devDependencies": {
+    "@types/d3-format": "^2.0.0",
     "@types/minimist": "^1.2.0",
     "@types/moment": "^2.13.0",
     "@types/node": "^14.14.2",

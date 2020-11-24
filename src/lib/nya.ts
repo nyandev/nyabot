@@ -251,8 +251,6 @@ export class Nya implements NyaInterface
       else
         return printf( "**Note**: %s\n```%s```", args[1], args[0] )
     }
-    else if ( replycode === 'slot_win' )
-      return printf( `%s You won %d %s}!`, ...args )
     else if ( replycode === 'link' )
       return this.talk.sendAttachmentResponse( message, args[0] )
     else if ( replycode === 'club_leave_success' )

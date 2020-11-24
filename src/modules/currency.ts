@@ -1,17 +1,19 @@
-import { debug, log, logSprintf } from '../globals'
-import fs = require( 'fs' )
+import * as fs from 'fs'
 import { EventEmitter } from 'events'
-import Commando = require( 'discord.js-commando' )
+import * as Commando from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
-
+import { format as formatNumber } from 'd3-format'
 import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
+import { sprintf } from 'sprintf-js'
 
+import { debug, log, logSprintf } from '../globals'
 import { Backend } from '../lib/backend'
 import { Parser } from '../lib/parser'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
+
+
+const formatDecimal = formatNumber( ',~r' )
 
 
 class AwardCurrencyCommand extends Commando.Command
@@ -186,9 +188,10 @@ class SlotCommand extends Commando.Command
       } catch ( error ) {
         log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
       }
-      return host.respondTo( message, 'slot_win', slotString, winAmount, currencySymbol )
+      const formattedAmount = formatDecimal( winAmount )
+      return host.talk.sendText( message, 'slot_win', slotString, formattedAmount, currencySymbol )
     } else {
-      return host.respondTo( message, 'slot_no_win', slotString )
+      return host.talk.sendText( message, 'slot_no_win', slotString )
     }
   }
 }
