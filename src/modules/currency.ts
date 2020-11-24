@@ -179,7 +179,14 @@ class SlotCommand extends Commando.Command
     const winAmount = args.amount * multiplier
     if ( winAmount > 0 ) {
       await user.increment( { currency: winAmount } )
-      return host.respondTo( message, 'slot_win', slotString, winAmount )
+      let currencySymbol = 'currency'
+      try {
+        const guild = await backend.getGuildBySnowflake( message.guild.id )
+        currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
+      } catch ( error ) {
+        log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
+      }
+      return host.respondTo( message, 'slot_win', slotString, winAmount, currencySymbol )
     } else {
       return host.respondTo( message, 'slot_no_win', slotString )
     }
