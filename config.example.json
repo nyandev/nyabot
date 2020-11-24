@@ -19,7 +19,7 @@
       "enabled": true,
       "clientID": "<your id here>",
       "clientSecret": "<your secret here>",
-      "hostname": "nya.aho.ge",
+      "hostname": "nya.example.com",
       "ssl": true,
       "port": 443,
       "listenerPort": 8090,
@@ -31,7 +31,7 @@
       "interval": 60,
       // You shouldn't change maxQueryLength or maxResults unless Twitter changes the corresponding value
       "maxQueryLength": 512,
-      "maxResults": 100,
+      "maxResults": 100
     }
   },
   "bot": {
