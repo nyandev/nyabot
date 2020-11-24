@@ -183,6 +183,9 @@ class TwitterChannelDefaultCommand extends NyaCommand
       if ( typeof args.channel === 'string' )
         return host.talk.sendError( message, args.channel )
 
+      if ( !( args.channel instanceof TextChannel ) )
+        return this.unexpectedError( message )
+
       let channel
       try {
         channel = await backend.getChannelBySnowflake( args.channel.id )
@@ -258,10 +261,21 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 }
 
 
+class TwitterChannelDefaultSetCommand extends NyaCommand
+{
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
+  }
+}
+
+
 class TwitterChannelGetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    let accountArg = args.account as string
+
     const backend = this.module.backend
     const host = this.module.host
 
@@ -281,26 +295,26 @@ class TwitterChannelGetCommand extends NyaCommand
       return this.unexpectedError( message )
     }
 
-    if ( args.account.startsWith( '@' ) )
-      args.account = args.account.substring( 1 )
+    if ( accountArg.startsWith( '@' ) )
+      accountArg = accountArg.substring( 1 )
 
     subscriptions = subscriptions.filter( ( [account, options] ) => {
-      return args.account.toLowerCase() === account.toLowerCase()
+      return accountArg.toLowerCase() === account.toLowerCase()
     } )
 
     if ( subscriptions.length === 0 )
-      return host.talk.sendText( message, 'twitter_channel_get_not_following', args.account, profileURL( args.account ) )
+      return host.talk.sendText( message, 'twitter_channel_get_not_following', accountArg, profileURL( accountArg ) )
 
     if ( subscriptions.length > 1 ) {
       log(
-        `Twitter account @${args.account.toLowerCase()} is contained in guild ${guild.id}'s ${this.module.settingKeys.subscriptions} under multiple capitalizations:`,
+        `Twitter account @${accountArg.toLowerCase()} is contained in guild ${guild.id}'s ${this.module.settingKeys.subscriptions} under multiple capitalizations:`,
         subscriptions.map( ( [account, _] ) => account )
       )
       return this.unexpectedError( message )
     }
 
     const [account, options] = subscriptions[0] as [string, TwitterSubscriptionOptions]
-    const linkArgs = [args.account, profileURL( args.account )]
+    const linkArgs = [account, profileURL( account )]
 
     let validChannelSetting = true
     if ( options.channel != null ) {
@@ -349,13 +363,26 @@ class TwitterChannelSetCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
+    let accountArg = args.account as string
+
     const host = this.module.host
 
     // If args.channel is a string, it contains an error message ID
     if ( typeof args.channel === 'string' )
       return host.talk.sendError( message, args.channel )
 
-    return host.respondTo( message, 'twitter_channel_set', args.account, profileURL( args.account ), args.channel.id )
+    if ( args.channel instanceof TextChannel )
+      return host.respondTo( message, 'twitter_channel_set', accountArg, profileURL( accountArg ), args.channel.id )
+    return null
+  }
+}
+
+
+class TwitterFollowCommand extends NyaCommand
+{
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
   }
 }
 
@@ -368,14 +395,31 @@ class TwitterCommand extends NyaBaseCommand
     {
       name: 'twitter',
       group: 'twitter',
-      description: "Shows this server\u2019s Twitter account(s).",
+      description: `Post this guild${apos}s Twitter link(s).`,
       guildOnly: true,
-      ownerOnly: true,
       subcommandSpec: {
+        follow:  {
+          class: TwitterFollowCommand,
+          options: {
+            description: "Follow a Twitter account or change which tweet types are posted.",
+            ownerOnly: true,
+            args: [
+              {
+                key: 'account',
+                type: 'string'
+              },
+              {
+                key: 'tweetTypes',
+                catchAll: true,
+                type: 'string'
+              }
+            ]
+          }
+        },
         list: {
           class: TwitterListCommand,
           options: {
-            description: "Lists all Twitter accounts followed on this server."
+            description: "List all Twitter accounts followed on this server."
           }
         },
         channel: {
@@ -388,18 +432,25 @@ class TwitterCommand extends NyaBaseCommand
             default: {
               class: TwitterChannelDefaultCommand,
               options: {
-                description: "Shows or modifies the default channel for Twitter notifications.",
-                args: [{
-                  key: 'channel',
-                  optional: true,
-                  type: 'text-channel',
-                }]
+                description: "Show the default channel for posting Twitter notifications."
               },
               subcommands: {
                 clear: {
                   class: TwitterChannelDefaultClearCommand,
                   options: {
-                    description: "Clears the default channel for Twitter notifications."
+                    description: "Clear the default channel for posting Twitter notifications.",
+                    ownerOnly: true
+                  }
+                },
+                set: {
+                  class: TwitterChannelDefaultSetCommand,
+                  options: {
+                    description: "Set the default channel for posting Twitter notifications.",
+                    ownerOnly: true,
+                    args: [{
+                      key: 'channel',
+                      type: 'text-channel'
+                    }]
                   }
                 }
               }
@@ -407,7 +458,7 @@ class TwitterCommand extends NyaBaseCommand
             get: {
               class: TwitterChannelGetCommand,
               options: {
-                description: "Shows which channel a Twitter account\u2019s notifications are being posted to.",
+                description: `Show which channel a Twitter account${apos}s notifications are being posted to.`,
                 args: [{
                   key: 'account',
                   type: 'string'
@@ -417,7 +468,8 @@ class TwitterCommand extends NyaBaseCommand
             set: {
               class: TwitterChannelSetCommand,
               options: {
-                description: "Sets a channel for posting notifications from a particular Twitter user.",
+                description: "Set a channel for posting notifications from a particular Twitter user.",
+                ownerOnly: true,
                 args: [
                   {
                     key: 'account',

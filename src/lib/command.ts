@@ -12,9 +12,10 @@ interface ArgumentSpec {
   catchAll?: boolean
 }
 
+type Argument = string | number | TextChannel | null
+
 export interface Arguments {
-  _: any[]
-  [key: string]: any
+  [key: string]: Argument | Argument[]
 }
 
 export interface SubcommandInfo {
@@ -199,10 +200,11 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
     return false
 
   const catchAll = args.length && args[args.length - 1].catchAll
+  const catchAllKey = catchAll ? args[args.length - 1].key : ''
   const catchAllType = catchAll ? args[args.length - 1].type : 'string'
-  const parsed: Arguments = {
-    _: []
-  }
+  const catchAllList: Argument[] = []
+
+  const parsed: Arguments = {}
   let error = false
 
   values.forEach( ( val, i ) => {
@@ -228,12 +230,14 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
     else
       throw new Error( `Unknown argument type: ${spec.type}` )
     if ( addToRest )
-      parsed._.push( parsedValue )
+      catchAllList.push( parsedValue )
     else
       parsed[spec.key] = parsedValue
   } )
   if ( error )
     return false
+  if ( catchAll )
+    parsed[catchAllKey] = catchAllList
   return parsed
 }
 
