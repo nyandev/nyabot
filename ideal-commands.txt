@@ -41,6 +41,6 @@ Clear channel for account:
   !twitter channel clear <account>
 
 Follow a Twitter account:
-  !twitter follow <account>
+  !twitter follow <account> [quoteTweets] [retweets] [replies]
 Unfollow a Twitter account:
   !twitter unfollow <account>
