@@ -1,18 +1,12 @@
-import { logSprintf } from '../globals'
-import fs = require( 'fs' )
-import { EventEmitter } from 'events'
-import Commando = require( 'discord.js-commando' )
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import { Message } from 'discord.js'
+import { ArgumentCollectorResult, Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 
-import * as moment from 'moment'
-import sprintfjs = require( 'sprintf-js' )
-const sprintf = sprintfjs.sprintf
-
+import { apos } from '../globals'
 import { Backend } from '../lib/backend'
-import { Nya } from '../lib/nya'
-import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
+import { NyaInterface, ModuleBase } from '../modules/module'
 
-class ConfigCommand extends Commando.Command
+
+class ConfigCommand extends Command
 {
   constructor( protected _service: ModuleBase )
   {
@@ -44,7 +38,7 @@ class ConfigCommand extends Commando.Command
     })
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  async run( message: CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const argstruct: any = args
     const host: NyaInterface = this._service.host
@@ -76,7 +70,7 @@ class ConfigCommand extends Commando.Command
   }
 }
 
-class StatusCommand extends Commando.Command {
+class StatusCommand extends Command {
   constructor( protected _service: ModuleBase )
   {
     super( _service.client,
@@ -84,7 +78,7 @@ class StatusCommand extends Commando.Command {
       name: 'status',
       group: 'admin',
       memberName: 'status',
-      description: "Set the bot\u2019s activity.",
+      description: `Set the bot${apos}s activity.`,
       args: [
         {
           key: 'type',
@@ -102,7 +96,7 @@ class StatusCommand extends Commando.Command {
     } )
   }
 
-  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | null>
+  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
   {
     const host: any = this._service.host
     if ( args.type === 'clear' )
@@ -117,19 +111,19 @@ class StatusCommand extends Commando.Command {
 
 export class AdministrationModule extends ModuleBase
 {
-  constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
+  constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
   }
 
-  getGroups(): Commando.CommandGroup[]
+  getGroups(): CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.client, 'admin', 'Administration', false )
+      new CommandGroup( this.client, 'admin', 'Administration', false )
     ]
   }
 
-  getCommands(): Commando.Command[]
+  getCommands(): Command[]
   {
     return [
       new ConfigCommand( this ),
