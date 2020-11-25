@@ -24,6 +24,7 @@ async function fetchGuild( message: CommandoMessage, backend: Backend )
 }
 
 
+// TODO: should use moment I guess
 function isValidDate( date: Date ): boolean
 {
   return !Number.isNaN( date.getTime() )
@@ -88,9 +89,11 @@ class TwitterListCommand extends NyaCommand
         const channel = await backend.getChannelByID( setting.value )
         if ( channel )
           defaultChannel = channel.snowflake
+        else
+          throw new Error( `getChannelByID(${setting.value}) returned ${channel}` )
       }
-    } catch ( _ ) {
-      // Ignore
+    } catch ( error ) {
+      log( `Couldn't fetch ${this.module.settingKeys.defaultChannel} setting for guild ${guild.id}:`, error )
     }
 
     // TODO: get language from a guild/global setting or something
@@ -382,7 +385,28 @@ class TwitterFollowCommand extends NyaCommand
 {
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
+    const module = this.module as TwitterModule
+    const backend = module.backend
+    const host = module.host
+
+    const language = 'en'
+    const tweetTypes = args.tweetTypes as string[]
+    const validTweetTypes = module.tweetTypes
+    const invalidTweetTypes = []
+
+    for ( const type of tweetTypes ) {
+      if ( !validTweetTypes.includes( type ) )
+        invalidTweetTypes.push( type )
+    }
+    if ( invalidTweetTypes.length > 0 )
+      return this.module.host.talk.sendError( message, ['twitter_follow_invalid_tweet_types', host.talk.joinList[language]( invalidTweetTypes )] )
+
+    let account = args.account as string
+    if ( account.startsWith( '@' ) )
+      account = account.substring( 1 )
+
+    const tweetTypesString = 'tweets and retweets'
+    return this.module.host.talk.sendSuccess( message, ['twitter_follow_new', tweetTypesString, account, profileURL( account )] )
   }
 }
 
@@ -564,6 +588,7 @@ export class TwitterModule extends ModuleBase
     subscriptions: 'TwitterSubscriptions'
   }
   subscriptions: Map<string, Map<number, TwitterSubscriptionOptions>> = new Map()
+  tweetTypes = ['quotetweets', 'replies', 'retweets']
 
   constructor( id: number, host: NyaInterface, client: CommandoClient )
   {

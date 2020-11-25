@@ -87,6 +87,8 @@
   "twitter_channel_get_unset_invalid_default": "Tweets from [@%s](%s) would be posted to the default channel but that setting has an invalid value.",
   "twitter_channel_get_not_following": "This guild is not following [@%s](%s).",
   "twitter_channel_set": "Tweets from [@%s](%s) will be posted to <#%s>.",
+  "twitter_follow_invalid_tweet_types": "Invalid tweet types were specified: %s",
+  "twitter_follow_new": "Started following %s from [@%s](%s).",
   "twitter_list_line": "**[@%s](%s)**: Posting %s to <#%s>",
   "twitter_list_line_default_channel": "**[@%s](%s)**: Posting %s to <#%s> (default channel)",
   "twitter_list_line_default_channel_unset": "**[@%s](%s)**: Would post %s, but no channel has been set",
