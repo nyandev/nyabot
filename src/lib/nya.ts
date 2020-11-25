@@ -134,7 +134,12 @@ export class Nya implements NyaInterface
         console.log( c )
         let channel = await this._backend.upsertChannel( c )
       }, this )
-    let dsUsers = await dsGuild.members.fetch()
+    let dsUsers
+    try {
+      dsUsers = await dsGuild.members.fetch()
+    } catch ( error ) {
+      log( `Couldn't fetch members of guild ${dsGuild.id}:`, error )
+    }
     if ( dsUsers )
       dsUsers.each( async membership => {
         let fetched = await membership.user.fetch()
