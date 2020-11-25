@@ -8,8 +8,8 @@ import { Nya } from './nya'
 
 
 interface EmbedData {
-  title?: string | PrintfParams
-  description?: string | PrintfParams
+  title?: FormatData
+  description?: FormatData
   color?: ColorResolvable
   fields?: FieldData[]
   url?: string
@@ -17,10 +17,14 @@ interface EmbedData {
 }
 
 interface FieldData {
-  name: string | PrintfParams
-  value: string | PrintfParams
+  name: FormatData
+  value: FormatData
   inline?: boolean
 }
+
+type FormatData = string | NonemptyArray<string> | PrintfParams
+
+type NonemptyArray<T> = { 0: T } & Array<T>
 
 interface PrintfParams {
   messageID: string
@@ -36,11 +40,21 @@ export class TalkModule
   {
   }
 
-  format( data: string | PrintfParams )
+  format( data: FormatData )
   {
-    const messageID = ( typeof data === 'string' ) ? data : data.messageID
+    let messageID: string
+    let args: string[]
+    if ( typeof data === 'string' ) {
+      messageID = data
+      args = []
+    } else if ( Array.isArray( data ) ) {
+      messageID = data[0]
+      args = data.slice( 1 )
+    } else {
+      messageID = data.messageID
+      args = data.args || []
+    }
     const template = this.getTemplate( messageID )
-    const args = ( typeof data === 'string' ) ? [] : ( data.args || [] )
     return sprintf( template, ...args )
   }
 
@@ -97,7 +111,7 @@ export class TalkModule
     return message.embed( embed )
   }
 
-  async sendError( message: CommandoMessage, data: string | PrintfParams )
+  async sendError( message: CommandoMessage, data: FormatData )
   {
     return this.sendEmbed( message, {
       description: data,
@@ -123,6 +137,13 @@ export class TalkModule
   {
     return this.sendEmbed( message, {
       description: { messageID, args }
+    } )
+  }
+
+  async sendSuccess( message: CommandoMessage, data: FormatData ) {
+    return this.sendEmbed( message, {
+      description: data,
+      color: 'GREEN'
     } )
   }
 
