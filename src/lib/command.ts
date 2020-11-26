@@ -19,7 +19,7 @@ export interface Arguments {
   [key: string]: Argument | Argument[]
 }
 
-export interface CommandOptionSpec {
+export interface CommandOptions {
   description: string
   dummy?: boolean
   guildOnly?: boolean
@@ -38,7 +38,7 @@ interface CommandInstanceOptions {
 
 interface SubcommandConstructor {
   new ( module: ModuleBase, options: {name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean} ): NyaCommand
-  options: CommandOptionSpec
+  options: CommandOptions
   subcommands?: Subcommands
 }
 
@@ -127,6 +127,7 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
     }
   }
 }
+
 
 function buildSubcommands( module: ModuleBase, subcommandList: any = {}, baseOptions: any ): { [name: string]: NyaCommand }
 {

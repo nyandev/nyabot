@@ -5,10 +5,11 @@ import { sprintf } from 'sprintf-js'
 
 import { apos, debug, log } from '../globals'
 import { Backend } from '../lib/backend'
-import { Arguments, NyaBaseCommand, NyaCommand, CommandOptionSpec, Subcommands } from '../lib/command'
+import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
+// TODO: move this to Backend#getGuildByMessage?
 async function fetchGuild( message: CommandoMessage, backend: Backend )
 {
   let guild
@@ -44,7 +45,7 @@ function queryString( accounts: string[] ) {
 
 class TwitterListCommand extends NyaCommand
 {
-  static options = {
+  static options: CommandOptions = {
     description: "List all Twitter accounts followed by this guild."
   }
 
@@ -144,7 +145,7 @@ class TwitterListCommand extends NyaCommand
 
 class TwitterChannelDefaultClearCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: "Clear the default channel for posting Twitter notifications.",
     ownerOnly: true
   }
@@ -190,7 +191,7 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 
 class TwitterChannelDefaultSetCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: "Set the default channel for posting Twitter notifications.",
     ownerOnly: true,
     args: [
@@ -200,14 +201,74 @@ class TwitterChannelDefaultSetCommand extends NyaCommand
 
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
+    const backend = this.module.backend
+    const host = this.module.host
+    const settingKey = this.module.settingKeys.defaultChannel
+
+    let guild
+    try {
+      guild = await fetchGuild( message, backend )
+    } catch ( error ) {
+      return this.unexpectedError( message )
+    }
+
+    // TODO: how do I specify a DB model type
+    let oldChannel: any = null
+    try {
+      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
+      if ( channelSetting && channelSetting.value != null ) {
+        oldChannel = await backend.getChannelByID( channelSetting.value )
+        if ( !oldChannel ) 
+          throw new Error( `Backend#getChannelByID(${channelSetting.value}) returned ${oldChannel}` )
+        }
+    } catch ( error ) {
+      log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
+    }
+
+    const error = () => {
+      if ( oldChannel )
+        return host.talk.sendError( message, ['twitter_channel_default_set_error_previously_set', oldChannel.snowflake] )
+      return host.talk.sendError( message, 'twitter_channel_default_set_error_previously_unset' )
+    }
+
+    // If args.channel is a string, it contains an error message ID
+    if ( typeof args.channel === 'string' )
+      return host.talk.sendError( message, args.channel )
+
+    if ( !( args.channel instanceof TextChannel ) )
+      return host.talk.sendError( message, 'channel_not_found_by_name' )
+
+    let channel
+    try {
+      channel = await backend.getChannelBySnowflake( args.channel.id )
+      if ( !channel )
+        throw new Error( `Backend#getChannelBySnowflake(${args.channel.id}) returned ${channel}` )
+    } catch ( error ) {
+      log( `Couldn't fetch channel ${args.channel.id}:`, error )
+      return error()
+    }
+
+    try {
+      // TODO: check return value
+      await backend.setGuildSetting( guild.id, settingKey, channel.id )
+    } catch ( error ) {
+      log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
+      return error()
+    }
+
+    if ( oldChannel ) {
+      if ( channel.snowflake === oldChannel.snowflake )
+        return host.talk.sendSuccess( message, ['twitter_channel_default_set_no_change', channel.snowflake] )
+      return host.talk.sendSuccess( message, ['twitter_channel_default_set_previously_set', channel.snowflake, oldChannel.snowflake] )
+    }
+    return host.talk.sendSuccess( message, ['twitter_channel_default_set_previously_unset', channel.snowflake] )
   }
 }
 
 
 class TwitterChannelDefaultCommand extends NyaCommand
 {
-  static options = {
+  static options: CommandOptions = {
     description: "Show the default channel for posting Twitter notifications."
   }
   static subcommands = {
@@ -228,70 +289,28 @@ class TwitterChannelDefaultCommand extends NyaCommand
       return this.unexpectedError( message )
     }
 
-    // TODO: how to specify a DB model type
-    let oldChannel: any = null
+    let channel
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
       if ( channelSetting && channelSetting.value != null ) {
-        oldChannel = await backend.getChannelByID( channelSetting.value )
-        if ( !oldChannel )
-          throw new Error( `Couldn't fetch channel ${channelSetting.value}` )
+        channel = await backend.getChannelByID( channelSetting.value )
+        if ( !channel )
+          throw new Error( `Backend#getChannelByID(${channelSetting.value}) returned ${channel}` )
       }
     } catch ( error ) {
       log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
     }
 
-    const errorMessage = () => {
-      if ( oldChannel )
-       return host.respondTo( message, 'twitter_channel_default_error_previously_set', oldChannel.snowflake )
-      return host.respondTo( message, 'twitter_channel_default_error_previously_unset' )
-    }
-
-    if ( args.channel ) {
-      // If args.channel is a string, it contains an error message ID
-      if ( typeof args.channel === 'string' )
-        return host.talk.sendError( message, args.channel )
-
-      if ( !( args.channel instanceof TextChannel ) )
-        return this.unexpectedError( message )
-
-      let channel
-      try {
-        channel = await backend.getChannelBySnowflake( args.channel.id )
-        if ( !channel )
-          throw new Error( `getChannelBySnowflake returned ${channel}` )
-      } catch ( error ) {
-        log( `Couldn't fetch channel ${args.channel.id}:`, error )
-        return errorMessage()
-      }
-
-      try {
-        // TODO: check return value
-        await backend.setGuildSetting( guild.id, settingKey, channel.id )
-      } catch ( error ) {
-        log( `Failed to set ${settingKey} setting for guild ${guild.id} to ${channel.id}:`, error )
-        return errorMessage()
-      }
-      if ( oldChannel ) {
-        if ( channel.snowflake === oldChannel.snowflake )
-          return host.respondTo( message, 'twitter_channel_default_set_no_change', channel.snowflake )
-        return host.respondTo( message, 'twitter_channel_default_set_previously_set', channel.snowflake, oldChannel.snowflake )
-      }
-      return host.respondTo( message, 'twitter_channel_default_set_previously_unset', channel.snowflake )
-    }
-    if ( args.channel === null )
-      return host.talk.sendError( message, 'channel_not_found_by_name' )
-
-    if ( oldChannel )
-      return host.respondTo( message, 'twitter_channel_default_get', oldChannel.snowflake )
-    return host.respondTo( message, 'twitter_channel_default_get_unset' )
+    if ( !channel )
+      return host.talk.sendText( message, 'twitter_channel_default_get_unset' )
+    return host.talk.sendText( message, 'twitter_channel_default_get', channel.snowflake )
   }
 }
 
 
 class TwitterChannelGetCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: `Show which channel a Twitter account${apos}s notifications are being posted to.`,
     args: [
       { key: 'account', type: 'string' }
@@ -387,7 +406,7 @@ class TwitterChannelGetCommand extends NyaCommand
 
 class TwitterChannelSetCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: "Set a channel for posting notifications from a Twitter account.",
     ownerOnly: true,
     args: [
@@ -415,11 +434,11 @@ class TwitterChannelSetCommand extends NyaCommand
 
 class TwitterChannelCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: "Show or modify the channels used for Twitter notifications.",
     dummy: true
   }
-  static subcommands: Subcommands = {
+  static subcommands = {
     default: TwitterChannelDefaultCommand,
     get: TwitterChannelGetCommand,
     set: TwitterChannelSetCommand
@@ -434,7 +453,7 @@ class TwitterChannelCommand extends NyaCommand
 
 class TwitterFollowCommand extends NyaCommand
 {
-  static options: CommandOptionSpec = {
+  static options: CommandOptions = {
     description: "Follow a Twitter account or change which types of tweets are posted.",
     ownerOnly: true,
     args: [
