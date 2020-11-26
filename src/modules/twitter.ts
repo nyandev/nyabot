@@ -458,8 +458,15 @@ class TwitterFollowCommand extends NyaCommand
     ownerOnly: true,
     args: [
       { key: 'account', type: 'string' },
-      { key: 'tweetTypes', catchAll: true, type: 'string' }
+      { key: 'tweetTypes', helpKey: 'tweet type', catchAll: true, optional: true, type: 'string' }
     ]
+  }
+
+  constructor( public module: ModuleBase, options: { name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean } )
+  {
+    super( module, options )
+    const tweetTypes = Object.keys( ( module as TwitterModule ).tweetTypes ).filter( type => type !== 'tweets' ).join( ', ' )
+    this.options.usageNotes = `\`<tweet type>\` can be one of: ${tweetTypes}`
   }
 
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
@@ -470,22 +477,23 @@ class TwitterFollowCommand extends NyaCommand
 
     const language = 'en'
     const tweetTypes = args.tweetTypes as string[]
-    const validTweetTypes = module.tweetTypes
+    const validTweetTypes = Object.keys( module.tweetTypes )
+    const validTweetTypesLower = validTweetTypes.map( type => type.toLowerCase() )
     const invalidTweetTypes = []
 
     for ( const type of tweetTypes ) {
-      if ( !validTweetTypes.includes( type ) )
+      if ( !validTweetTypesLower.includes( type.toLowerCase() ) )
         invalidTweetTypes.push( type )
     }
     if ( invalidTweetTypes.length > 0 )
-      return this.module.host.talk.sendError( message, ['twitter_follow_invalid_tweet_types', host.talk.joinList[language]( invalidTweetTypes )] )
+      return module.host.talk.sendError( message, ['twitter_follow_invalid_tweet_types', host.talk.joinList[language]( invalidTweetTypes )] )
 
     let account = args.account as string
     if ( account.startsWith( '@' ) )
       account = account.substring( 1 )
 
     const tweetTypesString = 'tweets and retweets'
-    return this.module.host.talk.sendSuccess( message, ['twitter_follow_new', tweetTypesString, account, profileURL( account )] )
+    return module.host.talk.sendSuccess( message, ['twitter_follow_new', tweetTypesString, account, profileURL( account )] )
   }
 }
 
@@ -584,7 +592,12 @@ export class TwitterModule extends ModuleBase
     subscriptions: 'TwitterSubscriptions'
   }
   subscriptions: Map<string, Map<number, TwitterSubscriptionOptions>> = new Map()
-  tweetTypes = ['quotetweets', 'replies', 'retweets']
+  tweetTypes = {
+    quoteTweets: this.host.messages.tweet_type_quotetweets,
+    replies: this.host.messages.tweet_type_replies,
+    retweets: this.host.messages.tweet_type_retweets,
+    tweets: this.host.messages.tweet_type_tweets
+  }
 
   constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
