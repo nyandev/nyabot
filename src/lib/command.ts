@@ -7,6 +7,7 @@ import { ModuleBase } from '../modules/module'
 
 interface ArgumentSpec {
   key: string
+  helpKey?: string
   type: ArgumentType
   optional?: boolean
   catchAll?: boolean
@@ -25,6 +26,7 @@ export interface CommandOptions {
   guildOnly?: boolean
   ownerOnly?: boolean
   args?: ArgumentSpec[]
+  usageNotes?: string
 }
 
 interface CommandInstanceOptions {
@@ -115,6 +117,8 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
         if ( args )
           reply += ` ${args}`
         reply += '`'
+        if ( this.options.usageNotes )
+          reply += `\n${this.options.usageNotes}`
         if ( subcommands.length )
           reply += `\nSubcommands: ${subcommandList}`
       }
@@ -180,7 +184,7 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
 
 export abstract class NyaCommand extends CommandMixin(Object)
 {
-  constructor( public module: ModuleBase, options: {name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean} )
+  constructor( public module: ModuleBase, options: { name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean } )
   {
     super()
     const cls = this.constructor as SubcommandConstructor
@@ -194,10 +198,12 @@ export abstract class NyaCommand extends CommandMixin(Object)
       args: cls.options.args || []
     }
 
-    if ( cls.options.hasOwnProperty( 'guildOnly' ) )
+    if ( cls.options.guildOnly != null )
       this.options.guildOnly = cls.options.guildOnly
-    if ( cls.options.hasOwnProperty( 'ownerOnly' ) )
+    if ( cls.options.ownerOnly != null )
       this.options.ownerOnly = cls.options.ownerOnly
+    if ( cls.options.usageNotes )
+      this.options.usageNotes = cls.options.usageNotes
 
     this.subcommands = buildSubcommands( module, cls.subcommands, this.options )
   }
@@ -210,10 +216,10 @@ function usageArgs( args: ArgumentSpec[] ): string
 {
   const argStrings = []
   for ( const arg of args ) {
-    let s = `<${arg.key}>`
+    let s = `<${arg.helpKey || arg.key}>`
     if ( arg.optional )
       s = `[${s}]`
-    if ( arg.type.startsWith( '...' ) )
+    if ( arg.catchAll )
       s = `${s}...`
     argStrings.push( s )
   }
