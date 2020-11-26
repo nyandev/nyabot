@@ -1,8 +1,8 @@
-import Commando = require( 'discord.js-commando' )
+import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
+import { debug } from '../globals'
 import { Backend } from '../lib/backend'
-import { SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
 import { Parser, ParsedStruct } from '../lib/parser'
 import { TalkModule } from '../lib/talk'
 
@@ -16,8 +16,8 @@ export interface NyaInterface
   talk: TalkModule
 
   getBackend(): Backend
-  getClient(): Commando.CommandoClient
-  respondTo( message: Commando.CommandoMessage, messageID: string, ...args: any[] ): Promise<Message | Message[] | null> | null
+  getClient(): CommandoClient
+  respondTo( message: CommandoMessage, messageID: string, ...args: any[] ): Promise<Message | Message[] | null> | null
   getGlobalSettingKeys(): string[]
 }
 
@@ -30,17 +30,19 @@ export abstract class ModuleBase
   constructor(
     protected id: number,
     public readonly host: NyaInterface,
-    public readonly client: Commando.CommandoClient
-  )
-  {
+    public readonly client: CommandoClient
+  ) {
     this.backend = this.host.getBackend()
   }
 
-  buildSubcommands( baseName: string, data: SubcommandSpec ): SubcommandList
+/*
+  buildSubcommands( baseOptions: any ):
   {
-    const commands: SubcommandList = {}
+    const subcommands: SubcommandList = {}
+
     for ( const [name, command] of Object.entries( data ) ) {
-      const options: SubcommandInfo = {
+
+      const options: CommandOptions = {
         name: `${baseName} ${name}`
       }
       if ( command.options ) {
@@ -59,9 +61,11 @@ export abstract class ModuleBase
         options,
         subcommands
       }
+
     }
     return commands
   }
+*/
 
   destroy()
   {
@@ -72,8 +76,8 @@ export abstract class ModuleBase
     return []
   }
 
-  abstract getGroups(): Commando.CommandGroup[]
-  abstract getCommands(): Commando.Command[]
+  abstract getGroups(): CommandGroup[]
+  abstract getCommands(): Command[]
   abstract registerStuff( id: number, host: NyaInterface ): boolean
   abstract onMessage( msg: Message ): Promise<void>
 }

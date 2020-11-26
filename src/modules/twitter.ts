@@ -5,7 +5,7 @@ import { sprintf } from 'sprintf-js'
 
 import { apos, debug, log } from '../globals'
 import { Backend } from '../lib/backend'
-import { Arguments, NyaBaseCommand, NyaCommand, parseTextChannel, SubcommandInfo, SubcommandList, SubcommandSpec } from '../lib/command'
+import { Arguments, NyaBaseCommand, NyaCommand, CommandOptionSpec, Subcommands } from '../lib/command'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
@@ -42,17 +42,12 @@ function queryString( accounts: string[] ) {
 }
 
 
-class TwitterChannelCommand extends NyaCommand
-{
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-  {
-    return null // This command should be used through its subcommands.
-  }
-}
-
-
 class TwitterListCommand extends NyaCommand
 {
+  static options = {
+    description: "List all Twitter accounts followed by this guild."
+  }
+
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
@@ -147,8 +142,79 @@ class TwitterListCommand extends NyaCommand
 }
 
 
+class TwitterChannelDefaultClearCommand extends NyaCommand
+{
+  static options: CommandOptionSpec = {
+    description: "Clear the default channel for posting Twitter notifications.",
+    ownerOnly: true
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const host = this.module.host
+    const settingKey = this.module.settingKeys.defaultChannel
+
+    let guild
+    try {
+      guild = await fetchGuild( message, backend )
+    } catch ( error ) {
+      return this.unexpectedError( message )
+    }
+
+    let oldChannel = null
+    try {
+      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
+      if ( channelSetting && channelSetting.value != null ) {
+        oldChannel = await backend.getChannelByID( channelSetting.value )
+      }
+    } catch ( error ) {
+      log( `Couldn't fetch default Twitter channel of guild ${guild.id}:`, error )
+    }
+
+    try {
+      // TODO: check return value
+      await backend.removeGuildSetting( guild.id, settingKey )
+    } catch ( error ) {
+      log( `Failed to remove ${settingKey} setting of guild ${guild.id}:`, error )
+      if ( oldChannel )
+        return host.respondTo( message, 'twitter_channel_default_clear_error_previously_set', oldChannel.snowflake )
+      return host.respondTo( message, 'twitter_channel_default_clear_error_previously_unset' )
+    }
+    if ( oldChannel )
+      return host.respondTo( message, 'twitter_channel_default_clear_previously_set', oldChannel.snowflake )
+    return host.respondTo( message, 'twitter_channel_default_clear_previously_unset' )
+  }
+}
+
+
+class TwitterChannelDefaultSetCommand extends NyaCommand
+{
+  static options: CommandOptionSpec = {
+    description: "Set the default channel for posting Twitter notifications.",
+    ownerOnly: true,
+    args: [
+      { key: 'channel', type: 'text-channel' }
+    ]
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
+  }
+}
+
+
 class TwitterChannelDefaultCommand extends NyaCommand
 {
+  static options = {
+    description: "Show the default channel for posting Twitter notifications."
+  }
+  static subcommands = {
+    clear: TwitterChannelDefaultClearCommand,
+    set: TwitterChannelDefaultSetCommand
+  }
+
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
@@ -223,58 +289,15 @@ class TwitterChannelDefaultCommand extends NyaCommand
 }
 
 
-class TwitterChannelDefaultClearCommand extends NyaCommand
-{
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-  {
-    const backend = this.module.backend
-    const host = this.module.host
-    const settingKey = this.module.settingKeys.defaultChannel
-
-    let guild
-    try {
-      guild = await fetchGuild( message, backend )
-    } catch ( error ) {
-      return this.unexpectedError( message )
-    }
-
-    let oldChannel = null
-    try {
-      const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( channelSetting && channelSetting.value != null ) {
-        oldChannel = await backend.getChannelByID( channelSetting.value )
-      }
-    } catch ( error ) {
-      log( `Couldn't fetch default Twitter channel of guild ${guild.id}:`, error )
-    }
-
-    try {
-      // TODO: check return value
-      await backend.removeGuildSetting( guild.id, settingKey )
-    } catch ( error ) {
-      log( `Failed to remove ${settingKey} setting of guild ${guild.id}:`, error )
-      if ( oldChannel )
-        return host.respondTo( message, 'twitter_channel_default_clear_error_previously_set', oldChannel.snowflake )
-      return host.respondTo( message, 'twitter_channel_default_clear_error_previously_unset' )
-    }
-    if ( oldChannel )
-      return host.respondTo( message, 'twitter_channel_default_clear_previously_set', oldChannel.snowflake )
-    return host.respondTo( message, 'twitter_channel_default_clear_previously_unset' )
-  }
-}
-
-
-class TwitterChannelDefaultSetCommand extends NyaCommand
-{
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-  {
-    return this.module.host.talk.sendText(message, '%s', JSON.stringify(args))
-  }
-}
-
-
 class TwitterChannelGetCommand extends NyaCommand
 {
+  static options: CommandOptionSpec = {
+    description: `Show which channel a Twitter account${apos}s notifications are being posted to.`,
+    args: [
+      { key: 'account', type: 'string' }
+    ]
+  }
+
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     let accountArg = args.account as string
@@ -364,6 +387,15 @@ class TwitterChannelGetCommand extends NyaCommand
 
 class TwitterChannelSetCommand extends NyaCommand
 {
+  static options: CommandOptionSpec = {
+    description: "Set a channel for posting notifications from a Twitter account.",
+    ownerOnly: true,
+    args: [
+      { key: 'account', type: 'string' },
+      { key: 'channel', type: 'text-channel' }
+    ]
+  }
+
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     let accountArg = args.account as string
@@ -381,8 +413,36 @@ class TwitterChannelSetCommand extends NyaCommand
 }
 
 
+class TwitterChannelCommand extends NyaCommand
+{
+  static options: CommandOptionSpec = {
+    description: "Show or modify the channels used for Twitter notifications.",
+    dummy: true
+  }
+  static subcommands: Subcommands = {
+    default: TwitterChannelDefaultCommand,
+    get: TwitterChannelGetCommand,
+    set: TwitterChannelSetCommand
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    return null // This command should be used through its subcommands.
+  }
+}
+
+
 class TwitterFollowCommand extends NyaCommand
 {
+  static options: CommandOptionSpec = {
+    description: "Follow a Twitter account or change which types of tweets are posted.",
+    ownerOnly: true,
+    args: [
+      { key: 'account', type: 'string' },
+      { key: 'tweetTypes', catchAll: true, type: 'string' }
+    ]
+  }
+
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const module = this.module as TwitterModule
@@ -421,93 +481,10 @@ class TwitterCommand extends NyaBaseCommand
       group: 'twitter',
       description: `Post this guild${apos}s Twitter link(s).`,
       guildOnly: true,
-      subcommandSpec: {
-        follow:  {
-          class: TwitterFollowCommand,
-          options: {
-            description: "Follow a Twitter account or change which tweet types are posted.",
-            ownerOnly: true,
-            args: [
-              {
-                key: 'account',
-                type: 'string'
-              },
-              {
-                key: 'tweetTypes',
-                catchAll: true,
-                type: 'string'
-              }
-            ]
-          }
-        },
-        list: {
-          class: TwitterListCommand,
-          options: {
-            description: "List all Twitter accounts followed on this server."
-          }
-        },
-        channel: {
-          class: TwitterChannelCommand,
-          options: {
-            dummy: true,
-            description: "Shows or modifies the channels used for Twitter notifications."
-          },
-          subcommands: {
-            default: {
-              class: TwitterChannelDefaultCommand,
-              options: {
-                description: "Show the default channel for posting Twitter notifications."
-              },
-              subcommands: {
-                clear: {
-                  class: TwitterChannelDefaultClearCommand,
-                  options: {
-                    description: "Clear the default channel for posting Twitter notifications.",
-                    ownerOnly: true
-                  }
-                },
-                set: {
-                  class: TwitterChannelDefaultSetCommand,
-                  options: {
-                    description: "Set the default channel for posting Twitter notifications.",
-                    ownerOnly: true,
-                    args: [{
-                      key: 'channel',
-                      type: 'text-channel'
-                    }]
-                  }
-                }
-              }
-            },
-            get: {
-              class: TwitterChannelGetCommand,
-              options: {
-                description: `Show which channel a Twitter account${apos}s notifications are being posted to.`,
-                args: [{
-                  key: 'account',
-                  type: 'string'
-                }]
-              }
-            },
-            set: {
-              class: TwitterChannelSetCommand,
-              options: {
-                description: "Set a channel for posting notifications from a particular Twitter user.",
-                ownerOnly: true,
-                args: [
-                  {
-                    key: 'account',
-                    type: 'string'
-                  },
-                  {
-                    key: 'channel',
-                    type: 'text-channel'
-                  }
-                ]
-              }
-            }
-          }
-        }
+      subcommands: {
+        channel: TwitterChannelCommand,
+        follow: TwitterFollowCommand,
+        list: TwitterListCommand
       }
     } )
   }

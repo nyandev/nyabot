@@ -7,44 +7,43 @@ import { ModuleBase } from '../modules/module'
 
 interface ArgumentSpec {
   key: string
-  type: 'string' | 'number' | 'text-channel'
+  type: ArgumentType
   optional?: boolean
   catchAll?: boolean
 }
 
+type ArgumentType = 'string' | 'number' | 'text-channel'
 type Argument = string | number | TextChannel | null
 
 export interface Arguments {
   [key: string]: Argument | Argument[]
 }
 
-export interface SubcommandInfo {
-  name?: string
-  description?: string
+export interface CommandOptionSpec {
+  description: string
+  dummy?: boolean
   guildOnly?: boolean
   ownerOnly?: boolean
-  dummy?: boolean
   args?: ArgumentSpec[]
 }
 
-export interface SubcommandList {
-  [name: string]: {
-    command: NyaCommand
-    options?: SubcommandInfo
-    subcommands?: SubcommandList
-  }
+interface CommandInstanceOptions {
+  name: string
+  description: string
+  guildOnly: boolean
+  ownerOnly: boolean
+  dummy: boolean
+  args: ArgumentSpec[]
 }
 
-export interface SubcommandOptions extends SubcommandInfo {
-  subcommands?: SubcommandList
+interface SubcommandConstructor {
+  new ( module: ModuleBase, options: {name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean} ): NyaCommand
+  options: CommandOptionSpec
+  subcommands?: Subcommands
 }
 
-export interface SubcommandSpec {
-  [name: string]: {
-    class: new (module: ModuleBase, subcommands?: SubcommandOptions) => NyaCommand
-    options?: SubcommandInfo
-    subcommands?: SubcommandSpec
-  }
+export interface Subcommands {
+  [name: string]: SubcommandConstructor
 }
 
 interface BaseCommandInfo {
@@ -55,7 +54,7 @@ interface BaseCommandInfo {
   args?: ArgumentSpec[]
   guildOnly?: boolean
   ownerOnly?: boolean
-  subcommandSpec?: SubcommandSpec
+  subcommands?: Subcommands
 }
 
 type CommandConstructor = new ( ...args: any[] ) => any
@@ -67,7 +66,7 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
     async delegate( message: CommandoMessage, args: string[] )
     {
       if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
-        return this.subcommands[args[0]].command.delegate( message, args.slice( 1 ) )
+        return this.subcommands[args[0]].delegate( message, args.slice( 1 ) )
 
       const usageMsg = async () => message.say( await this.help( message ) )
       if ( this.options.dummy )
@@ -129,10 +128,25 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
   }
 }
 
+function buildSubcommands( module: ModuleBase, subcommandList: any = {}, baseOptions: any ): { [name: string]: NyaCommand }
+{
+  const subcommands: { [name: string]: NyaCommand } = {}
+
+  for ( const [name, command] of Object.entries( subcommandList ) ) {
+    const ctor = command as any
+    subcommands[name] = new ctor( module, {
+      name: `${baseOptions.name} ${name}`,
+      baseGuildOnly: baseOptions.guildOnly,
+      baseOwnerOnly: baseOptions.ownerOnly
+    } )
+  }
+  return subcommands
+}
+
 
 export abstract class NyaBaseCommand extends CommandMixin(Command)
 {
-  subcommands: SubcommandList = {}
+  subcommands: { [name: string]: NyaCommand } = {}
 
   constructor( protected module: ModuleBase, private options: BaseCommandInfo )
   {
@@ -141,12 +155,16 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
       memberName: options.name,
       group: options.group,
       description: options.description,
-      guildOnly: options.guildOnly,
-      ownerOnly: options.ownerOnly,
+      guildOnly: Boolean( options.guildOnly ),
+      ownerOnly: Boolean( options.ownerOnly ),
       argsType: 'multiple'
     } )
-    if ( options.subcommandSpec )
-      this.subcommands = this.module.buildSubcommands( options.name, options.subcommandSpec )
+    if ( options.subcommands )
+      this.subcommands = buildSubcommands( module, options.subcommands, {
+        name: options.name,
+        guildOnly: Boolean( options.guildOnly ),
+        ownerOnly: Boolean( options.ownerOnly )
+      } )
   }
 
   async run( message: CommandoMessage, args: string[], fromPattern: boolean, result?: ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
@@ -161,14 +179,26 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
 
 export abstract class NyaCommand extends CommandMixin(Object)
 {
-  subcommands: SubcommandList = {}
-
-  constructor( public module: ModuleBase, public options: SubcommandOptions = {} )
+  constructor( public module: ModuleBase, options: {name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean} )
   {
     super()
-    if ( options.subcommands )
-      this.subcommands = options.subcommands
-    delete this.options.subcommands
+    const cls = this.constructor as SubcommandConstructor
+
+    this.options = {
+      name: options.name,
+      description: cls.options.description,
+      dummy: Boolean( cls.options.dummy ),
+      guildOnly: Boolean( options.baseGuildOnly ),
+      ownerOnly: Boolean( options.baseOwnerOnly ),
+      args: cls.options.args || []
+    }
+
+    if ( cls.options.hasOwnProperty( 'guildOnly' ) )
+      this.options.guildOnly = cls.options.guildOnly
+    if ( cls.options.hasOwnProperty( 'ownerOnly' ) )
+      this.options.ownerOnly = cls.options.ownerOnly
+
+    this.subcommands = buildSubcommands( module, cls.subcommands, this.options )
   }
 
   abstract execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
