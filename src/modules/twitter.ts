@@ -764,12 +764,17 @@ export class TwitterModule extends ModuleBase
     }
     const redisKey = ( account: string ) => `latesttweet:${account}`
 
+    // Tweets take a while from posting to show up in the API (sometimes over 10 seconds),
+    // so with short polling intervals we need to check a bit further back.
+    // Duration in milliseconds.
+    const leeway = 30000
+
     let startTime = null
     const now = new Date()
     if ( interval.lastCheck ) {
       // start_time cannot be more than a week old
       if ( now.getTime() - interval.lastCheck.getTime() < 7 * 24 * 60 * 60 * 1000 )
-        startTime = interval.lastCheck
+        startTime = new Date( interval.lastCheck.getTime() - leeway )
     }
     interval.lastCheck = now
 
