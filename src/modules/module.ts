@@ -1,5 +1,5 @@
 import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import { Message, MessageReaction, User } from 'discord.js'
 
 import { debug } from '../globals'
 import { Backend } from '../lib/backend'
@@ -78,6 +78,22 @@ export abstract class ModuleBase
 
   abstract getGroups(): CommandGroup[]
   abstract getCommands(): Command[]
-  abstract registerStuff( id: number, host: NyaInterface ): boolean
-  abstract onMessage( msg: Message ): Promise<void>
+
+  async onMessage( msg: Message ): Promise<void>
+  {
+  }
+
+  async onReactionAdd( reaction: MessageReaction, user: User ): Promise<void>
+  {
+  }
+
+  async onReactionRemove( reaction: MessageReaction, user: User ): Promise<void>
+  {
+  }
+
+  registerStuff( id: number, host: NyaInterface )
+  {
+    this.id = id
+    return true
+  }
 }
