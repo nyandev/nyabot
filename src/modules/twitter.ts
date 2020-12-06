@@ -6,7 +6,7 @@ import { sprintf } from 'sprintf-js'
 import { apos, debug, log } from '../globals'
 import { Backend } from '../lib/backend'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
-import { NyaInterface, ModuleBase } from '../modules/module'
+import { NyaInterface, ModuleBase } from './module'
 
 
 // TODO: move this to Backend#getGuildByMessage?
@@ -544,7 +544,7 @@ interface IntervalStatus {
   cleared: boolean
   accounts: string[]
   queryLength: number
-  lastCheck?: Date
+  latestTweet?: string
 }
 
 interface TwitterSubscriptionOptions {
@@ -764,35 +764,27 @@ export class TwitterModule extends ModuleBase
     }
     const redisKey = ( account: string ) => `latesttweet:${account}`
 
-    // Tweets take a while from posting to show up in the API (sometimes over 10 seconds),
-    // so with short polling intervals we need to check a bit further back.
-    // Duration in milliseconds.
-    const leeway = 30000
-
-    let startTime = null
-    const now = new Date()
-    if ( interval.lastCheck ) {
-      // start_time cannot be more than a week old
-      if ( now.getTime() - interval.lastCheck.getTime() < 7 * 24 * 60 * 60 * 1000 )
-        startTime = new Date( interval.lastCheck.getTime() - leeway )
-    }
-    interval.lastCheck = now
-
     const query = queryString( interval.accounts )
     let recentsURL = `https://api.twitter.com/2/tweets/search/recent?query=${query}&max_results=${this.config.maxResults}`
-    if ( startTime )
-      recentsURL += `&start_time=${startTime.toISOString()}`
+    if ( interval.latestTweet )
+      recentsURL += `&since_id=${interval.latestTweet}`
 
     let recentTweets
     try {
       const response = await fetch( recentsURL, fetchOptions )
       recentTweets = await response.json()
-      if ( !recentTweets.meta )
+      if ( !recentTweets.meta ) {
+        // interval.latestTweet might be too old
+        delete interval.latestTweet
         throw new Error( "Response for recent tweet lookup has no `meta` field." )
+      }
     } catch ( error ) {
       log( `Couldn't fetch tweets in interval ${index}:`, error )
       return
     }
+
+    if ( recentTweets.meta.newest_id )
+      interval.latestTweet = recentTweets.meta.newest_id
 
     if ( recentTweets.meta.result_count === 0 || !recentTweets.data )
       return
