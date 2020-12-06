@@ -16,6 +16,7 @@ import { AdministrationModule } from '../modules/administration'
 import { ClubModule } from '../modules/club'
 import { CurrencyModule } from '../modules/currency'
 import { GamesModule } from '../modules/games'
+import { RolesModule } from '../modules/roles'
 import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
 import { XPModule } from '../modules/xp'
@@ -232,11 +233,21 @@ export class Nya implements NyaInterface
 
   async onMessage( message: Message )
   {
-    if ( !this.shouldHandle( message ) )
-      return
-    this._modules.forEach( module => {
-      module.onMessage( message )
-    })
+    if ( this.shouldHandle( message ) )
+      for ( const module of this._modules )
+        module.onMessage( message )
+  }
+
+  async onReactionAdd( reaction: MessageReaction, user: User )
+  {
+    for ( const module of this._modules )
+      module.onReactionAdd( reaction, user )
+  }
+
+  async onReactionRemove( reaction: MessageReaction, user: User )
+  {
+    for ( const module of this._modules )
+      module.onReactionRemove( reaction, user )
   }
 
   // TODO: maybe remove this method entirely and send responses directly via TalkModule methods
@@ -318,17 +329,19 @@ export class Nya implements NyaInterface
         .on( 'warn', this.onWarning )
         .on( 'error', this.onError )
         .on( 'invalidated', this.onInvalidated )
-        .on( 'ready', ( this.onReady ).bind( this ) )
+        .on( 'ready', this.onReady.bind( this ) )
         .on( 'rateLimit', this.onRateLimit )
         .on( 'shardReady', this.onShardReady )
-        .on( 'guildCreate', ( this.onGuildCreate ).bind( this ) )
-        .on( 'guildUpdate', ( this.onGuildUpdate ).bind( this ) )
-        .on( 'guildDelete', ( this.onGuildDelete ).bind( this ) )
-        .on( 'channelCreate', ( this.onChannelCreate ).bind( this ) )
-        .on( 'channelUpdate', ( this.onChannelUpdate ).bind( this ) )
-        .on( 'channelDelete', ( this.onChannelDelete ).bind( this ) )
-        .on( 'userUpdate', ( this.onUserUpdate ).bind( this ) )
-        .on( 'message', ( this.onMessage ).bind( this ) )
+        .on( 'guildCreate', this.onGuildCreate.bind( this ) )
+        .on( 'guildUpdate', this.onGuildUpdate.bind( this ) )
+        .on( 'guildDelete', this.onGuildDelete.bind( this ) )
+        .on( 'channelCreate', this.onChannelCreate.bind( this ) )
+        .on( 'channelUpdate', this.onChannelUpdate.bind( this ) )
+        .on( 'channelDelete', this.onChannelDelete.bind( this ) )
+        .on( 'userUpdate', this.onUserUpdate.bind( this ) )
+        .on( 'message', this.onMessage.bind( this ) )
+        .on( 'messageReactionAdd', this.onReactionAdd.bind( this ) )
+        .on( 'messageReactionRemove', this.onReactionRemove.bind( this ) )
         .on( 'guildUnavailable', this.onGuildUnavailable )
         .on('commandError', (cmd, err) => {
           if(err instanceof Commando.FriendlyError) return;
@@ -376,6 +389,7 @@ export class Nya implements NyaInterface
           ClubModule,
           CurrencyModule,
           GamesModule,
+          RolesModule,
           TwitchModule,
           TwitterModule,
           XPModule
