@@ -14,36 +14,24 @@ const minLettersInMsg: number = 5
 
 export class ParsedBase
 {
-  protected _type: string
-  get type(): string { return this._type }
-  constructor( type: string )
+  constructor( readonly type: string )
   {
-    this._type = type
   }
 }
 
 export class ParsedText extends ParsedBase
 {
-  protected _text: string
-  get text(): string { return this._text }
-  constructor( text: string )
+  constructor( readonly text: string )
   {
     super( 'text' )
-    this._text = text
   }
 }
 
 export class ParsedMention extends ParsedBase
 {
-  protected _targetType: string
-  protected _target: string
-  get targetType(): string { return this._targetType }
-  get target(): string { return this._target }
-  constructor( type: string, target: string )
+  constructor( readonly targetType: string, readonly target: string )
   {
     super( 'mention' )
-    this._targetType = type
-    this._target = target
   }
 }
 
@@ -60,15 +48,9 @@ export class ParsedStruct
 
 export class ParsedEmote extends ParsedBase
 {
-  protected _name: string
-  protected _code: string
-  get name(): string { return this._name }
-  get code(): string { return this._code }
-  constructor( name: string, code: string )
+  constructor( readonly name: string, readonly code: string )
   {
     super( 'emote' )
-    this._name = name
-    this._code = code
   }
 }
 
