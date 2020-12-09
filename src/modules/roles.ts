@@ -350,13 +350,9 @@ export class RolesModule extends ModuleBase
       return
     }
 
-    const channel = (await this.client.channels.fetch('775265183395479614')) as any
-    channel.send(`Hey ${member}, lemme give you the <@&${roleID}> role`)
-
     try {
       await member.roles.add( roleID )
     } catch ( error ) {
-      channel.send(`Couldn't auto-assign role: ${error}`)
       log( `Couldn't auto-assign role ${roleID} to user ${member.id}:`, error )
     }
   }
