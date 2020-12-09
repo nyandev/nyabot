@@ -163,6 +163,11 @@ export class TalkModule
     return message.embed( embed )
   }
 
+  unexpectedError( message: CommandoMessage )
+  {
+    return this.sendError( message, 'unexpected_error' )
+  }
+
 /*
   async sendPlainResponse( message: CommandoMessage, data: EmbedData ): Promise<Message | Message[] | null>
   {

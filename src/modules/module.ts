@@ -1,5 +1,5 @@
 import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
-import { Message, MessageReaction, User } from 'discord.js'
+import { GuildMember, Message, MessageReaction, User } from 'discord.js'
 
 import { debug } from '../globals'
 import { Backend } from '../lib/backend'
@@ -88,6 +88,10 @@ export abstract class ModuleBase
   }
 
   async onReactionRemove( reaction: MessageReaction, user: User ): Promise<void>
+  {
+  }
+
+  async onGuildMemberAdd( member: GuildMember )
   {
   }
 

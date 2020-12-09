@@ -163,6 +163,12 @@ export class Nya implements NyaInterface
     this._emitter.emit( 'guildDeleted', guild )
   }
 
+  async onGuildMemberAdd( member: GuildMember )
+  {
+    for ( const module of this._modules )
+      module.onGuildMemberAdd( member )
+  }
+
   async onChannelCreate( dsChannel: Channel )
   {
     if ( dsChannel.type !== 'dm' )
@@ -335,6 +341,7 @@ export class Nya implements NyaInterface
         .on( 'guildCreate', this.onGuildCreate.bind( this ) )
         .on( 'guildUpdate', this.onGuildUpdate.bind( this ) )
         .on( 'guildDelete', this.onGuildDelete.bind( this ) )
+        .on( 'guildMemberAdd', this.onGuildMemberAdd.bind( this ) )
         .on( 'channelCreate', this.onChannelCreate.bind( this ) )
         .on( 'channelUpdate', this.onChannelUpdate.bind( this ) )
         .on( 'channelDelete', this.onChannelDelete.bind( this ) )

@@ -1,17 +1,10 @@
-import { CommandoClient } from 'discord.js-commando'
-import { MessageReaction, Snowflake, TextChannel, User } from 'discord.js'
+import { CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
+import { GuildMember, Message, MessageReaction, Role, Snowflake, TextChannel, User } from 'discord.js'
 import { QueryTypes } from 'sequelize'
 
 import { debug, log } from '../globals'
+import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand } from '../lib/command'
 import { NyaInterface, ModuleBase } from './module'
-
-
-interface RoleReactionsSetting {
-  [messageID: string]: {
-    channel: Snowflake,
-    reactions: Array<{ [emojiID: string]: Snowflake }>
-  }
-}
 
 
 interface RoleReactionsRow {
@@ -23,16 +16,144 @@ interface RoleReactionsRow {
 }
 
 
+class RoleAutoClearCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Clear the auto-assigned role."
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const host = this.module.host
+
+    let dbGuild
+    try {
+      dbGuild = await backend.getGuildByMessage( message )
+    } catch ( error ) {
+      return host.talk.unexpectedError( message )
+    }
+
+    try {
+      await backend.removeGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole )
+    } catch ( error ) {
+      log( `Couldn't remove ${this.module.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
+      return this.unexpectedError( message )
+    }
+    return host.talk.sendText( message, 'role_auto_clear' )
+  }
+}
+
+
+class RoleAutoSetCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Set the auto-assigned role.",
+    args: [
+      { key: 'role', type: 'role' }
+    ]
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const host = this.module.host
+
+    if ( typeof args.role === 'string' )
+      return host.talk.sendError( message, args.role )
+    if ( !( args.role instanceof Role ) )
+      return host.talk.sendError( message, 'role_not_found_by_name' )
+
+    let dbGuild
+    try {
+      dbGuild = await backend.getGuildByMessage( message )
+    } catch ( error ) {
+      return host.talk.unexpectedError( message )
+    }
+
+    try {
+      await backend.setGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole, args.role.id )
+    } catch ( error ) {
+      log( `Couldn't set ${this.module.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id} to ${args.role.id}:`, error )
+      return host.talk.unexpectedError( message )
+    }
+    return host.talk.sendText( message, 'role_auto_set', args.role.toString() )
+  }
+}
+
+
+class RoleAutoCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Show the auto-assigned role."
+  }
+  static subcommands = {
+    clear: RoleAutoClearCommand,
+    set: RoleAutoSetCommand
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const host = this.module.host
+
+    let dbGuild
+    try {
+      dbGuild = await backend.getGuildByMessage( message )
+    } catch ( error ) {
+      return host.talk.unexpectedError( message )
+    }
+
+    let roleID
+    try {
+      const setting = await backend.getGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole )
+      if ( !setting || !setting.value )
+        return host.talk.sendText( message, 'role_auto_unset' )
+      roleID = setting.value
+    } catch ( error ) {
+      log( `Couldn't fetch ${this.module.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
+      return host.talk.unexpectedError( message )
+    }
+
+    let role
+    try {
+      role = await message.guild.roles.fetch( roleID )
+      if ( !role )
+        throw new Error( `RoleManager#fetch returned ${role} (deleted role?)` )
+    } catch ( error ) {
+      log( `Couldn't fetch role ${roleID} in guild ${dbGuild.id}:`, error )
+      return host.talk.unexpectedError( message )
+    }
+
+    return host.talk.sendText( message, 'role_auto', role.toString() )
+  }
+}
+
+
+class RoleCommand extends NyaBaseCommand
+{
+  constructor( protected module: RolesModule )
+  {
+    super( module,
+    {
+      name: 'role',
+      group: 'roles',
+      description: "Manage auto-assigned and self-assigned roles.",
+      dummy: true,
+      guildOnly: true,
+      ownerOnly: true,
+      subcommands: {
+        auto: RoleAutoCommand
+      }
+    } )
+  }
+}
+
+
 export class RolesModule extends ModuleBase
 {
   settingKeys = {
-    roleReactions: 'RoleReactions'
-  }
-  tables = {
-    roleReactions: 'RoleReactions'
-  }
-  timeouts = {
-    guildMembersFetch: 10000
+    autoAssignedRole: 'AutoAssignedRole'
   }
 
   constructor( id: number, host: NyaInterface, client: CommandoClient )
@@ -46,12 +167,16 @@ export class RolesModule extends ModuleBase
 
   getCommands()
   {
-    return []
+    return [
+      new RoleCommand( this )
+    ]
   }
 
   getGroups()
   {
-    return []
+    return [
+      new CommandGroup( this.client, 'roles', 'Roles', false )
+    ]
   }
 
   async getRole( reaction: MessageReaction ): Promise<string | null>
@@ -87,7 +212,7 @@ export class RolesModule extends ModuleBase
   async initialize(): Promise<void>
   {
     try {
-      await this.backend._db.query( `CREATE TABLE IF NOT EXISTS ${this.tables.roleReactions} (
+      await this.backend._db.query( `CREATE TABLE IF NOT EXISTS RoleReactions (
         role VARCHAR(30),
         guild VARCHAR(30),
         channel VARCHAR(30) NOT NULL,
@@ -96,18 +221,18 @@ export class RolesModule extends ModuleBase
         PRIMARY KEY (role, guild))`
       )
     } catch ( error ) {
-      log( `Couldn't create table ${this.tables.roleReactions}:`, error )
+      log( `Couldn't create RoleReactions table:`, error )
       return
     }
 
     let rows
     try {
       rows = await this.backend._db.query(
-        `SELECT role, guild, channel, message, emoji FROM ${this.tables.roleReactions}`,
+        `SELECT role, guild, channel, message, emoji FROM RoleReactions`,
         { type: QueryTypes.SELECT }
       ) as RoleReactionsRow[]
     } catch ( error ) {
-      log( `Couldn't fetch data from ${this.tables.roleReactions} table`, error )
+      log( `Couldn't fetch data from RoleReactions table`, error )
       return
     }
 
@@ -157,8 +282,9 @@ export class RolesModule extends ModuleBase
       }
 
       // Fetch guild members into cache, so that Role#members will include them
+      let guildMembers
       try {
-        await guild.members.fetch()
+        guildMembers = await guild.members.fetch()
       } catch ( error ) {
         log( `Couldn't fetch members of guild ${guild.id}:`, error )
       }
@@ -192,6 +318,40 @@ export class RolesModule extends ModuleBase
         if ( !reactedUsers.has( user.id ) )
           user.roles.remove( role )
       }
+    }
+  }
+
+  async onGuildMemberAdd( member: GuildMember ): Promise<void>
+  {
+    let dbGuild
+    try {
+      dbGuild = await this.backend.getGuildBySnowflake( member.guild.id )
+      if ( !dbGuild )
+        throw new Error( `Backend#getGuildBySnowflake returned ${dbGuild}` )
+    } catch ( error ) {
+      log( `Couldn't fetch guild ${member.guild.id}:`, error )
+      return
+    }
+
+    let roleID
+    try {
+      const setting = await this.backend.getGuildSetting( dbGuild.id, this.settingKeys.autoAssignedRole )
+      if ( !setting || !setting.value )
+        return
+      roleID = setting.value
+    } catch ( error ) {
+      log( `Couldn't fetch ${this.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
+      return
+    }
+
+    const channel = (await this.client.channels.fetch('775265183395479614')) as any
+    channel.send(`Hey ${member}, lemme give you the <@&${roleID}> role`)
+
+    try {
+      await member.roles.add( roleID )
+    } catch ( error ) {
+      channel.send(`Couldn't auto-assign role: ${error}`)
+      log( `Couldn't auto-assign role ${roleID} to user ${member.id}:`, error )
     }
   }
 
