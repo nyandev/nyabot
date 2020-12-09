@@ -1,5 +1,5 @@
 import { ArgumentCollectorResult, Command, CommandoMessage } from 'discord.js-commando'
-import { Channel, Message, TextChannel } from 'discord.js'
+import { Channel, Message, Role, TextChannel } from 'discord.js'
 
 import { debug, log } from '../globals'
 import { ModuleBase } from '../modules/module'
@@ -13,8 +13,8 @@ interface ArgumentSpec {
   catchAll?: boolean
 }
 
-type ArgumentType = 'string' | 'number' | 'text-channel'
-type Argument = string | number | TextChannel | null
+type ArgumentType = 'string' | 'number' | 'role' | 'text-channel'
+type Argument = string | number | Role | TextChannel | null
 
 export interface Arguments {
   [key: string]: Argument | Argument[]
@@ -74,7 +74,7 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
       if ( this.options.dummy )
         return await usageMsg()
 
-      const parsedArgs = parseArgs( args, this.options.args || [], message )
+      const parsedArgs = await parseArgs( args, this.options.args || [], message )
       if ( !parsedArgs )
         return await usageMsg()
       return this.execute( message, parsedArgs )
@@ -125,6 +125,7 @@ function CommandMixin<TBase extends CommandConstructor>( Base: TBase )
       return reply
     }
 
+    // DEPRECATED: Use TalkModule#unexpectedError instead
     async unexpectedError( message: CommandoMessage )
     {
       return this.host.talk.sendError( message, 'unexpected_error' )
@@ -178,7 +179,10 @@ export abstract class NyaBaseCommand extends CommandMixin(Command)
   }
 
   // I'd prefer to call this `run` but Commando uses that method name
-  abstract execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
+  {
+    return null
+  }
 }
 
 
@@ -227,7 +231,7 @@ function usageArgs( args: ArgumentSpec[] ): string
 }
 
 
-function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Arguments | false
+async function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Promise<Arguments | false>
 {
   const requiredArgs = args.map( ( arg, i ) => [arg, i] ).filter( ([arg, i]) => !( arg as ArgumentSpec ).optional )
   if ( requiredArgs.length && requiredArgs.length <= requiredArgs[requiredArgs.length - 1][1] )
@@ -240,50 +244,67 @@ function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMes
   const catchAllKey = catchAll ? args[args.length - 1].key : ''
   const catchAllType = catchAll ? args[args.length - 1].type : null
   const catchAllList: Argument[] = []
-
   const parsed: Arguments = {}
-  let error = false
 
-  values.forEach( ( val, i ) => {
+  for ( const [i, val] of values.entries() ) {
     const spec = args[i]
     let type
     let addToCatchAll
 
     if ( !spec ) {
-      if ( !catchAll ) {
-        error = true
-        return
-      }
+      if ( !catchAll )
+        return false
       addToCatchAll = true
       type = catchAllType
     } else {
       addToCatchAll = spec.catchAll
       type = spec.type
     }
-    if ( !type ) {
-      error = true
-      return
-    }
+
+    if ( !type )
+      return false
 
     let parsedValue
     if ( type === 'string' )
       parsedValue = val
     else if ( type === 'number' )
       parsedValue = parseFloat( val )
+    else if ( type === 'role' )
+      parsedValue = await parseRole( val, message )
     else if ( type === 'text-channel' )
-      parsedValue = parseTextChannel( val, message )
+      parsedValue = await parseTextChannel( val, message )
     else
       throw new Error( `Unknown argument type: ${spec.type}` )
     if ( addToCatchAll )
       catchAllList.push( parsedValue )
     else
       parsed[spec.key] = parsedValue
-  } )
-  if ( error )
-    return false
+  }
+
   if ( catchAll )
     parsed[catchAllKey] = catchAllList
   return parsed
+}
+
+
+async function parseRole( arg: string, message: CommandoMessage ): Promise<Role | string | null>
+{
+  if ( !arg )
+    return null
+
+  const roleMention = arg.match( /^<@&(\d+)>$/ )
+  if ( roleMention ) {
+    const role = await message.guild.roles.fetch( roleMention[1] )
+    return role || null
+  }
+
+  const allRoles = await message.guild.roles.fetch()
+  const roles = allRoles.filter( ( role: Role ) => role.name.toLowerCase() === arg.toLowerCase() )
+  if ( roles.size === 0 )
+    return null
+  if ( roles.size === 1 )
+    return roles.first() as Role
+  return 'multiple_roles_same_name'
 }
 
 
@@ -297,24 +318,21 @@ function textChannelFilter( search: string )
 }
 
 
-export function parseTextChannel( arg: string, message: CommandoMessage ): TextChannel | string | null
+export async function parseTextChannel( arg: string, message: CommandoMessage ): Promise<TextChannel | string | null>
 {
-  if ( !arg || !message )
+  if ( !arg || !message.guild )
     return null
 
-  const channelMention = arg.match( /^\<#(\d+)>$/ )
+  const channelMention = arg.match( /^<#(\d+)>$/ )
   if ( channelMention ) {
-    const channel = message.client.channels.resolve( channelMention[1] )
+    const channel = await message.client.channels.fetch( channelMention[1] )
     return ( channel && channel.type === 'text' ) ? ( channel as TextChannel ) : null
   }
 
-  if ( !message.guild )
-    return null
-
   const channels = message.guild.channels.cache.filter( textChannelFilter( arg ) )
-  if ( !channels.size )
+  if ( channels.size === 0 )
     return null
-  if ( channels.size === 1)
+  if ( channels.size === 1 )
     return ( channels.first() as TextChannel )
   return 'multiple_channels_same_name'
 }
