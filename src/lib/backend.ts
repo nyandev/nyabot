@@ -5,10 +5,10 @@ const sprintf = sprintfjs.sprintf
 import { datetimeNow, debug, logSprintf } from '../globals'
 import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
 import { Redis } from './redis'
-import { CommandoClient } from 'discord.js-commando'
-
+import { CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 
+import { log } from '../globals'
 
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
@@ -254,6 +254,20 @@ export class Backend
   {
     let cond = { snowflake }
     return this._models.Guild.findOne({ where: cond })
+  }
+
+  async getGuildByMessage( message: CommandoMessage )
+  {
+    let dbGuild
+    try {
+      dbGuild = await this.getGuildBySnowflake( message.guild.id )
+      if ( !dbGuild )
+        throw new Error( `Backend#getGuildBySnowflake returned ${dbGuild}` )
+    } catch ( error ) {
+      log( `Couldn't fetch guild ${message.guild.id}:`, error )
+      throw error
+    }
+    return dbGuild
   }
 
   async getSnowflakeByGuildID( id: number )
