@@ -245,11 +245,16 @@ export class RolesModule extends ModuleBase
         continue
       }
 
-      const channel = guild.channels.resolve( row.channel )
-      if ( !channel ) {
-        log( `Couldn't resolve channel ${row.channel} in guild ${guild.id}` )
+      let channel
+      try {
+        channel = await this.client.channels.fetch( row.channel )
+        if ( !channel )
+          throw new Error( `ChannelManager#fetch returned ${channel}` )
+      } catch ( error ) {
+        log( `Couldn't fetch channel ${row.channel}:`, error )
         continue
       }
+
       if ( channel.type !== 'text' ) {
         log( `Channel ${channel.id} is not a text channel` )
         continue
@@ -307,13 +312,14 @@ export class RolesModule extends ModuleBase
           continue
         try {
           const guildMember = await guild.members.fetch( user )
-          await guildMember.roles.add( role )
+          if ( !guildMember.roles.cache.has( role.id ) )
+            await guildMember.roles.add( role )
         } catch ( error ) {
           log( `Couldn't add role ${role.id} to user ${user.id} in guild ${guild.id}:`, error )
           continue
         }
       }
-      debug(role.members)
+
       for ( const user of role.members.values() ) {
         if ( !reactedUsers.has( user.id ) )
           user.roles.remove( role )
