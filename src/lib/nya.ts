@@ -132,7 +132,6 @@ export class Nya implements NyaInterface
     let dsChannels = dsGuild.channels.cache
     if ( dsChannels )
       dsChannels.each( async c => {
-        console.log( c )
         let channel = await this._backend.upsertChannel( c )
       }, this )
     let dsUsers
@@ -144,7 +143,6 @@ export class Nya implements NyaInterface
     if ( dsUsers )
       dsUsers.each( async membership => {
         let fetched = await membership.user.fetch()
-        console.log( fetched )
         let user = await this._backend.upsertUser( fetched )
         await this._backend.upsertGuildUser( membership )
       }, this )

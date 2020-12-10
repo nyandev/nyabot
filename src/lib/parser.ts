@@ -74,8 +74,6 @@ export class Parser
 
   static parseMessage( fulltext: string ): ParsedStruct
   {
-    logSprintf( 'parse', 'Parsing:' )
-    console.log( fulltext )
     let i = 0
     let letters = 0
     let parsed = new ParsedStruct
