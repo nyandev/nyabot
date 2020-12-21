@@ -362,9 +362,17 @@ export class Backend
       if ( shouldUpdateDB )
       {
         this._redis.set( skey, '0' )
-        const guilduser = await this.getGuildUserByIDs( guild.id, user.id )
-        await guilduser.increment(['experience', 'totalExperience'], { by: Math.round( sxp ) })
-        await guilduser.reload()
+        let guilduser
+        try {
+          guilduser = await this.getGuildUserByIDs( guild.id, user.id )
+          if ( !guilduser )
+            throw new Error( `Backend#getGuildUserByIDs(${guild.id}, ${user.id}) returned ${guilduser}` )
+          await guilduser.increment(['experience', 'totalExperience'], { by: Math.round( sxp ) })
+          await guilduser.reload()
+        } catch ( error ) {
+          log( `Couldn't update experience for user ${user.id} in guild ${guild.id}:`, error )
+          return
+        }
         logSprintf( 'xp', 'User %i Server XP after save: %f', user.id, guilduser.experience )
       }
     }
