@@ -549,6 +549,7 @@ interface IntervalStatus {
 
 interface TwitterSubscriptionOptions {
   channel?: number
+  message?: string
   quoteTweets?: boolean
   replies?: boolean
   retweets?: boolean
@@ -835,17 +836,24 @@ export class TwitterModule extends ModuleBase
         continue
 
       for ( const [guildID, options] of subscriptions ) {
+        let verb = 'tweeted'
         const retweet = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'retweeted' )
         if ( retweet && !options.retweets )
           continue
+        if ( retweet )
+          verb = 'retweeted'
 
         const quoteTweet = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'quoted' )
         if ( quoteTweet && !options.quoteTweets )
           continue
+        if ( quoteTweet )
+          verb = 'quote tweeted'
 
         const reply = tweet.referenced_tweets && tweet.referenced_tweets.some( ( ref: any ) => ref.type === 'replied_to' )
         if ( reply && !options.replies )
           continue
+        if ( reply )
+          verb = 'replied'
 
         let channelID = options.channel
         if ( channelID == null ) {
@@ -863,10 +871,10 @@ export class TwitterModule extends ModuleBase
 
         let channel = null
         try {
-          const ch = await this.backend.getChannelByID( channelID )
-          if ( !ch )
-            throw new Error( `getChannelByID returned ${ch}` )
-          channel = await this.client.channels.fetch( ch.snowflake )
+          const dbChannel = await this.backend.getChannelByID( channelID )
+          if ( !dbChannel )
+            throw new Error( `getChannelByID returned ${dbChannel}` )
+          channel = await this.client.channels.fetch( dbChannel.snowflake )
           if ( channel.type !== 'text' )
             throw new Error( `Channel ${channelID} is not a text channel.` )
         } catch ( error ) {
@@ -874,19 +882,20 @@ export class TwitterModule extends ModuleBase
           continue
         }
 
-        const messageSetting = retweet ? this.settingKeys.retweetMessage : this.settingKeys.message
-        let template
-        try {
-          template = await this.backend.getSetting( messageSetting, guildID )
-          if ( template == null )
-            throw new Error( `getSetting(${messageSetting}, ${guildID}) returned ${template}` )
-        } catch ( error ) {
-          log( `Couldn't fetch ${messageSetting} setting for guild ${guildID} or globally:`, error )
-          continue
+        let template = options.message
+        if ( !template ) {
+          try {
+            template = await this.backend.getSetting( this.settingKeys.message, guildID )
+            if ( template == null )
+              throw new Error( `getSetting(${this.settingKeys.message}, ${guildID}) returned ${template}` )
+          } catch ( error ) {
+            log( `Couldn't fetch ${this.settingKeys.message} setting for guild ${guildID} or globally:`, error )
+            continue
+          }
         }
 
         const url = `https://twitter.com/${author.username}/status/${tweet.id}`
-        const message = sprintf( template, { url, username: author.name } )
+        const message = sprintf( template, { url, username: author.name, verb } )
 
         try {
           await ( channel as TextChannel ).send( message )
