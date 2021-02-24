@@ -589,7 +589,6 @@ export class TwitterModule extends ModuleBase
     defaultChannel: 'TwitterDefaultChannel',
     defaultMessage: 'TwitterDefaultMessage',
     message: 'TwitterMessage',
-    retweetMessage: 'TwitterRetweetMessage',
     subscriptions: 'TwitterSubscriptions'
   }
   subscriptions: Map<string, Map<number, TwitterSubscriptionOptions>> = new Map()
@@ -625,7 +624,6 @@ export class TwitterModule extends ModuleBase
     return [
       this.settingKeys.defaultMessage,
       this.settingKeys.message,
-      this.settingKeys.retweetMessage
     ]
   }
 

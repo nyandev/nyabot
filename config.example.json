@@ -59,8 +59,7 @@
       "TimelyReward": 300,
       "TwitchMessage": "@everyone",
       "TwitterDefaultMessage": "Follow us at https://twitter.com/example\u200A!",
-      "TwitterMessage": "**%(username)s** tweeted: %(url)s",
-      "TwitterRetweetMessage": "**%(username)s** retweeted: %(url)s"
+      "TwitterMessage": "**%(username)s** %(verb)s: %(url)s"
     }
   }
 }
