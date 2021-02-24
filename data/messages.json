@@ -38,6 +38,10 @@
   "role_auto_unset": "No auto-assigned role has been set.",
   "speedtyping_start": "Speed typing contest started! Time limit is %d seconds. The text is\n%s",
   "speedtyping_exists": "A speed typing contest is already running on this channel.",
+
+  "timely_success": "You\u2019ve claimed your %s. You can claim again in %s.",
+  "timely_too_soon": "You\u2019ve already claimed your timely reward. You can get it again in %s.",
+
   "twitchchannel_fail": "Failed to change the channel for Twitch notifications.",
   "twitchchannel_set": "Twitch notifications will be posted to <#%s>.",
   "twitchchannel_show": "Twitch notifications are currently being posted to <#%s>.",

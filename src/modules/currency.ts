@@ -1,18 +1,22 @@
 import * as fs from 'fs'
 import { EventEmitter } from 'events'
 import * as Commando from 'discord.js-commando'
+import { CommandoMessage } from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
 import { format as formatNumber } from 'd3-format'
 import * as moment from 'moment'
+import * as prettyMs from 'pretty-ms'
 import { sprintf } from 'sprintf-js'
 
 import { debug, log, logSprintf } from '../globals'
 import { Backend } from '../lib/backend'
+import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
 
+const duration = ( ms: number ) => prettyMs( ms, { secondsDecimalDigits: 0 } )
 const formatDecimal = formatNumber( ',~r' )
 
 
@@ -197,10 +201,117 @@ class SlotCommand extends Commando.Command
 }
 
 
+class TimelyCommand extends NyaBaseCommand
+{
+  constructor( protected module: CurrencyModule )
+  {
+    super( module,
+    {
+      name: 'timely',
+      group: 'currency',
+      description: "Get your regular delivery of tendies.",
+      guildOnly: true,
+    } )
+  }
+
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const host = this.module.host
+    const redis = backend._redis
+
+    let user
+    try {
+      user = await backend.getUserBySnowflake( message.author.id )
+      if ( !user )
+        throw new Error( `Backend#getUserBySnowflake returned ${user}` )
+    } catch ( error ) {
+      log( `Failed to fetch user ${message.author.id}: ${error}` )
+      return null
+    }
+
+    let guild
+    try {
+      guild = await backend.getGuildBySnowflake( message.guild.id )
+      if ( !guild )
+        throw new Error( `Backend#getGuildBySnowflake returned ${guild}` )
+    } catch ( error ) {
+      log( `Failed to fetch guild ${message.guild.id}: ${error}` )
+      return null
+    }
+
+    let interval
+    try {
+      interval = parseInt( await backend.getSetting( this.module.settingKeys.timelyInterval, guild.id ), 10 )
+      if ( !Number.isInteger( interval ) )
+        throw new Error( `Backend#getSetting returned ${interval}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.module.settingKeys.timelyInterval} setting: ${error}` )
+      return null
+    }
+    interval *= 1000  // Working in ms from here
+
+    const redisKey = `latesttimely:${guild.id}:${user.id}`
+
+    let latest
+    try {
+      latest = await redis.get( redisKey )
+      if ( latest === null )
+        latest = 0
+      else
+        latest = parseInt( latest, 10 )
+      if ( !Number.isInteger( latest ) )
+        throw new Error( `${redisKey} was set to ${latest}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${redisKey} from Redis: ${error}` )
+      return null
+    }
+    log(duration(500))
+    if ( Date.now() < latest + interval )
+      return host.talk.sendError( message, ['timely_too_soon', duration( latest + interval - Date.now() )] )
+
+    try {
+      await redis.set( redisKey, Date.now() )
+    } catch ( error ) {
+      log( `Failed to set ${redisKey} in Redis: ${error}` )
+      return null
+    }
+
+    let currencySymbol
+    try {
+      currencySymbol = await backend.getSetting( this.module.settingKeys.currencySymbol, guild.id )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.module.settingKeys.currencySymbol} setting: ${error}` )
+    }
+
+    let reward
+    try {
+      reward = parseInt( await backend.getSetting( this.module.settingKeys.timelyReward, guild.id ), 10 )
+      if ( !Number.isInteger( reward ) )
+        throw new Error( `Backend#getSetting returned ${reward}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.module.settingKeys.timelyReward} setting: ${error}` )
+      return null
+    }
+
+    try {
+      await user.increment( { currency: reward } )
+    } catch ( error ) {
+      log( `Failed to give currency to user ${user.id}: ${error}` )
+      return null
+    }
+
+    const currencyString = currencySymbol ? `${reward} ${currencySymbol}` : reward.toString()
+    return host.talk.sendSuccess( message, ['timely_success', currencyString, duration( interval )] )
+  }
+}
+
 export class CurrencyModule extends ModuleBase
 {
   settingKeys = {
-    currencySymbol: 'CurrencySymbol'
+    currencySymbol: 'CurrencySymbol',
+    timelyInterval: 'TimelyInterval',
+    timelyReward: 'TimelyReward'
   }
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
@@ -214,7 +325,9 @@ export class CurrencyModule extends ModuleBase
 
   getGlobalSettingKeys() {
     return [
-      this.settingKeys.currencySymbol
+      this.settingKeys.currencySymbol,
+      this.settingKeys.timelyInterval,
+      this.settingKeys.timelyReward
     ]
   }
 
@@ -230,7 +343,8 @@ export class CurrencyModule extends ModuleBase
     return [
       new AwardCurrencyCommand( this ),
       new ShowCurrencyCommand( this ),
-      new SlotCommand( this )
+      new SlotCommand( this ),
+      new TimelyCommand( this )
     ]
   }
 

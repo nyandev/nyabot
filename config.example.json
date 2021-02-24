@@ -55,6 +55,8 @@
         ":green_apple:",
         ":dolphin:"
       ],
+      "TimelyInterval": 60,
+      "TimelyReward": 300,
       "TwitchMessage": "@everyone",
       "TwitterDefaultMessage": "Follow us at https://twitter.com/example\u200A!",
       "TwitterMessage": "**%(username)s** tweeted: %(url)s",
