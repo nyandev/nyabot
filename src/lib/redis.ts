@@ -19,9 +19,29 @@ export class Redis
     return this._ioredis.del( key )
   }
 
+  exists( key: string ): Promise<number>
+  {
+    return this._ioredis.exists( key )
+  }
+
   get( key: string ): Promise<string | null>
   {
     return this._ioredis.get( key )
+  }
+
+  hget( key: string, field: string ): Promise<string | null>
+  {
+    return this._ioredis.hget( key, field )
+  }
+
+  hgetall( key: string ): Promise<Record<string, string>>
+  {
+    return this._ioredis.hgetall( key )
+  }
+
+  hset( key: string, data: Record<string, any> ): Promise<'OK'>
+  {
+    return this._ioredis.hset( key, data )
   }
 
   set( key: string, value: any ): Promise<'OK' | null>

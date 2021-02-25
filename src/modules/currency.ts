@@ -20,12 +20,6 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 const duration = ( ms: number ) => prettyMs( ms, { secondsDecimalDigits: 0 } )
 const formatDecimal = formatNumber( ',~r' )
 
-interface CurrencyGenerationData {
-  amount: number,
-  code?: string
-  created: number,
-  messageID: Snowflake
-}
 
 class AwardCurrencyCommand extends Commando.Command
 {
@@ -373,9 +367,8 @@ export class CurrencyModule extends ModuleBase
     const redisKey = `currencygeneration:${channel.id}`
     const redis = this.backend._redis
     try {
-      if ( await redis.get( redisKey ) )
+      if ( await redis.exists( redisKey ) )
         return
-      // Maybe check for expired flowers while we're here
     } catch ( error ) {
       log( `Failed to fetch ${redisKey} from Redis: ${error}` )
       return
@@ -403,7 +396,7 @@ export class CurrencyModule extends ModuleBase
 
     const amount = randomInt( amountMin, amountMax )
 
-    let code
+    let code = ''
     try {
       if ( JSON.parse( await this.backend.getSetting( this.settingKeys.currencyGenerationCode ) ) )
         code = randomInt( 1000, 9999 ).toString()
@@ -423,15 +416,7 @@ export class CurrencyModule extends ModuleBase
       return
     }
 
-    const data: CurrencyGenerationData = {
-      amount,
-      created: Date.now(),
-      messageID: pickMessage.id
-    }
-    if ( code )
-      data.code = code
-
-    await redis.set( redisKey, JSON.stringify( data ) )
+    await redis.hset( redisKey, { amount, code, created: Date.now(), messageID: pickMessage.id } )
   }
 
   getGlobalSettingKeys() {
