@@ -24,6 +24,8 @@ interface FieldData {
 
 type FormatData = string | NonemptyArray<string> | PrintfParams
 
+type MessageLike = CommandoMessage | Message
+
 type NonemptyArray<T> = { 0: T } & Array<T>
 
 interface PrintfParams {
@@ -89,7 +91,7 @@ export class TalkModule
     sv: this.joinListFactory( 'och' )
   }
 
-  async sendEmbed( message: CommandoMessage, data: EmbedData ): Promise<Message | Message[] | null>
+  async sendEmbed( message: MessageLike, data: EmbedData ): Promise<Message | Message[] | null>
   {
     const embed = new MessageEmbed()
 
@@ -108,10 +110,10 @@ export class TalkModule
     if ( data.imageURL )
       embed.setImage( data.imageURL )
 
-    return message.embed( embed )
+    return message.channel.send( embed )
   }
 
-  async sendError( message: CommandoMessage, data: FormatData )
+  async sendError( message: MessageLike, data: FormatData )
   {
     return this.sendEmbed( message, {
       description: data,
@@ -133,14 +135,14 @@ export class TalkModule
     return message.embed( embed )
   }
 
-  async sendText( message: CommandoMessage, messageID: string, ...args: string[] )
+  async sendText( message: MessageLike, messageID: string, ...args: string[] )
   {
     return this.sendEmbed( message, {
       description: { messageID, args }
     } )
   }
 
-  async sendSuccess( message: CommandoMessage, data: FormatData ) {
+  async sendSuccess( message: MessageLike, data: FormatData ) {
     return this.sendEmbed( message, {
       description: data,
       color: 'GREEN'
