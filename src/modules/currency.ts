@@ -6,6 +6,7 @@ import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, Gu
 import { format as formatNumber } from 'd3-format'
 import * as moment from 'moment'
 import * as prettyMs from 'pretty-ms'
+import randomInt = require( 'random-int' )
 import { sprintf } from 'sprintf-js'
 
 import { debug, log, logSprintf } from '../globals'
@@ -19,6 +20,12 @@ import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 const duration = ( ms: number ) => prettyMs( ms, { secondsDecimalDigits: 0 } )
 const formatDecimal = formatNumber( ',~r' )
 
+interface CurrencyGenerationData {
+  amount: number,
+  code?: string
+  created: number,
+  messageID: Snowflake
+}
 
 class AwardCurrencyCommand extends Commando.Command
 {
@@ -249,7 +256,7 @@ class TimelyCommand extends NyaBaseCommand
       log( `Failed to fetch ${this.module.settingKeys.timelyInterval} setting: ${error}` )
       return null
     }
-    interval *= 1000  // Working in ms from here
+    interval *= 1000  // Working in milliseconds from here
 
     const redisKey = `latesttimely:${guild.id}:${user.id}`
 
@@ -266,7 +273,7 @@ class TimelyCommand extends NyaBaseCommand
       log( `Failed to fetch ${redisKey} from Redis: ${error}` )
       return null
     }
-    log(duration(500))
+
     if ( Date.now() < latest + interval )
       return host.talk.sendError( message, ['timely_too_soon', duration( latest + interval - Date.now() )] )
 
@@ -306,9 +313,14 @@ class TimelyCommand extends NyaBaseCommand
   }
 }
 
+
 export class CurrencyModule extends ModuleBase
 {
   settingKeys = {
+    currencyGenerationAmountMax: 'CurrencyGenerationAmountMax',
+    currencyGenerationAmountMin: 'CurrencyGenerationAmountMin',
+    currencyGenerationChance: 'CurrencyGenerationChance',
+    currencyGenerationCode: 'CurrencyGenerationCode',
     currencySymbol: 'CurrencySymbol',
     timelyInterval: 'TimelyInterval',
     timelyReward: 'TimelyReward'
@@ -319,16 +331,111 @@ export class CurrencyModule extends ModuleBase
     super( id, host, client )
   }
 
-  async onMessage( msg: Message ): Promise<void>
+  async onMessage( message: Message ): Promise<void>
   {
+    if ( !message.guild || message.author.bot )
+      return
+    // Should probably disable generation from command messages
+
+    let guild
+    try {
+      guild = await this.backend.getGuildBySnowflake( message.guild.id )
+      if ( !guild )
+        throw new Error( `Backend#getGuildBySnowflake returned ${guild}` )
+    } catch ( error ) {
+      log( `Failed to fetch guild ${message.guild.id}: ${error}` )
+      return
+    }
+
+    let chance
+    try {
+      chance = Number( await this.backend.getSetting( this.settingKeys.currencyGenerationChance ) )
+      if ( Number.isNaN( chance ) )
+        throw new Error( `Backend#getSetting returned ${chance}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.settingKeys.currencyGenerationChance} setting: ${error}` )
+      return
+    }
+
+    if ( Math.random() > chance )
+      return
+
+    let channel
+    try {
+      channel = await this.backend.getChannelBySnowflake( message.channel.id )
+      if ( !channel )
+        throw new Error( `Backend#getChannelBySnowflake returned ${channel}` )
+    } catch ( error ) {
+      log( `Failed to fetch channel ${message.channel.id}: ${error}` )
+      return
+    }
+
+    const redisKey = `currencygeneration:${channel.id}`
+    const redis = this.backend._redis
+    try {
+      if ( await redis.get( redisKey ) )
+        return
+      // Maybe check for expired flowers while we're here
+    } catch ( error ) {
+      log( `Failed to fetch ${redisKey} from Redis: ${error}` )
+      return
+    }
+
+    let amountMin
+    try {
+      amountMin = parseInt( await this.backend.getSetting( this.settingKeys.currencyGenerationAmountMin, guild.id ), 10 )
+      if ( !Number.isInteger( amountMin ) || amountMin < 1 )
+        throw new Error( `Backend#getSetting returned ${amountMin}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.settingKeys.currencyGenerationAmountMin} setting: ${error}` )
+      return
+    }
+
+    let amountMax
+    try {
+      amountMax = parseInt( await this.backend.getSetting( this.settingKeys.currencyGenerationAmountMax, guild.id ), 10 )
+      if ( !Number.isInteger( amountMax ) || amountMax < amountMin )
+        throw new Error( `Backend#getSetting returned ${amountMax}` )
+    } catch ( error ) {
+      log( `Failed to fetch ${this.settingKeys.currencyGenerationAmountMax} setting: ${error}` )
+      return
+    }
+
+    const amount = randomInt( amountMin, amountMax )
+
+    let code
+    try {
+      if ( JSON.parse( await this.backend.getSetting( this.settingKeys.currencyGenerationCode ) ) )
+        code = randomInt( 1000, 9999 ).toString()
+    } catch ( error ) {
+      log( `Failed to fetch ${this.settingKeys.currencyGenerationCode} setting: ${error}` )
+    }
+
+    let pickMessage
+    try {
+      pickMessage = await this.host.talk.sendText( message,
+        `Use code '${code || 'whatever'}' to get your free trial of ${amount} tendies now`
+      )
+      if ( !( pickMessage instanceof Message ) )
+        throw new Error( "fuck" )
+    } catch ( error ) {
+      log( `Failed to send message to channel ${channel.id}: ${error}` )
+      return
+    }
+
+    const data: CurrencyGenerationData = {
+      amount,
+      created: Date.now(),
+      messageID: pickMessage.id
+    }
+    if ( code )
+      data.code = code
+
+    await redis.set( redisKey, JSON.stringify( data ) )
   }
 
   getGlobalSettingKeys() {
-    return [
-      this.settingKeys.currencySymbol,
-      this.settingKeys.timelyInterval,
-      this.settingKeys.timelyReward
-    ]
+    return Object.values( this.settingKeys )
   }
 
   getGroups(): Commando.CommandGroup[]
