@@ -46,6 +46,10 @@
     "globalDefaults": {
       "MessageEditableDuration": 10,
       "Prefix": "?",
+      "CurrencyGenerationAmountMax": 300,
+      "CurrencyGenerationAmountMin": 100,
+      "CurrencyGenerationChance": 0.05,
+      "CurrencyGenerationCode": true,
       "CurrencySymbol": ":cherry_blossom:",
       "SlotsJoker": ":cherry_blossom:",
       "SlotsImages": [
@@ -55,7 +59,7 @@
         ":green_apple:",
         ":dolphin:"
       ],
-      "TimelyInterval": 60,
+      "TimelyInterval": 36000,
       "TimelyReward": 300,
       "TwitchMessage": "@everyone",
       "TwitterDefaultMessage": "Follow us at https://twitter.com/example\u200A!",
