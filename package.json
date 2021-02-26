@@ -13,13 +13,13 @@
     "url": "https://github.com/nyandev/nyabot/issues"
   },
   "homepage": "https://github.com/nyandev/nyabot#readme",
-  "main": "built/index.js",
+  "main": "build/index.js",
   "scripts": {
     "dev": "ts-node ./src/index.ts",
     "dev:watch": "ts-node-dev --respawn src/index.ts",
     "clean": "rimraf dist/*",
     "build": "npm-run-all clean tsc",
-    "start": "node ./built/index.js"
+    "start": "node ./build/index.js"
   },
   "dependencies": {
     "@types/express": "^4.17.8",
