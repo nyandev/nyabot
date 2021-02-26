@@ -3,7 +3,7 @@ import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
 import { datetimeNow, debug, logSprintf } from '../globals'
-import { Sequelize, Model, DataType, DataTypes } from 'sequelize'
+import { DataType, DataTypes, Model, Sequelize, Transaction } from 'sequelize'
 import { Redis } from './redis'
 import { CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
@@ -54,11 +54,49 @@ export class Backend
     })
 
     this._models = {}
-    for ( const model of ['User', 'Guild', 'GuildUser', 'GuildSetting', 'Channel', 'Club', 'ClubUser'] )
+    const models = [
+      'Channel',
+      'ChannelSetting',
+      'Club',
+      'ClubUser',
+      'Guild',
+      'GuildSetting',
+      'GuildUser',
+      'User'
+    ]
+    for ( const model of models )
       this._models[model] = require( `../models/${model.toLowerCase()}` ).init( this._db )
 
     this._models.Club.hasMany( this._models.ClubUser, { foreignKey: 'clubID' } )
     this._models.ClubUser.belongsTo( this._models.Club, { foreignKey: 'clubID' } )
+  }
+
+  async getChannelSetting( channel: number, settingKey: string, transaction?: Transaction )
+  {
+    const where = { channelID: channel, key: settingKey }
+    try {
+      const result = await this._models.ChannelSetting.findOne( { where, transaction } )
+      return result ? result.value : null
+    } catch ( error ) {
+      log( `Backend#getChannelSetting(${channel}, ${settingKey}) failed: ${error}` )
+      throw error
+    }
+  }
+
+  async setChannelSetting( channel: number, settingKey: string, settingValue: string, transaction?: Transaction )
+  {
+    const values = {
+      channelID: channel,
+      key: settingKey,
+      value: settingValue,
+      lastChanged: datetimeNow()
+    }
+    try {
+      await this._models.ChannelSetting.upsert( values, { transaction } )
+    } catch ( error ) {
+      log( `Backend#setChannelSetting(${channel}, ${settingKey}, ${settingValue}) failed: ${error}` )
+      throw error
+    }
   }
 
   async getAllGuildsSettings( settingKey: string )
