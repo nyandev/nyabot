@@ -312,6 +312,8 @@ export class RolesModule extends ModuleBase
           continue
         try {
           const guildMember = await guild.members.fetch( user )
+          if ( !guildMember || guildMember.deleted )
+            continue
           if ( !guildMember.roles.cache.has( role.id ) )
             await guildMember.roles.add( role )
         } catch ( error ) {
@@ -321,7 +323,7 @@ export class RolesModule extends ModuleBase
       }
 
       for ( const user of role.members.values() ) {
-        if ( !reactedUsers.has( user.id ) )
+        if ( !user.deleted && !reactedUsers.has( user.id ) )
           user.roles.remove( role )
       }
     }
