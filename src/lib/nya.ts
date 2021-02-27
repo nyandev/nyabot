@@ -172,6 +172,12 @@ export class Nya implements NyaInterface
     await this._backend.upsertGuildUser( member )
   }
 
+  async onGuildMemberUpdate( oldMember: GuildMember, newMember: GuildMember )
+  {
+    // Update DB
+    await this._backend.upsertGuildUser( newMember )
+  }
+
   async onGuildMemberRemove( member: GuildMember )
   {
     // First let modules react
@@ -354,6 +360,7 @@ export class Nya implements NyaInterface
         .on( 'guildUpdate', this.onGuildUpdate.bind( this ) )
         .on( 'guildDelete', this.onGuildDelete.bind( this ) )
         .on( 'guildMemberAdd', this.onGuildMemberAdd.bind( this ) )
+        .on( 'guildMemberUpdate', this.onGuildMemberUpdate.bind( this ) )
         .on( 'guildMemberRemove', this.onGuildMemberRemove.bind( this ) )
         .on( 'channelCreate', this.onChannelCreate.bind( this ) )
         .on( 'channelUpdate', this.onChannelUpdate.bind( this ) )
