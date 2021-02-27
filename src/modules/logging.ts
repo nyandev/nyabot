@@ -17,10 +17,10 @@ export class LoggingModule extends ModuleBase
     const dbGuild = await this.backend.getGuildBySnowflake( guild.id )
     if ( !dbGuild )
       return null
-    const channelSnowflake = await this.backend.getGuildSetting( dbGuild.id, "LogChannel" )
-    if ( !channelSnowflake )
+    const logChannelSetting = await this.backend.getGuildSetting( dbGuild.id, "LogChannel" )
+    if ( !logChannelSetting )
       return null
-    const channel = await this.client.channels.fetch( channelSnowflake )
+    const channel = await this.client.channels.fetch( logChannelSetting.value )
     return channel;
   }
 
