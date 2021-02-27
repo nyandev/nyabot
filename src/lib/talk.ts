@@ -154,9 +154,11 @@ export class TalkModule
     const template = this.getTemplate( messageID )
 
     const embed = new MessageEmbed()
-      .setTitle( template.title )
+      .setTitle( ':pencil: ' + template.title )
       .setDescription( sprintf( template.body, ...args ) )
       .setColor( 'GOLD' )
+      .setTimestamp()
+      .setFooter( 'Logger' )
 
     return channel.send( embed )
   }

@@ -1,6 +1,6 @@
 import { logSprintf } from '../globals'
 import * as Commando from 'discord.js-commando'
-import { Message, User, GuildMember, TextChannel } from 'discord.js'
+import { Message, User, Guild, GuildMember, TextChannel } from 'discord.js'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
 
@@ -11,10 +11,23 @@ export class LoggingModule extends ModuleBase
     super( id, host, client )
   }
 
+  async resolveGuildLogChannel( guild: Guild ): Promise<any>
+  {
+    // yes obviously all of this should be cached, or better yet, received from events
+    const dbGuild = await this.backend.getGuildBySnowflake( guild.id )
+    if ( !dbGuild )
+      return null
+    const channelSnowflake = await this.backend.getGuildSetting( dbGuild.id, "LogChannel" )
+    if ( !channelSnowflake )
+      return null
+    const channel = await this.client.channels.fetch( channelSnowflake )
+    return channel;
+  }
+
   async onGuildMemberAdd( member: GuildMember ): Promise<void>
   {
-    const channel = await this.client.channels.fetch( "733128656175628327" )
-    if ( channel.isText() )
+    const channel = await this.resolveGuildLogChannel( member.guild )
+    if ( channel && channel.isText() )
     {
       this.host.talk.sendLogEvent( (channel as TextChannel), 'logging_guild_user_add', [member.user.tag || member.user.id] )
     }
@@ -22,8 +35,8 @@ export class LoggingModule extends ModuleBase
 
   async onGuildMemberRemove( member: GuildMember ): Promise<void>
   {
-    const channel = await this.client.channels.fetch( "733128656175628327" )
-    if ( channel.isText() )
+    const channel = await this.resolveGuildLogChannel( member.guild )
+    if ( channel && channel.isText() )
     {
       this.host.talk.sendLogEvent( (channel as TextChannel), 'logging_guild_user_remove', [member.user.tag || member.user.id] )
     }
