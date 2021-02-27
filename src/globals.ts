@@ -13,6 +13,15 @@ export function logSprintf( from: string, ...args: any[] ): void
   console.log( sprintf.apply( null, args ) )
 }
 
+export function logPrint( from: string, ...args: any[] ): void
+{
+  if ( !args.length )
+    return
+  const timestamp: string = moment().format( "YY-MM-DD HH:mm:ss" )
+  const line: string = args.join( " " )
+  console.log( sprintf( "%s: [%s] %s", timestamp, from, line ) )
+}
+
 export function arrayOneOf( arr: any[] ): any
 {
   return arr[Math.floor( Math.random() * arr.length )]
@@ -40,14 +49,16 @@ export function datetimeNow(): string
 export function debug(...args: any[]): void
 {
   if ( true /* replace with configuration.debug */ )
-    console.log('[DEBUG]', ...args)
+    logPrint( "debug", ...args )
+    //console.log('[DEBUG]', ...args)
 }
 
 /*  Log for end users (intended to be written to a file in production)
  */
 export function log(...args: any[]): void
 {
-  console.log(...args)
+  logPrint( "production", ...args )
+  //console.log(...args)
 }
 
 export function logThrow( error: string ): never

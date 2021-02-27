@@ -211,9 +211,11 @@ export class RolesModule extends ModuleBase
 
   async runRolesSync( rows: any[] ): Promise<void>
   {
+    await timeout( 4000 )
+
     for ( const row of rows )
     {
-      await timeout( 2000 )
+      await timeout( 1000 )
 
       logSprintf( "roles", "Handling reaction roles for emote %s on channel %s", row.emoji, row.channel )
 
@@ -314,8 +316,6 @@ export class RolesModule extends ModuleBase
         if ( !user.deleted && !reactedUsers.has( user.id ) )
           user.roles.remove( role )
       }
-
-      await timeout( 2000 )
     }
 
     logSprintf( "roles", "Reaction roles sync done" )

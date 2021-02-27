@@ -1,6 +1,6 @@
 import { logSprintf } from '../globals'
 
-const unicode_generalCategory = require( 'unicode-13.0.0/General_Category' )
+const unicode_generalCategory = require( '@unicode/unicode-13.0.0/General_Category' )
 
 const charCategoryMultipliers: number[] = [
   0, // none
