@@ -44,6 +44,16 @@ export class LoggingModule extends ModuleBase
 
   async onMessageUpdated( oldMessage: Message, newMessage: Message )
   {
+    if ( !newMessage.guild )
+      return
+    const channel = await this.resolveGuildLogChannel( newMessage.guild )
+    if ( channel && channel.isText() )
+    {
+      const textChannel: TextChannel = channel
+      this.host.talk.sendLogEvent( textChannel, 'logging_guild_message_update', [
+        newMessage.id, newMessage.author.tag || newMessage.author.id, textChannel.name, oldMessage.cleanContent, newMessage.cleanContent
+      ])
+    }
   }
  
   async onMessageDeleted( message: Message )
@@ -53,7 +63,10 @@ export class LoggingModule extends ModuleBase
     const channel = await this.resolveGuildLogChannel( message.guild )
     if ( channel && channel.isText() )
     {
-      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_message_remove', [message.id, message.cleanContent] )
+      const textChannel: TextChannel = channel
+      this.host.talk.sendLogEvent( textChannel, 'logging_guild_message_remove', [
+        message.id, message.author.tag || message.author.id, textChannel.name, message.cleanContent
+      ])
     }
   }
 

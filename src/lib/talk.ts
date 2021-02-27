@@ -154,11 +154,11 @@ export class TalkModule
     const template = this.getTemplate( messageID )
 
     const embed = new MessageEmbed()
-      .setTitle( ':pencil: ' + template.title )
+      .setTitle( template.title )
       .setDescription( sprintf( template.body, ...args ) )
-      .setColor( 'GOLD' )
+      .setColor( '#e86e97' )
       .setTimestamp()
-      .setFooter( 'Logger' )
+      .setFooter( 'Logger at ' + channel.guild.name )
 
     return channel.send( embed )
   }
