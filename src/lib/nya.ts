@@ -77,6 +77,11 @@ export class Nya implements NyaInterface
     return this._backend
   }
 
+  getEmitter(): EventEmitter
+  {
+    return this._emitter
+  }
+
   getClient(): Commando.CommandoClient
   {
     return this._client
@@ -261,6 +266,18 @@ export class Nya implements NyaInterface
       for ( const module of this._modules )
         module.onMessage( message )
   }
+ 
+  async onMessageUpdate( oldMessage: Message, newMessage: Message )
+  {
+    if ( this.shouldHandle( newMessage ) )
+      this._emitter.emit( 'messageUpdated', oldMessage, newMessage )
+  }
+ 
+  async onMessageDelete( message: Message )
+  {
+    if ( this.shouldHandle( message ) )
+      this._emitter.emit( 'messageDeleted', message )
+  }
 
   async onReactionAdd( reaction: MessageReaction, user: User )
   {
@@ -373,6 +390,8 @@ export class Nya implements NyaInterface
         .on( 'message', this.onMessage.bind( this ) )
         .on( 'messageReactionAdd', this.onReactionAdd.bind( this ) )
         .on( 'messageReactionRemove', this.onReactionRemove.bind( this ) )
+        .on( 'messageUpdate', this.onMessageUpdate.bind( this ) )
+        .on( 'messageDelete', this.onMessageDelete.bind( this ) )
         .on( 'guildUnavailable', this.onGuildUnavailable )
         .on( 'commandError', ( cmd, err, ...args ) => {
           if ( err instanceof Commando.FriendlyError )

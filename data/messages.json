@@ -44,6 +44,7 @@
 
   "logging_guild_user_add": { "title": "User joined", "body": "User **%s** joined the server." },
   "logging_guild_user_remove": { "title": "User left", "body": "User **%s** left the server." },
+  "logging_guild_message_remove": { "title": "Message deleted", "body": "Message `%s` was deleted.  Content:  ```%s```" },
 
   "twitchchannel_fail": "Failed to change the channel for Twitch notifications.",
   "twitchchannel_set": "Twitch notifications will be posted to <#%s>.",

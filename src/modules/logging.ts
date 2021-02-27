@@ -29,7 +29,7 @@ export class LoggingModule extends ModuleBase
     const channel = await this.resolveGuildLogChannel( member.guild )
     if ( channel && channel.isText() )
     {
-      this.host.talk.sendLogEvent( (channel as TextChannel), 'logging_guild_user_add', [member.user.tag || member.user.id] )
+      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_user_add', [member.user.tag || member.user.id] )
     }
   }
 
@@ -38,7 +38,22 @@ export class LoggingModule extends ModuleBase
     const channel = await this.resolveGuildLogChannel( member.guild )
     if ( channel && channel.isText() )
     {
-      this.host.talk.sendLogEvent( (channel as TextChannel), 'logging_guild_user_remove', [member.user.tag || member.user.id] )
+      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_user_remove', [member.user.tag || member.user.id] )
+    }
+  }
+
+  async onMessageUpdated( oldMessage: Message, newMessage: Message )
+  {
+  }
+ 
+  async onMessageDeleted( message: Message )
+  {
+    if ( !message.guild )
+      return
+    const channel = await this.resolveGuildLogChannel( message.guild )
+    if ( channel && channel.isText() )
+    {
+      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_message_remove', [message.id, message.cleanContent] )
     }
   }
 
@@ -55,6 +70,8 @@ export class LoggingModule extends ModuleBase
   registerStuff( id: number, host: NyaInterface ): boolean
   {
     this.id = id
+    host.getEmitter().on( 'messageUpdated', this.onMessageUpdated.bind( this ) )
+    host.getEmitter().on( 'messageDeleted', this.onMessageDeleted.bind( this ) )
     return true
   }
 }

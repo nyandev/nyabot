@@ -1,6 +1,7 @@
 import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { GuildMember, Message, MessageReaction, User } from 'discord.js'
 
+import { EventEmitter } from 'events'
 import { debug } from '../globals'
 import { Backend } from '../lib/backend'
 import { Parser, ParsedStruct } from '../lib/parser'
@@ -17,10 +18,10 @@ export interface NyaInterface
 
   getBackend(): Backend
   getClient(): CommandoClient
+  getEmitter(): EventEmitter
   respondTo( message: CommandoMessage, messageID: string, ...args: any[] ): Promise<Message | Message[] | null> | null
   getGlobalSettingKeys(): string[]
 }
-
 
 export abstract class ModuleBase
 {
