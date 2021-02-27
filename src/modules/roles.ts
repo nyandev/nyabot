@@ -2,7 +2,7 @@ import { CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-comman
 import { DiscordAPIError, GuildMember, Message, MessageReaction, Role, Snowflake, TextChannel, User, Constants } from 'discord.js'
 import { QueryTypes } from 'sequelize'
 
-import { debug, log, timeout, promiseSerial } from '../globals'
+import { debug, log, logSprintf, timeout, promiseSerial } from '../globals'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand } from '../lib/command'
 import { NyaInterface, ModuleBase } from './module'
 
@@ -241,7 +241,7 @@ export class RolesModule extends ModuleBase
     {
       promisedRows.push( new Promise( async resolve =>
       {
-        log( `Handling reaction roles for emote ${row.emoji} on channel ${row.channel}` )
+        logSprintf( "roles", "Handling reaction roles for emote %s on channel %s", row.emoji, row.channel )
         let guild
         try {
           guild = await this.client.guilds.fetch( row.guild )
@@ -340,9 +340,11 @@ export class RolesModule extends ModuleBase
             user.roles.remove( role )
         }
       }))
+      
       promisedRows.push( timeout( 5000 ) )
     }
-    await Promise.all( promisedRows )
+
+    await promiseSerial( promisedRows )
   }
 
   async onGuildMemberAdd( member: GuildMember ): Promise<void>
@@ -420,8 +422,8 @@ export class RolesModule extends ModuleBase
 
     try {
       const guildMember = await reaction.message.guild.members.fetch( user )
-      if ( !guildMember )
-        throw new Error( `Guild#member returned ${guildMember}` )
+      if ( !guildMember || guildMember.deleted )
+        return
       await guildMember.roles.remove( role )
     } catch ( error ) {
       log( `Couldn't remove role ${role} from user ${user.id} in guild ${reaction.message.guild.id}:`, error )
