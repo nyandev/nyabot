@@ -39,7 +39,7 @@ export class Redis
     return this._ioredis.hgetall( key )
   }
 
-  hset( key: string, data: Record<string, any> ): Promise<'OK'>
+  hset( key: string, data: Record<string, any> ): Promise<number>
   {
     return this._ioredis.hset( key, data )
   }

@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import { EventEmitter } from 'events'
 
 import * as Commando  from 'discord.js-commando'
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook, InviteGenerationOptions } from 'discord.js'
+import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, Intents, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook, InviteGenerationOptions } from 'discord.js'
 
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
@@ -330,21 +330,25 @@ export class Nya implements NyaInterface
         messageCacheMaxSize: 200,
         messageCacheLifetime: 0,
         messageSweepInterval: 0,
-        fetchAllMembers: false,
-        // disableMentions, allowedMentions, partials
+        // allowedMentions?, partials?
         restWsBridgeTimeout: 5000,
         restTimeOffset: 500,
         restRequestTimeout: 10000,
         restSweepInterval: 60,
         retryLimit: 2,
         presence: this.makePresence(),
+        intents: Intents.ALL,
         ws: {
           large_threshold: 200
-          // intents: 
+          // compress?, properties?
+        },
+        http: {
+          version: 7 // API version to use
         },
         owner: owners,
         commandPrefix: await this._backend.getGlobalSetting( 'Prefix' ),
         commandEditableDuration: await this._backend.getGlobalSetting( 'MessageEditableDuration' )
+        // nonCommandEditable?, invite?
       }
       this._inviteLink = null
       this._client = new Commando.Client( this._opts )

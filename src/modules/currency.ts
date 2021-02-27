@@ -9,7 +9,7 @@ import * as prettyMs from 'pretty-ms'
 import randomInt = require( 'random-int' )
 import { sprintf } from 'sprintf-js'
 
-import { debug, log, logSprintf, logThrow } from '../globals'
+import { debug, log, logSprintf, logThrow, timeout } from '../globals'
 import { Backend } from '../lib/backend'
 import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
@@ -107,7 +107,11 @@ class PickCommand extends NyaBaseCommand
     const backend = this.module.backend
     const talk = this.module.host.talk
 
-    await message.delete( { timeout: 5000 } )
+    const picktime: number = 5000
+
+    await timeout( picktime ).then( () => {
+      message.delete()
+    })
 
     try {
       return await backend._db.transaction( async t => {

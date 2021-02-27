@@ -18,7 +18,7 @@ export function arrayOneOf( arr: any[] ): any
   return arr[Math.floor( Math.random() * arr.length )]
 }
 
-export function timeout( ms: number ): any
+export function timeout( ms: number ): Promise<void>
 {
   return new Promise( resolve => { setTimeout( resolve, ms ) } )
 };
