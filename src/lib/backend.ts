@@ -111,10 +111,10 @@ export class Backend
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSetting( guild: number, settingKey: string )
+  async getGuildSetting( guild: number, settingKey: string, transaction?: Transaction )
   {
-    const cond = { guildID: guild, key: settingKey }
-    return this._models.GuildSetting.findOne({ where: cond })
+    const where = { guildID: guild, key: settingKey }
+    return this._models.GuildSetting.findOne({ where, transaction })
   }
 
   async setGuildSetting( guild: number, settingKey: string, settingValue: string )
@@ -166,13 +166,13 @@ export class Backend
     return defaultValue
   }
 
-  async getGlobalSetting( settingKey: string ): Promise<any>
+  async getGlobalSetting( settingKey: string, transaction?: Transaction ): Promise<any>
   {
     const value = this._settingCache.get( settingKey )
     if ( value !== undefined )
       return value
-    const cond: any = { guildID: null, key: settingKey }
-    const row = await this._models.GuildSetting.findOne({ where: cond })
+    const where = { guildID: null, key: settingKey }
+    const row = await this._models.GuildSetting.findOne({ where, transaction })
     if ( row )
     {
       this._settingCache.set( settingKey, row.value )
@@ -221,17 +221,14 @@ export class Backend
   /*  Returns a setting primarily from guild settings, if it it set there,
    *  and secondarily from global settings.
    */
-  async getSetting( settingKey: string, guild?: number )
+  async getSetting( settingKey: string, guild?: number, transaction?: Transaction )
   {
     let guildSetting
     if ( guild != null )
-      guildSetting = await this.getGuildSetting( guild, settingKey )
+      guildSetting = await this.getGuildSetting( guild, settingKey, transaction )
     if ( guildSetting )
-      // TODO: changed `guildSetting` to `guildSetting.value` here so that the actual value
-      //       (instead of a GuildSetting object) is always returned, to be consistent with
-      //       getGlobalSetting's return value. This will undoubtedly cause much breakage.
       return guildSetting.value
-    return await this.getGlobalSetting( settingKey )
+    return await this.getGlobalSetting( settingKey, transaction )
   }
 
   async upsertUser( user: any )
@@ -276,10 +273,18 @@ export class Backend
     return this._models.Channel.findOne( { where: cond } )
   }
 
-  async getChannelBySnowflake( snowflake: string )
+  async getChannelBySnowflake( snowflake: string, transaction?: Transaction )
   {
-    const cond = { snowflake }
-    return this._models.Channel.findOne( { where: cond } )
+    const where = { snowflake }
+    try {
+      const channel = await this._models.Channel.findOne( { where, transaction } )
+      if ( !channel )
+        throw new Error( "no such channel" )
+      return channel
+    } catch ( error ) {
+      log( `Backend#getChannelBySnowflake(${snowflake}) failed: ${error}` )
+      throw error
+    }
   }
 
   async getGuildByID( id: number )
@@ -288,10 +293,18 @@ export class Backend
     return this._models.Guild.findOne( { where: cond } )
   }
 
-  async getGuildBySnowflake( snowflake: string )
+  async getGuildBySnowflake( snowflake: string, transaction?: Transaction )
   {
-    let cond = { snowflake }
-    return this._models.Guild.findOne({ where: cond })
+    const where = { snowflake }
+    try {
+      const guild = await this._models.Guild.findOne( { where, transaction } )
+      if ( !guild )
+        throw new Error( "no such guild" )
+      return guild
+    } catch ( error ) {
+      log( `Backend#getGuildBySnowflake(${snowflake}) failed: ${error}` )
+      throw error
+    }
   }
 
   async getGuildByMessage( message: CommandoMessage )

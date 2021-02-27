@@ -370,12 +370,12 @@ export class Nya implements NyaInterface
         .on( 'messageReactionAdd', this.onReactionAdd.bind( this ) )
         .on( 'messageReactionRemove', this.onReactionRemove.bind( this ) )
         .on( 'guildUnavailable', this.onGuildUnavailable )
-        .on( 'commandError', ( cmd, err ) => {
+        .on( 'commandError', ( cmd, err, ...args ) => {
           if ( err instanceof Commando.FriendlyError )
             return;
           console.error(`Error in command ${cmd.groupID}:${cmd.memberName}`, err);
         })
-        .on('commandBlocked', (msg: any, reason: any) => {
+        .on('commandBlock', (msg: any, reason: any) => {
           console.log(`
             Command ${msg.command ? `${msg.command.groupID}:${msg.command.memberName}` : ''}
             blocked; ${reason}
