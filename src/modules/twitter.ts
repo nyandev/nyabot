@@ -53,12 +53,13 @@ class TwitterListCommand extends NyaCommand
   {
     const backend = this.module.backend
     const host = this.module.host
+    const talk = host.talk
 
     let guild
     try {
       guild = await fetchGuild( message, backend )
     } catch ( _ ) {
-      return this.unexpectedError( message )
+      return talk.unexpectedError( message )
     }
 
     let subscriptions
@@ -67,7 +68,7 @@ class TwitterListCommand extends NyaCommand
       subscriptions = JSON.parse( setting.value || '{}' )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
-      return this.unexpectedError( message )
+      return talk.unexpectedError( message )
     }
     const sortedSubscriptions: [string, TwitterSubscriptionOptions][] = Object.entries( subscriptions )
     sortedSubscriptions.sort( ( a, b ) => {
@@ -138,7 +139,7 @@ class TwitterListCommand extends NyaCommand
         }
       }
     }
-    return host.talk.sendMultilineResponse( message, lines )
+    return talk.sendMultilineResponse( message, lines )
   }
 }
 
@@ -160,7 +161,7 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
     try {
       guild = await fetchGuild( message, backend )
     } catch ( error ) {
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     let oldChannel = null
@@ -209,7 +210,7 @@ class TwitterChannelDefaultSetCommand extends NyaCommand
     try {
       guild = await fetchGuild( message, backend )
     } catch ( error ) {
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     // TODO: how do I specify a DB model type
@@ -286,7 +287,7 @@ class TwitterChannelDefaultCommand extends NyaCommand
     try {
       guild = await fetchGuild( message, backend )
     } catch ( error ) {
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     let channel
@@ -328,7 +329,7 @@ class TwitterChannelGetCommand extends NyaCommand
     try {
       guild = await fetchGuild( message, backend )
     } catch ( error ) {
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     let subscriptions
@@ -337,7 +338,7 @@ class TwitterChannelGetCommand extends NyaCommand
       subscriptions = Object.entries( JSON.parse( setting.value || '{}' ) )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     if ( accountArg.startsWith( '@' ) )
@@ -355,7 +356,7 @@ class TwitterChannelGetCommand extends NyaCommand
         `Twitter account @${accountArg.toLowerCase()} is contained in guild ${guild.id}'s ${this.module.settingKeys.subscriptions} under multiple capitalizations:`,
         subscriptions.map( ( [account, _] ) => account )
       )
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
 
     const [account, options] = subscriptions[0] as [string, TwitterSubscriptionOptions]
@@ -442,11 +443,6 @@ class TwitterChannelCommand extends NyaCommand
     default: TwitterChannelDefaultCommand,
     get: TwitterChannelGetCommand,
     set: TwitterChannelSetCommand
-  }
-
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
-  {
-    return null // This command should be used through its subcommands.
   }
 }
 

@@ -38,7 +38,7 @@ class RoleAutoClearCommand extends NyaCommand
       await backend.removeGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole )
     } catch ( error ) {
       log( `Couldn't remove ${this.module.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
-      return this.unexpectedError( message )
+      return host.talk.unexpectedError( message )
     }
     return host.talk.sendText( message, 'role_auto_clear' )
   }

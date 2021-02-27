@@ -49,3 +49,9 @@ export function log(...args: any[]): void
 {
   console.log(...args)
 }
+
+export function logThrow( error: string ): never
+{
+  log( error )
+  throw new Error( error )
+}
