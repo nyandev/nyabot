@@ -1,8 +1,8 @@
 import { CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
-import { GuildMember, Message, MessageReaction, Role, Snowflake, TextChannel, User } from 'discord.js'
+import { DiscordAPIError, GuildMember, Message, MessageReaction, Role, Snowflake, TextChannel, User, Constants } from 'discord.js'
 import { QueryTypes } from 'sequelize'
 
-import { debug, log } from '../globals'
+import { debug, log, timeout, promiseSerial } from '../globals'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand } from '../lib/command'
 import { NyaInterface, ModuleBase } from './module'
 
@@ -236,95 +236,113 @@ export class RolesModule extends ModuleBase
       return
     }
 
-    for ( const row of rows ) {
-      let guild
-      try {
-        guild = await this.client.guilds.fetch( row.guild )
-      } catch ( error ) {
-        log( `Couldn't fetch guild ${row.guild}:`, error )
-        continue
-      }
-
-      let channel
-      try {
-        channel = await this.client.channels.fetch( row.channel )
-        if ( !channel )
-          throw new Error( `ChannelManager#fetch returned ${channel}` )
-      } catch ( error ) {
-        log( `Couldn't fetch channel ${row.channel}:`, error )
-        continue
-      }
-
-      if ( channel.type !== 'text' ) {
-        log( `Channel ${channel.id} is not a text channel` )
-        continue
-      }
-
-      let message
-      try {
-        message = await ( channel as TextChannel ).messages.fetch( row.message )
-      } catch ( error ) {
-        log( `Couldn't fetch message ${row.message} in channel ${channel.id}` )
-        continue
-      }
-
-      let reaction
-      try {
-        reaction = await message.react( row.emoji )
-      } catch ( error ) {
-        log( `Couldn't react to message ${message.id} with emoji ${row.emoji}:`, error )
-        continue
-      }
-
-      let role
-      try {
-        role = await guild.roles.fetch( row.role )
-        if ( !role )
-          throw new Error( `RoleManager#fetch returned ${role}` )
-      } catch ( error ) {
-        log( `Couldn't fetch role ${row.role} of guild ${guild.id}:`, error )
-        continue
-      }
-
-      // Fetch guild members into cache, so that Role#members will include them
-      let guildMembers
-      try {
-        guildMembers = await guild.members.fetch()
-      } catch ( error ) {
-        log( `Couldn't fetch members of guild ${guild.id}:`, error )
-      }
-
-      if ( reaction.count && reaction.count > 100 )
-        log( "Warning: At most 100 users can be fetched for a given role reaction." )
-
-      let reactedUsers
-      try {
-        // TODO: Fucking Discord API won't return more than 100 users at once.
-        //       Either partition the fetches by user ID or forfeit the idea of syncing roles on startup.
-        reactedUsers = await reaction.users.fetch()
-      } catch ( error ) {
-        log( `Couldn't fetch users who reacted to message ${message.id} with emoji ${row.emoji}:`, error )
-        continue
-      }
-
-      for ( const user of reactedUsers.values() ) {
-        if ( this.client.user && this.client.user.id === user.id )
-          continue
+    let promisedRows: Array<any> = []
+    for ( const row of rows )
+    {
+      promisedRows.push( new Promise( async resolve =>
+      {
+        log( `Handling reaction roles for emote ${row.emoji} on channel ${row.channel}` )
+        let guild
         try {
-          const guildMember = await guild.members.fetch( user )
-          if ( !guildMember.roles.cache.has( role.id ) )
-            await guildMember.roles.add( role )
+          guild = await this.client.guilds.fetch( row.guild )
         } catch ( error ) {
-          log( `Couldn't add role ${role.id} to user ${user.id} in guild ${guild.id}:`, error )
-          continue
+          log( `Couldn't fetch guild ${row.guild}:`, error )
+          return resolve( true )
         }
-      }
 
-      for ( const user of role.members.values() ) {
-        if ( !reactedUsers.has( user.id ) )
-          user.roles.remove( role )
-      }
+        let channel
+        try {
+          channel = await this.client.channels.fetch( row.channel )
+          if ( !channel )
+            throw new Error( `ChannelManager#fetch returned ${channel}` )
+        } catch ( error ) {
+          log( `Couldn't fetch channel ${row.channel}:`, error )
+          return resolve( true )
+        }
+
+        if ( channel.type !== 'text' ) {
+          log( `Channel ${channel.id} is not a text channel` )
+          return resolve( true )
+        }
+
+        let message
+        try {
+          message = await ( channel as TextChannel ).messages.fetch( row.message )
+        } catch ( error ) {
+          log( `Couldn't fetch message ${row.message} in channel ${channel.id}` )
+          return resolve( true )
+        }
+
+        let reaction
+        try {
+          reaction = await message.react( row.emoji )
+        } catch ( error ) {
+          log( `Couldn't react to message ${message.id} with emoji ${row.emoji}:`, error )
+          return resolve( true )
+        }
+
+        let role
+        try {
+          role = await guild.roles.fetch( row.role )
+          if ( !role )
+            throw new Error( `RoleManager#fetch returned ${role}` )
+        } catch ( error ) {
+          log( `Couldn't fetch role ${row.role} of guild ${guild.id}:`, error )
+          return resolve( true )
+        }
+
+        // Fetch guild members into cache, so that Role#members will include them
+        let guildMembers
+        try {
+          guildMembers = await guild.members.fetch()
+        } catch ( error ) {
+          log( `Couldn't fetch members of guild ${guild.id}:`, error )
+        }
+
+        if ( reaction.count && reaction.count > 100 )
+          log( "Warning: At most 100 users can be fetched for a given role reaction." )
+
+        let reactedUsers
+        try {
+          // TODO: Fucking Discord API won't return more than 100 users at once.
+          //       Either partition the fetches by user ID or forfeit the idea of syncing roles on startup.
+          reactedUsers = await reaction.users.fetch()
+        } catch ( error ) {
+          log( `Couldn't fetch users who reacted to message ${message.id} with emoji ${row.emoji}:`, error )
+          return resolve( true )
+        }
+
+        for ( const user of reactedUsers.values() )
+        {
+          if ( this.client.user && this.client.user.id === user.id )
+            continue
+          try {
+            const guildMember = await guild.members.fetch( user )
+            if ( !guildMember || guildMember.deleted )
+              continue
+            if ( !guildMember.roles.cache.has( role.id ) )
+              await guildMember.roles.add( role )
+          } catch ( err ) {
+            const error: DiscordAPIError = err
+            if ( error.code && error.code === Constants.APIErrors.UNKNOWN_MEMBER )
+            {
+              log( `Trying to remove reaction from deleted user ${user.id}.` )
+              reaction.users.remove( user.id )
+            } else
+              log( `Couldn't add role ${role.id} to user ${user.id} in guild ${guild.id}:`, error )
+            continue
+          }
+        }
+
+        for ( const user of role.members.values() )
+        {
+          if ( !user.deleted && !reactedUsers.has( user.id ) )
+            user.roles.remove( role )
+        }
+      }))
+      promisedRows.push( timeout( 5000 ) )
     }
+    await Promise.all( promisedRows )
   }
 
   async onGuildMemberAdd( member: GuildMember ): Promise<void>

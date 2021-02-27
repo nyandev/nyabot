@@ -103,9 +103,15 @@ dist
 # TernJS port file
 .tern-port
 
+# Sublime SFTP config, local
+sftp-config.json
+
 deps/
 dist/
 built/
 build/
 junk/
+
+# Our config, local
 config.json
+

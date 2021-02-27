@@ -1,4 +1,4 @@
-import { ColorResolvable, Message, MessageAttachment, MessageEmbed, User } from 'discord.js'
+import { ColorResolvable, Message, MessageAttachment, MessageEmbed, TextChannel, User } from 'discord.js'
 import { CommandoMessage } from 'discord.js-commando'
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
@@ -42,6 +42,16 @@ export class TalkModule
   {
   }
 
+  getTemplate( messageID: string ): any
+  {
+    const template = this.host.messages[messageID]
+    if ( !template ) {
+      log( `Unknown message ID "${messageID}"` )
+      return messageID
+    }
+    return template
+  }
+
   format( data: FormatData )
   {
     let messageID: string
@@ -58,16 +68,6 @@ export class TalkModule
     }
     const template = this.getTemplate( messageID )
     return sprintf( template, ...args )
-  }
-
-  getTemplate( messageID: string )
-  {
-    const template = this.host.messages[messageID]
-    if ( !template ) {
-      log( `Unknown message ID "${messageID}"` )
-      return messageID
-    }
-    return template
   }
 
   joinListFactory( and: string )
@@ -147,6 +147,20 @@ export class TalkModule
       description: data,
       color: 'GREEN'
     } )
+  }
+
+  async sendLogEvent( channel: TextChannel, messageID: string, args: any )
+  {
+    const template = this.getTemplate( messageID )
+
+    const embed = new MessageEmbed()
+      .setTitle( ':pencil: ' + template.title )
+      .setDescription( sprintf( template.body, ...args ) )
+      .setColor( 'GOLD' )
+      .setTimestamp()
+      .setFooter( 'Logger' )
+
+    return channel.send( embed )
   }
 
   async sendXPResponse( message: CommandoMessage, target: User, global: number, server: number ): Promise<Message | Message[] | null>
