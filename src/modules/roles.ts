@@ -236,18 +236,19 @@ export class RolesModule extends ModuleBase
       return
     }
 
-    let promisedRows: Array<any> = []
+    let promisedRows: Promise<void>[] = []
     for ( const row of rows )
     {
       promisedRows.push( new Promise( async resolve =>
       {
         logSprintf( "roles", "Handling reaction roles for emote %s on channel %s", row.emoji, row.channel )
+        
         let guild
         try {
           guild = await this.client.guilds.fetch( row.guild )
         } catch ( error ) {
           log( `Couldn't fetch guild ${row.guild}:`, error )
-          return resolve( true )
+          return
         }
 
         let channel
@@ -257,12 +258,12 @@ export class RolesModule extends ModuleBase
             throw new Error( `ChannelManager#fetch returned ${channel}` )
         } catch ( error ) {
           log( `Couldn't fetch channel ${row.channel}:`, error )
-          return resolve( true )
+          return
         }
 
         if ( channel.type !== 'text' ) {
           log( `Channel ${channel.id} is not a text channel` )
-          return resolve( true )
+          return
         }
 
         let message
@@ -270,7 +271,7 @@ export class RolesModule extends ModuleBase
           message = await ( channel as TextChannel ).messages.fetch( row.message )
         } catch ( error ) {
           log( `Couldn't fetch message ${row.message} in channel ${channel.id}` )
-          return resolve( true )
+          return
         }
 
         let reaction
@@ -278,7 +279,7 @@ export class RolesModule extends ModuleBase
           reaction = await message.react( row.emoji )
         } catch ( error ) {
           log( `Couldn't react to message ${message.id} with emoji ${row.emoji}:`, error )
-          return resolve( true )
+          return 
         }
 
         let role
@@ -288,7 +289,7 @@ export class RolesModule extends ModuleBase
             throw new Error( `RoleManager#fetch returned ${role}` )
         } catch ( error ) {
           log( `Couldn't fetch role ${row.role} of guild ${guild.id}:`, error )
-          return resolve( true )
+          return
         }
 
         // Fetch guild members into cache, so that Role#members will include them
@@ -309,7 +310,7 @@ export class RolesModule extends ModuleBase
           reactedUsers = await reaction.users.fetch()
         } catch ( error ) {
           log( `Couldn't fetch users who reacted to message ${message.id} with emoji ${row.emoji}:`, error )
-          return resolve( true )
+          return
         }
 
         for ( const user of reactedUsers.values() )
@@ -340,11 +341,16 @@ export class RolesModule extends ModuleBase
             user.roles.remove( role )
         }
       }))
-      
+
       promisedRows.push( timeout( 5000 ) )
     }
 
-    await promiseSerial( promisedRows )
+    const serial = async ( tasks: Promise<any>[] ) => {
+      await Promise.all( tasks )
+      logSprintf( "roles", "Done with roles init sync" )
+    }
+
+    serial( promisedRows )
   }
 
   async onGuildMemberAdd( member: GuildMember ): Promise<void>
