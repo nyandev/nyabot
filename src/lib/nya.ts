@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import { EventEmitter } from 'events'
 
 import * as Commando  from 'discord.js-commando'
-import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
+import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, PresenceData, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook, InviteGenerationOptions } from 'discord.js'
 
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
@@ -455,7 +455,12 @@ export class Nya implements NyaInterface
   {
     return new Promise( ( resolve, reject ) =>
     {
-      this._client.generateInvite( ['ADMINISTRATOR'] ).then( link =>
+      const opts: InviteGenerationOptions = {
+        permissions: ['ADMINISTRATOR']
+        // guild? - Guild to preselect
+        // disableGuildSelect? - Whether to disable the guild selection
+      }
+      this._client.generateInvite( opts ).then( link =>
       {
         this._inviteLink = link
         resolve( this._inviteLink )
