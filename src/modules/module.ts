@@ -91,7 +91,11 @@ export abstract class ModuleBase
   {
   }
 
-  async onGuildMemberAdd( member: GuildMember )
+  async onGuildMemberAdd( member: GuildMember ): Promise<void>
+  {
+  }
+
+  async onGuildMemberRemove( member: GuildMember ): Promise<void>
   {
   }
 

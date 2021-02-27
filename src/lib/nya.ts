@@ -20,6 +20,7 @@ import { RolesModule } from '../modules/roles'
 import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
 import { XPModule } from '../modules/xp'
+import { LoggingModule } from '../modules/logging'
 
 
 // Nya is the bot main class.
@@ -52,6 +53,7 @@ export class Nya implements NyaInterface
     const index = this._modules.length
     mod.registerStuff( index, this )
     this._modules.push( mod )
+    logSprintf( 'nya', 'Registered module %s', mod.constructor.name );
   }
 
   constructor( config: any, backend: Backend )
@@ -163,8 +165,20 @@ export class Nya implements NyaInterface
 
   async onGuildMemberAdd( member: GuildMember )
   {
+    // First let modules react
     for ( const module of this._modules )
       module.onGuildMemberAdd( member )
+    // Then update DB
+    await this._backend.upsertGuildUser( member )
+  }
+
+  async onGuildMemberRemove( member: GuildMember )
+  {
+    // First let modules react
+    for ( const module of this._modules )
+      module.onGuildMemberRemove( member )
+    // Then update DB
+    await this._backend.upsertGuildUser( member )
   }
 
   async onChannelCreate( dsChannel: Channel )
@@ -340,6 +354,7 @@ export class Nya implements NyaInterface
         .on( 'guildUpdate', this.onGuildUpdate.bind( this ) )
         .on( 'guildDelete', this.onGuildDelete.bind( this ) )
         .on( 'guildMemberAdd', this.onGuildMemberAdd.bind( this ) )
+        .on( 'guildMemberRemove', this.onGuildMemberRemove.bind( this ) )
         .on( 'channelCreate', this.onChannelCreate.bind( this ) )
         .on( 'channelUpdate', this.onChannelUpdate.bind( this ) )
         .on( 'channelDelete', this.onChannelDelete.bind( this ) )
@@ -348,8 +363,9 @@ export class Nya implements NyaInterface
         .on( 'messageReactionAdd', this.onReactionAdd.bind( this ) )
         .on( 'messageReactionRemove', this.onReactionRemove.bind( this ) )
         .on( 'guildUnavailable', this.onGuildUnavailable )
-        .on('commandError', (cmd, err) => {
-          if(err instanceof Commando.FriendlyError) return;
+        .on( 'commandError', ( cmd, err ) => {
+          if ( err instanceof Commando.FriendlyError )
+            return;
           console.error(`Error in command ${cmd.groupID}:${cmd.memberName}`, err);
         })
         .on('commandBlocked', (msg: any, reason: any) => {
@@ -397,7 +413,8 @@ export class Nya implements NyaInterface
           RolesModule,
           TwitchModule,
           TwitterModule,
-          XPModule
+          XPModule,
+          LoggingModule
       ] )
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
