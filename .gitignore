@@ -114,4 +114,4 @@ junk/
 
 # Our config, local
 config.json
-config*.json
+config-*.json
