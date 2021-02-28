@@ -412,16 +412,16 @@ export class Nya implements NyaInterface
       await this.start()
 
       for ( const module of [
-          AdministrationModule,
-          ClubModule,
-          CurrencyModule,
-          GamesModule,
-          RolesModule,
-          TwitchModule,
-          TwitterModule,
-          XPModule,
-          LoggingModule
-      ] )
+        AdministrationModule,
+        ClubModule,
+        CurrencyModule,
+        GamesModule,
+        RolesModule,
+        TwitchModule,
+        TwitterModule,
+        XPModule,
+        LoggingModule
+      ])
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       const globalKeys = this.getGlobalSettingKeys()

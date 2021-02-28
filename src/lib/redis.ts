@@ -2,7 +2,7 @@ import * as IORedis from 'ioredis'
 
 export class Redis
 {
-  _ioredis: IORedis.Redis
+  private _ioredis: IORedis.Redis
 
   constructor( config: any )
   {
