@@ -2,6 +2,8 @@ on:
   push:
     branches:
       - '**'
+  issues:
+    types: [opened, edited, deleted, closed, reopened, assigned, unassigned]
 
 name: Discord Notification
 
