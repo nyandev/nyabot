@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import { Buffer } from 'buffer'
 import { Canvas, Image, CanvasRenderingContext2D, NodeCanvasRenderingContext2DSettings, PngConfig, JpegConfig, CanvasGradient, CanvasPattern, createCanvas, createImageData, loadImage, registerFont } from 'canvas'
 import { type } from 'os'
+import { sprintf } from 'sprintf-js'
 
 export class Point
 {
@@ -223,10 +224,18 @@ export class Renderer
     const cpos = ( position instanceof Point ) ? position : new Point( position )
 
     const ctx = this._context
-    ctx.font = [size, 'px "', font, '"'].join( '' )
+    ctx.font = sprintf( '%ipx "%s"', size, font )
+
+    ctx.shadowOffsetX = 2
+    ctx.shadowOffsetY = 2
+    ctx.shadowBlur = 3
+    ctx.shadowColor = 'rgba(0,0,0,0.75)'
+
     ctx.fillStyle = textFill
+
     ctx.textAlign = align
     ctx.textBaseline = 'alphabetic'
+
     ctx.fillText( text, cpos.x, cpos.y )
   }
 
