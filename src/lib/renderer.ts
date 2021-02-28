@@ -1,27 +1,15 @@
 import * as fs from 'fs'
 import { Buffer } from 'buffer'
 import { Canvas, Image, CanvasRenderingContext2D, NodeCanvasRenderingContext2DSettings, PngConfig, JpegConfig, CanvasGradient, CanvasPattern, createCanvas, createImageData, loadImage, registerFont } from 'canvas'
-
-// Canvas.registerFont( 'geomgraphic_bold.otf', { family: 'geomgraph', weight: 'normal', style: 'normal' })
-// Canvas.registerFont( 'SFHypocrisy-Medium.otf', { family: 'sfhypo', weight: 'normal', style: 'normal' })
-
-export function globalRegisterFont( filepath: string, name: string )
-{
-  if ( !fs.existsSync( filepath ) )
-    throw new Error( 'Font file does not exist' )
-  registerFont( filepath, { family: name, weight: 'normal', style: 'normal' } )
-}
+import { type } from 'os'
 
 export class Point
 {
   public x: number
   public y: number
-  constructor( x?: number, y?: number )
-  {
-    this.x = x || 0
-    this.y = y || 0
-  }
-  from( ...args: Array<any> )
+  public constructor( x: number, y: number )
+  public constructor( coordinates: number[] )
+  public constructor( ...args: any[] )
   {
     if ( !args.length )
       throw new Error( "No arguments" )
@@ -45,18 +33,15 @@ export class Point
   }
 }
 
-type PointLike = Point | []
+type PointLike = Point | [] | any
 
 export class Dimensions
 {
   public width: number
   public height: number
-  constructor( width?: number, height?: number )
-  {
-    this.width = width || 0
-    this.height = height || 0
-  }
-  from( ...args: Array<any> )
+  public constructor( width: number, height: number )
+  public constructor( dimensions: number[] )
+  public constructor( ...args: any[] )
   {
     if ( !args.length )
       throw new Error( "No arguments" )
@@ -80,35 +65,25 @@ export class Dimensions
   }
 }
 
-type DimensionsLike = Dimensions | []
+type DimensionsLike = Dimensions | [] | any
 
-type ImageLike = Image | Canvas
+type ImageLike = Image | Canvas | string
 
 type FillLike = string | CanvasGradient | CanvasPattern
 
-function toPoint( ...args: Array<any> ): Point
-{
-  let ret = new Point
-  ret.from( ...args )
-  return ret
-}
-
-function toDimensions( ...args: Array<any> ): Dimensions
-{
-  let ret = new Dimensions
-  ret.from( ...args )
-  return ret
-}
+let g_canvasesCreated: boolean = false
 
 export class Renderer
 {
   protected readonly _dimensions: Dimensions
   protected _canvas: Canvas
   protected _context: CanvasRenderingContext2D
+  protected _images: Map<string, Image> = new Map()
 
   private recreate(): void
   {
     this._canvas = createCanvas( this._dimensions.width, this._dimensions.height )
+    g_canvasesCreated = true
 
     const opts: NodeCanvasRenderingContext2DSettings = {
       alpha: false,
@@ -124,20 +99,66 @@ export class Renderer
 
   constructor( dimensions: DimensionsLike )
   {
-    this._dimensions.from( dimensions )
+    this._dimensions = new Dimensions( dimensions )
     this.recreate()
+  }
+
+  public static registerFont( filepath: string, name: string )
+  {
+    if ( g_canvasesCreated )
+      throw new Error( 'Fonts must be registered before instantiating Renderers' )
+    if ( !fs.existsSync( filepath ) )
+      throw new Error( 'Font file does not exist' )
+    registerFont( filepath, { family: name, weight: 'normal', style: 'normal' } )
+  }
+
+  hasImage( name: string ): boolean
+  {
+    return this._images.has( name )
+  }
+
+  async loadImage( filepath: string, name: string ): Promise<Image>
+  {
+    return new Promise( ( resolve, reject ) =>
+    {
+      if ( !fs.existsSync( filepath ) )
+        return reject( new Error( 'Image file does not exist' ) )
+      let img = new Image;
+      img.onload = () => {
+        this._images.set( name, img )
+        resolve( img )
+      }
+      img.onerror = error => { reject( error ) }
+      img.src = filepath;
+    })
+  }
+
+  private _resolveImage( image: ImageLike ): Image | Canvas
+  {
+    if ( typeof image === 'string' )
+    {
+      if ( !this._images.has( image ) )
+        throw new Error( "Loaded image not found by name" )
+      return ( this._images.get( image ) as Image )
+    }
+    else
+      return image
   }
 
   drawImage( position: PointLike, size: DimensionsLike, image: ImageLike ): void
   {
-    const cpos = toPoint( position )
-    const cdim = toDimensions( size )
-    this._context.drawImage( image, cpos.x, cpos.y, cdim.width, cdim.height )
+    const cpos = ( position instanceof Point ) ? position : new Point( position )
+    const cdim = ( size instanceof Dimensions ) ? size : new Dimensions( size )
+    this._context.drawImage(
+      this._resolveImage( image ),
+      cpos.x, cpos.y,
+      cdim.width, cdim.height
+    )
   }
 
   drawAvatar( position: PointLike, size: number, image: ImageLike, backgroundFill: FillLike, outlineWidth: number, outlineFill: FillLike ): void
   {
-    const cpos = toPoint( position )
+    const cpos = ( position instanceof Point ) ? position : new Point( position )
     const radius = ( size * 0.5 )
 
     const ctx = this._context
@@ -164,7 +185,7 @@ export class Renderer
 
   drawText( position: PointLike, font: string, size: number, align: any, textFill: FillLike, text: string ): void
   {
-    const cpos = toPoint( position )
+    const cpos = ( position instanceof Point ) ? position : new Point( position )
 
     const ctx = this._context
     ctx.font = [size, 'px "', font, '"'].join( '' )
