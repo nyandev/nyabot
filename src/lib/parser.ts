@@ -131,7 +131,7 @@ export class Parser
               const emoteNumber = fulltext.substr( emoteClose + 1, close - emoteClose - 1 )
               if ( /^\d+$/.test( emoteNumber ) )
               {
-                logSprintf( 'parse', 'emote: %s (%s)', emoteName, emoteNumber )
+                //logSprintf( 'parse', 'emote: %s (%s)', emoteName, emoteNumber )
                 if ( buffer.length )
                   parsed.parts.push( new ParsedText( buffer ) )
                 buffer = ''
@@ -149,7 +149,7 @@ export class Parser
             const mentionNumber = fulltext.substr( j + 1, close - j - 1 )
             if ( /^\d+$/.test( mentionNumber ) )
             {
-              logSprintf( 'parse', 'mention: %s (%s)', mentionNumber, mentionType )
+              // logSprintf( 'parse', 'mention: %s (%s)', mentionNumber, mentionType )
               if ( buffer.length )
                 parsed.parts.push( new ParsedText( buffer ) )
               buffer = ''

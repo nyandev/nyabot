@@ -4,7 +4,6 @@ import { Channel, Message, Role, TextChannel } from 'discord.js'
 import { debug, log } from '../globals'
 import { ModuleBase } from '../modules/module'
 
-
 interface ArgumentSpec {
   key: string
   helpKey?: string
@@ -64,8 +63,8 @@ interface BaseCommandInfo {
   subcommands?: Subcommands
 }
 
-
-const mixins = {
+const mixins =
+{
   delegate: async function( message: CommandoMessage, args: string[] )
   {
     if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
@@ -125,7 +124,6 @@ const mixins = {
   }
 }
 
-
 function buildSubcommands( module: ModuleBase, subcommandList: any = {}, baseOptions: any ): { [name: string]: NyaCommand }
 {
   const subcommands: { [name: string]: NyaCommand } = {}
@@ -140,7 +138,6 @@ function buildSubcommands( module: ModuleBase, subcommandList: any = {}, baseOpt
   }
   return subcommands
 }
-
 
 export abstract class NyaBaseCommand extends Command
 {
@@ -181,7 +178,6 @@ export abstract class NyaBaseCommand extends Command
   }
 }
 
-
 export abstract class NyaCommand
 {
   protected options: CommandInstanceOptions
@@ -219,7 +215,6 @@ export abstract class NyaCommand
   }
 }
 
-
 function usageArgs( args: ArgumentSpec[] ): string
 {
   const argStrings = []
@@ -234,6 +229,44 @@ function usageArgs( args: ArgumentSpec[] ): string
   return argStrings.join( ' ' )
 }
 
+async function parseRole( arg: string, message: CommandoMessage ): Promise<Role | string | null>
+{
+  if ( !arg )
+    return null
+
+  const roleMention = arg.match( /^<@&(\d+)>$/ )
+  if ( roleMention ) {
+    const role = await message.guild.roles.fetch( roleMention[1] )
+    return role || null
+  }
+
+  const allRoles = await message.guild.roles.fetch()
+  const roles = allRoles.filter( ( role: Role ) => role.name.toLowerCase() === arg.toLowerCase() )
+  if ( roles.size === 0 )
+    return null
+  if ( roles.size === 1 )
+    return roles.first() as Role
+  return 'multiple_roles_same_name'
+}
+
+export async function parseTextChannel( arg: string, message: CommandoMessage ): Promise<TextChannel | string | null>
+{
+  if ( !arg || !message.guild )
+    return null
+
+  const channelMention = arg.match( /^<#(\d+)>$/ )
+  if ( channelMention ) {
+    const channel = await message.client.channels.fetch( channelMention[1] )
+    return ( channel && channel.type === 'text' ) ? ( channel as TextChannel ) : null
+  }
+
+  const channels = message.guild.channels.cache.filter( textChannelFilter( arg ) )
+  if ( channels.size === 0 )
+    return null
+  if ( channels.size === 1 )
+    return ( channels.first() as TextChannel )
+  return 'multiple_channels_same_name'
+}
 
 async function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Promise<Arguments | false>
 {
@@ -290,28 +323,6 @@ async function parseArgs( values: string[], args: ArgumentSpec[], message: Comma
   return parsed
 }
 
-
-async function parseRole( arg: string, message: CommandoMessage ): Promise<Role | string | null>
-{
-  if ( !arg )
-    return null
-
-  const roleMention = arg.match( /^<@&(\d+)>$/ )
-  if ( roleMention ) {
-    const role = await message.guild.roles.fetch( roleMention[1] )
-    return role || null
-  }
-
-  const allRoles = await message.guild.roles.fetch()
-  const roles = allRoles.filter( ( role: Role ) => role.name.toLowerCase() === arg.toLowerCase() )
-  if ( roles.size === 0 )
-    return null
-  if ( roles.size === 1 )
-    return roles.first() as Role
-  return 'multiple_roles_same_name'
-}
-
-
 function textChannelFilter( search: string )
 {
   return ( channel: Channel ) => {
@@ -319,24 +330,4 @@ function textChannelFilter( search: string )
       return false
    return ( channel as TextChannel ).name.toLowerCase() === search.toLowerCase()
   }
-}
-
-
-export async function parseTextChannel( arg: string, message: CommandoMessage ): Promise<TextChannel | string | null>
-{
-  if ( !arg || !message.guild )
-    return null
-
-  const channelMention = arg.match( /^<#(\d+)>$/ )
-  if ( channelMention ) {
-    const channel = await message.client.channels.fetch( channelMention[1] )
-    return ( channel && channel.type === 'text' ) ? ( channel as TextChannel ) : null
-  }
-
-  const channels = message.guild.channels.cache.filter( textChannelFilter( arg ) )
-  if ( channels.size === 0 )
-    return null
-  if ( channels.size === 1 )
-    return ( channels.first() as TextChannel )
-  return 'multiple_channels_same_name'
 }

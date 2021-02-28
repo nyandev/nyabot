@@ -1,7 +1,6 @@
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
 
-
 export const apos = '\u2019'
 
 export function logSprintf( from: string, ...args: any[] ): void
@@ -11,6 +10,12 @@ export function logSprintf( from: string, ...args: any[] ): void
   const timestamp: string = moment().format( "YY-MM-DD HH:mm:ss" )
   args[0] = sprintf( "%s: [%s] %s", timestamp, from, args[0] )
   console.log( sprintf.apply( null, args ) )
+}
+
+export function errorSprintf( error: any, ...args: any[] ): void
+{
+  logSprintf( "error", ...args )
+  console.log( error )
 }
 
 export function logPrint( from: string, ...args: any[] ): void

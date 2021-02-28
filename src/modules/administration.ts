@@ -70,7 +70,8 @@ class ConfigCommand extends Command
   }
 }
 
-class StatusCommand extends Command {
+class StatusCommand extends Command
+{
   constructor( protected _service: ModuleBase )
   {
     super( _service.client,

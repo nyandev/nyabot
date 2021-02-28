@@ -2,7 +2,7 @@ import * as moment from 'moment'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
-import { datetimeNow, debug, logSprintf } from '../globals'
+import { datetimeNow, debug, logSprintf, errorSprintf } from '../globals'
 import { DataType, DataTypes, Model, Sequelize, Transaction } from 'sequelize'
 import { Redis } from './redis'
 import { CommandoClient, CommandoMessage } from 'discord.js-commando'
@@ -65,7 +65,7 @@ export class Backend
       'User'
     ]
     for ( const model of models )
-      this._models[model] = require( `../models/${model.toLowerCase()}` ).init( this._db )
+      this._models[model] = require( '../models/' + model.toLowerCase() ).init( this._db )
 
     this._models.Club.hasMany( this._models.ClubUser, { foreignKey: 'clubID' } )
     this._models.ClubUser.belongsTo( this._models.Club, { foreignKey: 'clubID' } )
@@ -78,7 +78,7 @@ export class Backend
       const result = await this._models.ChannelSetting.findOne( { where, transaction } )
       return result ? result.value : null
     } catch ( error ) {
-      log( `Backend#getChannelSetting(${channel}, ${settingKey}) failed: ${error}` )
+      errorSprintf( error, "Backend#getChannelSetting(%s, %s) failed", channel, settingKey )
       throw error
     }
   }
@@ -94,7 +94,7 @@ export class Backend
     try {
       await this._models.ChannelSetting.upsert( values, { transaction } )
     } catch ( error ) {
-      log( `Backend#setChannelSetting(${channel}, ${settingKey}, ${settingValue}) failed: ${error}` )
+      errorSprintf( error, "Backend#setChannelSetting(%s, %s, %s) failed", channel, settingKey, settingValue )
       throw error
     }
   }
@@ -105,19 +105,19 @@ export class Backend
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSettings( guild: string )
+  async getGuildSettings( guild: number | null )
   {
     const cond = { guildID: guild }
     return this._models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSetting( guild: number, settingKey: string, transaction?: Transaction )
+  async getGuildSetting( guild: number | null, settingKey: string, transaction?: Transaction )
   {
     const where = { guildID: guild, key: settingKey }
     return this._models.GuildSetting.findOne({ where, transaction })
   }
 
-  async setGuildSetting( guild: number, settingKey: string, settingValue: string )
+  async setGuildSetting( guild: number | null, settingKey: string, settingValue: string )
   {
     const cond = { guildID: guild, key: settingKey }
     const vals = {
@@ -134,9 +134,15 @@ export class Backend
       })
   }
 
-  async removeGuildSetting( guild: number, settingKey: string )
+  async removeGuildSetting( guild: number | null, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
+    return this._models.GuildSetting.destroy({ where: cond })
+  }
+
+  async clearGuildSettings( guild: number | null )
+  {
+    const cond = { guildID: guild }
     return this._models.GuildSetting.destroy({ where: cond })
   }
 
@@ -279,10 +285,10 @@ export class Backend
     try {
       const channel = await this._models.Channel.findOne( { where, transaction } )
       if ( !channel )
-        throw new Error( "no such channel" )
+        throw new Error( "No such channel in database" )
       return channel
     } catch ( error ) {
-      log( `Backend#getChannelBySnowflake(${snowflake}) failed: ${error}` )
+      errorSprintf( error, "Backend#getChannelBySnowflake(%s) failed", snowflake )
       throw error
     }
   }
@@ -299,10 +305,10 @@ export class Backend
     try {
       const guild = await this._models.Guild.findOne( { where, transaction } )
       if ( !guild )
-        throw new Error( "no such guild" )
+        throw new Error( "No such guild in database" )
       return guild
     } catch ( error ) {
-      log( `Backend#getGuildBySnowflake(${snowflake}) failed: ${error}` )
+      errorSprintf( error, "Backend#getGuildBySnowflake(%s) failed", snowflake )
       throw error
     }
   }
@@ -421,7 +427,7 @@ export class Backend
           await guilduser.increment(['experience', 'totalExperience'], { by: Math.round( sxp ) })
           await guilduser.reload()
         } catch ( error ) {
-          log( `Couldn't update experience for user ${user.id} in guild ${guild.id}:`, error )
+          errorSprintf( error, "Couldn't update experience for user %s in guild %s", user.id, guild.id )
           return
         }
         logSprintf( 'xp', 'User %i Server XP after save: %f', user.id, guilduser.experience )

@@ -225,30 +225,6 @@ export class Nya implements NyaInterface
     this._emitter.emit( 'userUpdated', user )
   }
 
-  buildEmbedTypical( title: string, description: string, fields: any[], footer: boolean ): MessageEmbed
-  {
-    const embed = new MessageEmbed()
-      .setTitle( title )
-      .setDescription( description )
-    if ( footer )
-    {
-      embed.setTimestamp()
-      embed.setFooter( this._config.longName, this._config.iconURL )
-    }
-    fields.forEach( ( field: any ) => {
-      embed.addField( field.name, field.value, field.inline )
-    })
-    return embed
-  }
-
-  buildEmbedWelcome( user: User ): MessageEmbed
-  {
-    const description = sprintf( 'Welcome to the server, **%s**!\n```fix\nID: %s```', user.tag, user.id )
-    const embed = this.buildEmbedTypical( 'New Member', description, [], false )
-    embed.setThumbnail( user.displayAvatarURL() )
-    return embed
-  }
-
   shouldHandle( message: Message ): boolean
   {
     if ( message.partial )
@@ -393,42 +369,42 @@ export class Nya implements NyaInterface
         .on( 'messageUpdate', this.onMessageUpdate.bind( this ) )
         .on( 'messageDelete', this.onMessageDelete.bind( this ) )
         .on( 'guildUnavailable', this.onGuildUnavailable )
-        .on( 'commandError', ( cmd, err, ...args ) => {
+        .on( 'commandError', ( cmd, err, ...args ) =>
+        {
           if ( err instanceof Commando.FriendlyError )
             return;
           console.error(`Error in command ${cmd.groupID}:${cmd.memberName}`, err);
         })
-        .on('commandBlock', (msg: any, reason: any) => {
+        .on( 'commandBlock', ( msg: Commando.CommandoMessage, reason: any ) =>
+        {
           console.log(`
             Command ${msg.command ? `${msg.command.groupID}:${msg.command.memberName}` : ''}
             blocked; ${reason}
           `);
         })
-        .on('commandPrefixChange', (guild: any, prefix: any) => {
+        .on( 'commandPrefixChange', ( guild: Commando.CommandoGuild, prefix: string ) =>
+        {
           console.log(`
             Prefix ${prefix === '' ? 'removed' : `changed to ${prefix || 'the default'}`}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
           `);
         })
-        .on('commandStatusChange', (guild: any, command: any, enabled: any) => {
+        .on( 'commandStatusChange', ( guild: Commando.CommandoGuild, command: Commando.Command, enabled: boolean ) =>
+        {
           console.log(`
             Command ${command.groupID}:${command.memberName}
             ${enabled ? 'enabled' : 'disabled'}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
           `);
         })
-        .on('groupStatusChange', (guild: any, group: any, enabled: any) => {
+        .on( 'groupStatusChange', ( guild: Commando.CommandoGuild, group: Commando.CommandGroup, enabled: boolean ) =>
+        {
           console.log(`
             Group ${group.id}
             ${enabled ? 'enabled' : 'disabled'}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
           `);
         })
-
-      //this._client.dispatcher.addInhibitor( ( msg: Commando.CommandoMessage ): any =>
-      //{
-      //  return ( msg.channel && msg.channel.type !== 'dm' && msg.channel.name.indexOf( 'botdev' ) > 0 ) ? false : 'beep boop'
-      //})
   
       this._client.setProvider( new SettingsProvider( this._backend ) )
       this._client.registry.registerDefaultTypes()
@@ -449,7 +425,7 @@ export class Nya implements NyaInterface
         this.registerModule( new module( this._modules.length, this, this._client ) )
 
       const globalKeys = this.getGlobalSettingKeys()
-      if ( !await this._backend.initGlobalSettings( this._config.globalDefaults, this.getGlobalSettingKeys() ) )
+      if ( !await this._backend.initGlobalSettings( this._config.globalDefaults, globalKeys ) )
         return reject( new Error( "Global settings init failed" ) )
 
       this._client.registry.registerDefaultGroups()
