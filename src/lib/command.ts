@@ -86,8 +86,8 @@ const mixins =
     let prefix
     try {
       if ( message.guild ) {
-      const guild = await this.module.backend.getGuildBySnowflake( message.guild.id )
-      prefix = await this.module.backend.getSetting( 'Prefix', guild.id )
+        const guild = await this.module.backend.getGuildBySnowflake( message.guild.id )
+        prefix = await this.module.backend.getSetting( 'Prefix', guild.id )
       } else {
         prefix = await this.module.backend.getSetting( 'Prefix' )
       }

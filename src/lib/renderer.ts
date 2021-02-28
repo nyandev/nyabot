@@ -103,6 +103,30 @@ export class Renderer
     this.recreate()
   }
 
+/*
+  static drawFlowers( image: Image, code: string )
+  {
+    const renderer = new this( image )
+    renderer.drawImage( [0, 0], image, image )
+
+    const ctx = renderer._context
+    const textSize = Math.round(.15 * image.height)
+    ctx.font = `${textSize}px SourceSansPro-Semibold`
+    const textDims = ctx.measureText(code)
+    const textHeight = textDims.actualBoundingBoxAscent + textDims.actualBoundingBoxDescent
+    const boxWidth = Math.round(1.2 * textDims.width)
+    const boxHeight = Math.round(1.4 * textHeight)
+    const paddingWidth = (boxWidth - textDims.width) / 2
+    const paddingHeight = (boxHeight - textHeight) / 2
+
+    ctx.fillStyle = 'rgba(0, 0, 0, .5)'
+    ctx.fillRect(0, 0, boxWidth, boxHeight)
+    ctx.fillStyle = 'white'
+    ctx.fillText(code, paddingWidth, boxHeight - textDims.actualBoundingBoxDescent - paddingHeight)
+    return renderer
+  }
+*/
+
   public static registerFont( filepath: string, name: string )
   {
     if ( g_canvasesCreated )
