@@ -1,4 +1,5 @@
 import * as moment from 'moment'
+import * as path from 'path'
 import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
@@ -23,10 +24,11 @@ export class Backend
   constructor( config: any )
   {
     this._config = {
+      rootPath: path.join( __dirname, '../..' ),
       twitch: config.twitch,
       twitter: config.twitter
     }
-
+    console.log(this._config.rootPath)
     this._redis = new Redis( config.redis )
 
     this._db = new Sequelize( config.db.name, config.db.user, config.db.passwd,

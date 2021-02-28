@@ -9,11 +9,7 @@ import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 import { Renderer, Point, Dimensions } from '../lib/renderer'
 
-const g_rootPath: string = '/rep/nyabot'
 const g_dimensions: Dimensions = new Dimensions([680, 420])
-
-Renderer.registerFont( path.join( g_rootPath, 'gfx', 'geomgraphic_bold.otf' ), 'geomgraph' )
-Renderer.registerFont( path.join( g_rootPath, 'gfx', 'sfhypocrisy_medium.otf' ), 'sfhypo' )
 
 class ProfileCommand extends Command
 {
@@ -53,13 +49,19 @@ export class ProfileModule extends ModuleBase
   constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
+
+    const rootPath = this.backend._config.rootPath
+    Renderer.registerFont( path.join( rootPath, 'gfx', 'geomgraphic_bold.otf' ), 'geomgraph' )
+    Renderer.registerFont( path.join( rootPath, 'gfx', 'sfhypocrisy_medium.otf' ), 'sfhypo' )
+
     this._renderer = new Renderer( g_dimensions )
   }
 
   async initialize(): Promise<void>
   {
+    const rootPath = this.backend._config.rootPath
     if ( !this._renderer.hasImage( 'bg' ) )
-      await this._renderer.loadImageLocalCached( path.join( g_rootPath, 'gfx', 'nyabot-profile_bg-v1.png' ), 'bg' )
+      await this._renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'nyabot-profile_bg-v1.png' ), 'bg' )
   }
 
   async generateFor( user: User ): Promise<Buffer>
