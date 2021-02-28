@@ -414,6 +414,13 @@ export class CurrencyModule extends ModuleBase
         let code = ''
         if ( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) === '1' )
           code = randomInt( 1000, 9999 ).toString()
+/*
+  globalRegisterFont( 'data/SourceSansPro-Semibold.otf', 'SourceSansPro-Semibold' )
+  const img = await loadImg('data/top-nep.png')
+  const rnd = Renderer.drawFlowers( img, '1234' )
+  const buf = await rnd.toPNGBuffer()
+  await fs.writeFileSync( 'poop_out.png', buf )
+*/
 
         const pickMessage = await this.host.talk.sendText( message,
           code
