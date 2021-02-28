@@ -4,7 +4,6 @@ import { ArgumentCollectorResult, Command, CommandGroup, CommandoClient, Command
 import { apos } from '../globals'
 import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
-import { Renderer, Point, Dimensions } from '../lib/renderer'
 
 class ConfigCommand extends Command
 {
@@ -110,58 +109,11 @@ class StatusCommand extends Command
   }
 }
 
-class ImageTestCommand extends Command
-{
-  public _renderer: Renderer
-
-  constructor( protected _service: ModuleBase )
-  {
-    super( _service.client,
-    {
-      name: 'imagetest',
-      group: 'admin',
-      memberName: 'imagetest',
-      description: 'Test image output',
-      args: []
-    } )
-    this._renderer = new Renderer([680, 420])
-  }
-
-  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
-  {
-    const profile = {
-      name: message.author.tag,
-      color: '#00daee',
-      club: 'Gamindustri'
-    }
-
-    const avatarURL = message.author.displayAvatarURL({ format: 'png', dynamic: false, size: 128 })
-    const avatar = await this._renderer.loadImage( avatarURL )
-
-    if ( !this._renderer.hasImage( 'bg' ) )
-      await this._renderer.loadImageLocalCached( '/rep/nyabot/gfx/nyabot-profile_bg-v1.png', 'bg' )
-
-    this._renderer.drawImage( [0, 0], [680, 420], 'bg' )
-    this._renderer.drawAvatar( [14,10], 86, avatar, 'rgb(0,0,0)', 4, profile.color )
-    this._renderer.drawAvatar( [593,61], 66, avatar, 'rgb(0,0,0)', 4, profile.color )
-
-    this._renderer.drawText( [106,53], 'sfhypo', 27, 'left', 'rgb(255,255,255)', profile.name )
-    this._renderer.drawText( [587,91], 'sfhypo', 27, 'right', 'rgb(255,255,255)', profile.club  )
-
-    const pngbuf = await this._renderer.toPNGBuffer()
-    const attachment = new MessageAttachment( pngbuf, 'profile.png' )
-    message.channel.send( attachment )
-    return null
-  }
-}
-
 export class AdministrationModule extends ModuleBase
 {
   constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
-    Renderer.registerFont( '/rep/nyabot/gfx/geomgraphic_bold.otf', 'geomgraph' )
-    Renderer.registerFont( '/rep/nyabot/gfx/sfhypocrisy_medium.otf', 'sfhypo' )
   }
 
   getGroups(): CommandGroup[]
@@ -175,8 +127,7 @@ export class AdministrationModule extends ModuleBase
   {
     return [
       new ConfigCommand( this ),
-      new StatusCommand( this ),
-      new ImageTestCommand( this )
+      new StatusCommand( this )
     ]
   }
 

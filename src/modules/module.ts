@@ -80,6 +80,10 @@ export abstract class ModuleBase
   abstract getGroups(): CommandGroup[]
   abstract getCommands(): Command[]
 
+  async initialize(): Promise<void>
+  {
+  }
+
   async onMessage( msg: Message ): Promise<void>
   {
   }
