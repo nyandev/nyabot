@@ -5,8 +5,8 @@ import { Backend } from './backend'
 
 export class SettingsProvider extends SettingProviderBase
 {
-  settings: Map<any, any>
-  listeners: Map<any, any>
+  settings: Map<any, any> = new Map()
+  listeners: Map<any, any> = new Map()
   client: CommandoClient
 
   protected _idCache: Map<string, number>
@@ -77,7 +77,7 @@ export class SettingsProvider extends SettingProviderBase
         }
       })
   
-    for ( const [event, listener] of this.listeners )
+    for ( const [event, listener] of this.listeners.entries() )
       client.on( event, listener )
   }
 
@@ -115,7 +115,7 @@ export class SettingsProvider extends SettingProviderBase
 
   async destroy()
   {
-    for ( const [event, listener] of this.listeners )
+    for ( const [event, listener] of this.listeners.entries() )
       this.client.removeListener( event, listener )
     this.listeners.clear()
   }
