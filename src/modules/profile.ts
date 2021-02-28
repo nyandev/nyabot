@@ -9,7 +9,6 @@ import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 import { Renderer, Point, Dimensions } from '../lib/renderer'
 
-const g_dimensions: Dimensions = new Dimensions([680, 420])
 
 class ProfileCommand extends Command
 {
@@ -44,6 +43,7 @@ class ProfileCommand extends Command
 
 export class ProfileModule extends ModuleBase
 {
+  public bgDimensions = new Dimensions( 680, 420 )
   public _renderer: Renderer
 
   constructor( id: number, host: NyaInterface, client: CommandoClient )
@@ -53,13 +53,13 @@ export class ProfileModule extends ModuleBase
     const rootPath = this.backend._config.rootPath
     Renderer.registerFont( path.join( rootPath, 'gfx', 'geomgraphic_bold.otf' ), 'geomgraph' )
     Renderer.registerFont( path.join( rootPath, 'gfx', 'sfhypocrisy_medium.otf' ), 'sfhypo' )
-
-    this._renderer = new Renderer( g_dimensions )
   }
 
   async initialize(): Promise<void>
   {
     const rootPath = this.backend._config.rootPath
+
+    this._renderer = new Renderer( this.bgDimensions )
     if ( !this._renderer.hasImage( 'bg' ) )
       await this._renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'nyabot-profile_bg-v1.png' ), 'bg' )
   }
@@ -75,7 +75,7 @@ export class ProfileModule extends ModuleBase
     const avatarURL = user.displayAvatarURL({ format: 'png', dynamic: false, size: 128 })
     const avatar = await this._renderer.loadImage( avatarURL )
 
-    this._renderer.drawImage( [0, 0], g_dimensions, 'bg' )
+    this._renderer.drawImage( [0, 0], this.bgDimensions, 'bg' )
 
     this._renderer.drawAvatar( [14,10], 86, avatar, 'rgb(0,0,0)', 4, profile.color )
     this._renderer.drawAvatar( [599,53], 66, avatar, 'rgb(0,0,0)', 4, profile.color )
