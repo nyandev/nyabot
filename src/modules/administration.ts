@@ -129,13 +129,29 @@ class ImageTestCommand extends Command
 
   async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
   {
+    const profile = {
+      name: message.author.tag,
+      color: '#00daee',
+      club: 'Gamindustri'
+    }
+
+    const avatarURL = message.author.displayAvatarURL({ format: 'png', dynamic: false, size: 128 })
+    const avatar = await this._renderer.loadImage( avatarURL )
+
     if ( !this._renderer.hasImage( 'bg' ) )
-      await this._renderer.loadImage( '/rep/nyabot/gfx/nyabot-profile_bg-v1.png', 'bg' )
+      await this._renderer.loadImageLocalCached( '/rep/nyabot/gfx/nyabot-profile_bg-v1.png', 'bg' )
+
     this._renderer.drawImage( [0, 0], [680, 420], 'bg' )
-    this._renderer.drawText( [110,50], 'sfhypo', 28, 'left', 'rgb(255,255,255)', 'Name goes here' )
+    this._renderer.drawAvatar( [14,10], 86, avatar, 'rgb(0,0,0)', 4, profile.color )
+    this._renderer.drawAvatar( [593,61], 66, avatar, 'rgb(0,0,0)', 4, profile.color )
+
+    this._renderer.drawText( [106,53], 'sfhypo', 27, 'left', 'rgb(255,255,255)', profile.name )
+    this._renderer.drawText( [587,91], 'sfhypo', 27, 'right', 'rgb(255,255,255)', profile.club  )
+
     const pngbuf = await this._renderer.toPNGBuffer()
-    const attachment = new MessageAttachment( pngbuf, 'result.png' )
-    message.reply( 'beep boop lollersbollers', attachment )
+    const attachment = new MessageAttachment( pngbuf, 'profile.png' )
+    message.channel.send( attachment )
+    return null
   }
 }
 

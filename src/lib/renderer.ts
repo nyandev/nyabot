@@ -8,7 +8,7 @@ export class Point
   public x: number
   public y: number
   public constructor( x: number, y: number )
-  public constructor( coordinates: number[] )
+  public constructor( coordinates: PointLike )
   public constructor( ...args: any[] )
   {
     if ( !args.length )
@@ -33,14 +33,14 @@ export class Point
   }
 }
 
-type PointLike = Point | [] | any
+type PointLike = Point | number[]
 
 export class Dimensions
 {
   public width: number
   public height: number
   public constructor( width: number, height: number )
-  public constructor( dimensions: number[] )
+  public constructor( dimensions: DimensionsLike )
   public constructor( ...args: any[] )
   {
     if ( !args.length )
@@ -65,7 +65,7 @@ export class Dimensions
   }
 }
 
-type DimensionsLike = Dimensions | [] | any
+type DimensionsLike = Dimensions | number[]
 
 type ImageLike = Image | Canvas | string
 
@@ -87,7 +87,7 @@ export class Renderer
 
     const opts: NodeCanvasRenderingContext2DSettings = {
       alpha: false,
-      pixelFormat: 'RGBA32'
+      pixelFormat: 'RGB24'
     }
 
     this._context = this._canvas.getContext( '2d', opts )
@@ -117,17 +117,28 @@ export class Renderer
     return this._images.has( name )
   }
 
-  async loadImage( filepath: string, name: string ): Promise<Image>
+  async loadImageLocalCached( filepath: string, name: string ): Promise<Image>
   {
     return new Promise( ( resolve, reject ) =>
     {
       if ( !fs.existsSync( filepath ) )
         return reject( new Error( 'Image file does not exist' ) )
-      let img = new Image;
+      let img = new Image()
       img.onload = () => {
         this._images.set( name, img )
         resolve( img )
       }
+      img.onerror = error => { reject( error ) }
+      img.src = filepath;
+    })
+  }
+
+  async loadImage( filepath: string ): Promise<Image>
+  {
+    return new Promise( ( resolve, reject ) =>
+    {
+      let img = new Image()
+      img.onload = () => { resolve( img ) }
       img.onerror = error => { reject( error ) }
       img.src = filepath;
     })
