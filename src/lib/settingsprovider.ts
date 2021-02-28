@@ -1,16 +1,16 @@
 import { SettingProvider as SettingProviderBase, CommandoGuild, CommandoClient, Command, CommandGroup } from 'discord.js-commando'
 import { Snowflake, Guild, GuildResolvable } from 'discord.js'
 import { Backend } from './backend'
-//const SettingProvider = require( '../../node_modules/discord.js-commando/src/providers/base' )
+
 
 export class SettingsProvider extends SettingProviderBase
 {
-  settings: Map<any, any> = new Map()
-  listeners: Map<any, any> = new Map()
+  settings = new Map()
+  listeners = new Map()
   client: CommandoClient
 
-  protected _idCache: Map<string, number>
-  protected _flakeCache: Map<number, string>
+  protected _idCache = new Map()
+  protected _flakeCache = new Map()
 
   constructor( protected _backend: Backend )
   {
