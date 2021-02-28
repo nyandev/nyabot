@@ -28,7 +28,7 @@ export class Backend
       twitch: config.twitch,
       twitter: config.twitter
     }
-    console.log(this._config.rootPath)
+
     this._redis = new Redis( config.redis )
 
     this._db = new Sequelize( config.db.name, config.db.user, config.db.passwd,

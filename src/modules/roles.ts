@@ -159,10 +159,6 @@ export class RolesModule extends ModuleBase
   constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
-
-    this.initialize().catch( error => {
-      log( `Couldn't initialize ${this.constructor.name}:`, error )
-    } )
   }
 
   getCommands()

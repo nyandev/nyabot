@@ -440,9 +440,9 @@ export class Nya implements NyaInterface
         this._client.registry.registerCommands( module.getCommands() )
       })
 
-      this._modules.forEach( async module => {
-        logSprintf( 'nya', 'Initializing module %s', module.constructor.name );
-        await module.initialize()
+      this._modules.forEach( module => {
+        logSprintf( 'nya', 'Initializing module %s', module.constructor.name )
+        module.initialize()
       })
 
       resolve( true )
