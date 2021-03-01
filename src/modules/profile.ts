@@ -61,7 +61,7 @@ export class ProfileModule extends ModuleBase
 
     this._renderer = new Renderer( this.bgDimensions )
     if ( !this._renderer.hasImage( 'bg' ) )
-      await this._renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'nyabot-profile_bg-v1.png' ), 'bg' )
+      await this._renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'nyabot-profile_bg-v2.png' ), 'bg' )
   }
 
   async generateFor( user: User ): Promise<Buffer>

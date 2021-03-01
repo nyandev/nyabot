@@ -1,71 +1,109 @@
 import { Message, MessageAttachment } from 'discord.js'
 import { ArgumentCollectorResult, Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
+import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
 
 import { apos } from '../globals'
 import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
-class ConfigCommand extends Command
+class ConfigGlobalGetCommand extends NyaCommand
 {
-  constructor( protected _service: ModuleBase )
+  static options: CommandOptions = {
+    description: "Get a bot global configuration option value.",
+    ownerOnly: true,
+    args: [
+      { key: 'option', type: 'string' }
+    ]
+  }
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
-    super( _service.client,
+    const host: NyaInterface = this.module.host
+    const backend: Backend = this.module.backend
+
+    const key = ( args.option as string )
+
+    const gkeys: string[] = host.getGlobalSettingKeys()
+
+    if ( !gkeys.includes( key ) )
+      return host.respondTo( message, 'config_badkey', gkeys )
+
+    const value = await backend.getGlobalSetting( key )
+    return host.respondTo( message, 'config_get', key, value )
+  }
+}
+
+class ConfigGlobalSetCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Set a bot global configuration option.",
+    ownerOnly: true,
+    args: [
+      { key: 'option', type: 'string' },
+      { key: 'value', type: 'string' }
+    ]
+  }
+  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  {
+    const host: NyaInterface = this.module.host
+    const backend: Backend = this.module.backend
+    
+    const key = ( args.option as string )
+    let value = ( args.value as string )
+
+    const gkeys: string[] = host.getGlobalSettingKeys()
+
+    if ( !gkeys.includes( key ) )
+      return host.respondTo( message, 'config_badkey', gkeys )
+
+    await backend.setGlobalSetting( key, value )
+    value = await backend.getGlobalSetting( key )
+
+    if ( key === 'Prefix')
+      host.getClient().commandPrefix = value
+
+    return host.respondTo( message, 'config_set', key, value )
+  }
+}
+
+class ConfigGlobalCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: 'Get or set global bot configuration options.',
+    dummy: true
+  }
+  static subcommands = {
+    get: ConfigGlobalGetCommand,
+    set: ConfigGlobalSetCommand
+  }
+}
+
+/*class ConfigServerCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: 'Get or set server bot configuration options.',
+    dummy: true
+  }
+  static subcommands = {
+    get: ConfigGlobalGetCommand,
+    set: ConfigGlobalGetCommand
+  }
+}*/
+
+class ConfigCommand extends NyaBaseCommand
+{
+  constructor( protected module: AdministrationModule )
+  {
+    super( module,
     {
       name: 'config',
-      aliases: ['botconfedit', 'botconfig', 'bce'],
-      group: 'admin',
-      memberName: 'config',
-      description: 'Description',
-      details: 'Command details',
-      examples: ['config global MessageEditableDuration', 'config global MessageEditableDuration 10'],
-      args: [{
-        key: 'scope',
-        prompt: 'Configuration scope, global or server?',
-        type: 'string',
-        oneOf: ['global', 'server']
-      }, {
-        key: 'key',
-        prompt: 'Which configuration value to change?',
-        type: 'string'
-      }, {
-        key: 'value',
-        prompt: 'Value to set, or nothing to get current value',
-        type: 'string',
-        default: 'get'
-      }],
-      argsPromptLimit: 0
+      group: 'config',
+      description: 'Get or set configuration options.',
+      guildOnly: false,
+      subcommands: {
+        global: ConfigGlobalCommand
+        // server: ConfigServerCommand
+      }
     })
-  }
-
-  async run( message: CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | Message[] | null>
-  {
-    const argstruct: any = args
-    const host: NyaInterface = this._service.host
-    if ( argstruct.scope === 'global' )
-    {
-      const gkeys: string[] = host.getGlobalSettingKeys()
-
-      if ( !gkeys.includes( argstruct.key ) )
-        return host.respondTo( message, 'config_badkey', gkeys )
-      if ( argstruct.value === 'get' )
-      {
-        const value = await this._service.backend.getGlobalSetting( argstruct.key )
-        return host.respondTo( message, 'config_get', argstruct.key, value )
-      }
-      else
-      {
-        await this._service.backend.setGlobalSetting( argstruct.key, argstruct.value )
-        const value = await this._service.backend.getGlobalSetting( argstruct.key )
-        if ( argstruct.key === 'Prefix')
-          this.client.commandPrefix = value
-        return host.respondTo( message, 'config_set', argstruct.key, value )
-      }
-    }
-    else if ( argstruct.scope === 'server' )
-    {
-      console.log(args)
-    }
-    return message.reply( 'boop' )
   }
 }
 

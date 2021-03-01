@@ -227,7 +227,7 @@ export class Renderer
     ctx.shadowOffsetX = 2
     ctx.shadowOffsetY = 2
     ctx.shadowBlur = 3
-    ctx.shadowColor = 'rgba(0,0,0,0.75)'
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'
 
     ctx.fillStyle = textFill
 
