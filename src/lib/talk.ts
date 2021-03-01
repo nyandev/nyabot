@@ -91,7 +91,7 @@ export class TalkModule
     sv: this.joinListFactory( 'och' )
   }
 
-  async sendEmbed( message: MessageLike, data: EmbedData ): Promise<Message | Message[] | null>
+  async sendEmbed( message: MessageLike, data: EmbedData ): Promise<Message>
   {
     const embed = new MessageEmbed()
 
