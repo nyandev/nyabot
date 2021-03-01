@@ -1,3 +1,5 @@
+
+
 export function getXPRequiredForLevel( level: number ): number
 {
   const curveCoefficient = 0.15

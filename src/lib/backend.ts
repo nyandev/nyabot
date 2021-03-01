@@ -11,6 +11,8 @@ import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, Gu
 
 import { log } from '../globals'
 
+import * as Formulas from './formulas'
+
 import * as Models from '../models'
 
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
@@ -400,7 +402,27 @@ export class Backend
       await user.increment(['experience', 'totalExperience'], { by: Math.round( gxp ) })
       await user.reload()
       logSprintf( 'xp', 'User %i Global XP after save: %f', user.id, user.experience )
-      // if ( user.level )
+      let level: number = user.level
+      let experience: number = user.experience
+      while ( true )
+      {
+        const nextXP: number = Formulas.getXPRequiredForLevel( level + 1 )
+        if ( experience >= nextXP )
+        {
+          level++
+          experience -= nextXP
+        }
+        else
+          break
+      }
+      if ( level > user.level )
+      {
+        user.level = level
+        user.experience = experience
+        user.lastLeveled = datetimeNow()
+        await user.save()
+        logSprintf( 'xp', 'User %i Leveled up! Level: %f', user.id, user.level )
+      }
     }
     if ( skey && guild )
     {
@@ -415,6 +437,7 @@ export class Backend
             throw new Error( `Backend#getGuildUserByIDs(${guild.id}, ${user.id}) returned ${guilduser}` )
           await guilduser.increment(['experience', 'totalExperience'], { by: Math.round( sxp ) })
           await guilduser.reload()
+          guilduser.level
         } catch ( error ) {
           errorSprintf( error, "Couldn't update experience for user %s in guild %s", user.id, guild.id )
           return
