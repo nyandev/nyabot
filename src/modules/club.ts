@@ -184,7 +184,7 @@ class ListClubsCommand extends Commando.Command
   {
     const clubs = await Models.Club.findAll({
       attributes: ['name'],
-      include: [Models.ClubUser.associations.clubusers]
+      include: [Models.Club.associations.clubusers]
     })
     if ( !clubs.length )
       return this._service.host.respondTo( message, 'club_list_empty' )

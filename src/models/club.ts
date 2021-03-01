@@ -38,7 +38,6 @@ export class Club extends Model<ClubAttributes, ClubCreationAttributes> implemen
   public countClubUsers!: HasManyCountAssociationsMixin
   public createClubUser!: HasManyCreateAssociationMixin<ClubUser>
 
-
   public readonly clubusers?: ClubUser[]
 
   public static associations: {
