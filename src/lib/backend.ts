@@ -11,6 +11,8 @@ import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, Gu
 
 import { log } from '../globals'
 
+import * as Models from '../models'
+
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
 export class Backend
@@ -50,27 +52,12 @@ export class Backend
         timestamps: false
       },
       timezone: 'Etc/UTC',
-      logging: false /*msg => {
+      logging: msg => {
         logSprintf( 'db', 'Sequelize: %s', msg )
-      }*/
+      } // false
     })
 
-    this._models = {}
-    const models = [
-      'Channel',
-      'ChannelSetting',
-      'Club',
-      'ClubUser',
-      'Guild',
-      'GuildSetting',
-      'GuildUser',
-      'User'
-    ]
-    for ( const model of models )
-      this._models[model] = require( '../models/' + model.toLowerCase() ).init( this._db )
-
-    this._models.Club.hasMany( this._models.ClubUser, { foreignKey: 'clubID' } )
-    this._models.ClubUser.belongsTo( this._models.Club, { foreignKey: 'clubID' } )
+    Models.initialize( this._db )
   }
 
   async getChannelSetting( channel: number, settingKey: string, transaction?: Transaction )
@@ -414,6 +401,7 @@ export class Backend
       await user.increment(['experience', 'totalExperience'], { by: Math.round( gxp ) })
       await user.reload()
       logSprintf( 'xp', 'User %i Global XP after save: %f', user.id, user.experience )
+      // if ( user.level )
     }
     if ( skey && guild )
     {
