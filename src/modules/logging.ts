@@ -11,7 +11,7 @@ export class LoggingModule extends ModuleBase
     super( id, host, client )
   }
 
-  async resolveGuildLogChannel( guild: Guild )
+  async resolveGuildLogChannel( guild: Guild ): Promise<TextChannel | null>
   {
     // yes obviously all of this should be cached, or better yet, received from events
     const dbGuild = await this.backend.getGuildBySnowflake( guild.id )
@@ -21,13 +21,15 @@ export class LoggingModule extends ModuleBase
     if ( !logChannelSetting )
       return null
     const channel = await this.client.channels.fetch( logChannelSetting.value )
-    return channel;
+    if ( !( channel instanceof TextChannel ) || channel.guild.id !== guild.id )
+      return null
+    return channel
   }
 
   async onGuildMemberAdd( member: GuildMember ): Promise<void>
   {
     const channel = await this.resolveGuildLogChannel( member.guild )
-    if ( channel instanceof TextChannel )
+    if ( channel )
     {
       this.host.talk.sendLogEvent( channel, 'logging_guild_user_add', [member.user.tag || member.user.id] )
     }
@@ -36,7 +38,7 @@ export class LoggingModule extends ModuleBase
   async onGuildMemberRemove( member: GuildMember ): Promise<void>
   {
     const channel = await this.resolveGuildLogChannel( member.guild )
-    if ( channel instanceof TextChannel )
+    if ( channel )
     {
       this.host.talk.sendLogEvent( channel, 'logging_guild_user_remove', [member.user.tag || member.user.id] )
     }
@@ -47,7 +49,7 @@ export class LoggingModule extends ModuleBase
     if ( !newMessage.guild )
       return
     const logChannel = await this.resolveGuildLogChannel( newMessage.guild )
-    if ( logChannel instanceof TextChannel )
+    if ( logChannel )
     {
       const msgChannelName = 'name' in newMessage.channel ? newMessage.channel.name : 'unknown'
       this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
@@ -61,7 +63,7 @@ export class LoggingModule extends ModuleBase
     if ( !message.guild )
       return
     const logChannel = await this.resolveGuildLogChannel( message.guild )
-    if ( logChannel instanceof TextChannel )
+    if ( logChannel )
     {
       const msgChannelName = 'name' in message.channel ? message.channel.name : 'unknown'
       this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_remove', [
