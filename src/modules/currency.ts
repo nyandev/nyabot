@@ -135,7 +135,7 @@ class PickCommand extends NyaBaseCommand
           return null
 
         if ( data.code && args.code !== data.code ) {
-          talk.sendError( message, ['%s', "Wrong code faggot"] ).then( message => {
+          talk.sendError( message, ['%s', "Wrong code friendo"] ).then( message => {
             timeout( picktime ).then( () => { message.delete() } )
           } )
           return null
@@ -149,7 +149,7 @@ class PickCommand extends NyaBaseCommand
         const user = await backend.getUserBySnowflake( message.author.id, t )
         const guildUser = await backend.getGuildUserByIDs( channel.guildID, user.id, t )
         await guildUser.increment( { currency: data.amount }, { transaction: t } )
-        const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <a:painom:785024104163704862>`] )
+        const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <:nepSmug:730447513647317083>`] )
         timeout( picktime ).then( () => {
           ackMessage.delete()
         } )
@@ -439,7 +439,7 @@ export class CurrencyModule extends ModuleBase
         if ( !message.guild || message.author.bot )
           return
         // TODO: robust isCommand checking
-        if ( message.content && message.content.startsWith('!') )
+        if ( message.content && ['.', '!', '?'].includes( message.content[0] ) )
           return
         const channel = await this.backend.getChannelBySnowflake( message.channel.id, t )
 
@@ -481,7 +481,7 @@ export class CurrencyModule extends ModuleBase
         const imgBuffer = await this.renderer.toPNGBuffer()
 
         const attachment = new MessageAttachment( imgBuffer, 'free-tendies.png' )
-        const content = `Oh look, ${amount} <a:painom:785024104163704862> appeared! Ain't this your lucky day`
+        const content = `Oh look, ${amount} <:nepSmug:730447513647317083> appeared! Ain't this your lucky day`
         const pickMessage = await message.channel.send( content, attachment )
         try {
           await redis.hset( redisKey, { amount, code, created: Date.now(), messageID: pickMessage.id } )
