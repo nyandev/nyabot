@@ -1,4 +1,6 @@
 import * as fs from 'fs'
+import * as path from 'path'
+
 import { EventEmitter } from 'events'
 import * as Commando from 'discord.js-commando'
 import { CommandoMessage } from 'discord.js-commando'
@@ -13,6 +15,7 @@ import { debug, log, logSprintf, logThrow, timeout } from '../globals'
 import { Backend } from '../lib/backend'
 import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
+import { Dimensions, Renderer } from '../lib/renderer'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
@@ -98,7 +101,10 @@ class PickCommand extends NyaBaseCommand
       name: 'pick',
       group: 'currency',
       description: "Pick up that currency just lying around.",
-      guildOnly: true
+      guildOnly: true,
+      args: [
+        { key: 'code', type: 'string', optional: true }
+      ]
     } )
   }
 
@@ -107,10 +113,10 @@ class PickCommand extends NyaBaseCommand
     const backend = this.module.backend
     const talk = this.module.host.talk
 
-    const picktime: number = 5000
+    const picktime = 5000
 
-    await timeout( picktime ).then( () => {
-      message.delete()
+    timeout( picktime ).then( () => {
+      message.delete().catch( error => {} )
     })
 
     try {
@@ -121,9 +127,28 @@ class PickCommand extends NyaBaseCommand
         const redisKey = `currencygeneration:${channel.id}`
 
         const data = await redis.hgetall( redisKey )
-        if ( !data )
+        if ( !data || !data.messageID || !data.amount )
           return null
-        return talk.sendText( message, '%s', 'hello world' )
+
+        if ( data.code && args.code !== data.code ) {
+          talk.sendError( message, ['%s', "Wrong code faggot"] ).then( message => {
+            timeout( picktime ).then( () => { message.delete() } )
+          } )
+          return null
+        }
+
+        redis.del( redisKey )
+        message.channel.messages.fetch( data.messageID ).then(
+          origMessage => origMessage.delete().catch( error => { debug( "fuck", error ) } )
+        ).catch( error => { debug("fuck", error) } )
+
+        const user = await backend.getUserBySnowflake( message.author.id )
+        await user.increment( { currency: data.amount }, { transaction: t } )
+        const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <a:painom:785024104163704862>`] )
+        timeout( picktime ).then( () => {
+          ackMessage.delete()
+        } )
+        return null
       } )
     } catch ( error ) {
       return talk.unexpectedError( message )
@@ -366,18 +391,35 @@ export class CurrencyModule extends ModuleBase
     timelyReward: 'TimelyReward'
   }
 
+  currencyGenerationImageDimensions = new Dimensions( 796, 632 )
+  currencyGenerationImages = ['top-nep.png']
+  renderer: Renderer
+
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
+
+    const rootPath = this.backend._config.rootPath
+    Renderer.registerFont( path.join( rootPath, 'gfx', 'SourceSansPro-Semibold.otf' ), 'SourceSansPro-Semibold' )
+  }
+
+  async initialize() {
+    const rootPath = this.backend._config.rootPath
+    this.renderer = new Renderer( this.currencyGenerationImageDimensions )
+
+    await Promise.all( this.currencyGenerationImages.map(
+      img => this.renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'currency-drops', img ), img )
+    ) )
   }
 
   async onMessage( message: Message ): Promise<void>
   {
     try {
       await this.backend._db.transaction( async t => {
-        // TODO: should disable currency generation from command messages
-        // but how do we know if a Message is a command (would be trivial with CommandoMessage)
         if ( !message.guild || message.author.bot )
+          return
+        // TODO: robust isCommand checking
+        if ( message.content && message.content.startsWith('!') )
           return
         const channel = await this.backend.getChannelBySnowflake( message.channel.id, t )
 
@@ -414,21 +456,13 @@ export class CurrencyModule extends ModuleBase
         let code = ''
         if ( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) === '1' )
           code = randomInt( 1000, 9999 ).toString()
-/*
-  globalRegisterFont( 'data/SourceSansPro-Semibold.otf', 'SourceSansPro-Semibold' )
-  const img = await loadImg('data/top-nep.png')
-  const rnd = Renderer.drawFlowers( img, '1234' )
-  const buf = await rnd.toPNGBuffer()
-  await fs.writeFileSync( 'poop_out.png', buf )
-*/
 
-        const pickMessage = await this.host.talk.sendText( message,
-          code
-          ? `Use code ${code} to get your free trial of ${amount} tendies now`
-          : `Pick your free trial of ${amount} tendies now` )
-        if ( !( pickMessage instanceof Message ) )
-          logThrow( `TalkModule#sendText returned ${pickMessage} instead of a Message` )
+        this.renderer.drawCurrencyDrop( 'top-nep.png', code )
+        const imgBuffer = await this.renderer.toPNGBuffer()
 
+        const attachment = new MessageAttachment( imgBuffer, 'free-tendies.png' )
+        const content = `Oh look, ${amount} <a:painom:785024104163704862> appeared! Ain't this your lucky day`
+        const pickMessage = await message.channel.send( content, attachment )
         try {
           await redis.hset( redisKey, { amount, code, created: Date.now(), messageID: pickMessage.id } )
         } catch ( error ) {

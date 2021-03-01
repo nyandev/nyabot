@@ -51,7 +51,7 @@ export class Dimensions
       this.width = args[0][0]
       this.height = args[0][1]
     }
-    else if ( args[0] instanceof Dimensions )
+    else if ( typeof args[0].width === 'number' && typeof args[0].height === 'number' )
     {
       this.width = args[0].width
       this.height = args[0].height
@@ -66,7 +66,7 @@ export class Dimensions
   }
 }
 
-type DimensionsLike = Dimensions | number[]
+type DimensionsLike = { width: number, height: number } | [number, number]
 
 type ImageLike = Image | Canvas | string
 
@@ -104,13 +104,13 @@ export class Renderer
     this.recreate()
   }
 
-/*
-  static drawFlowers( image: Image, code: string )
+  drawCurrencyDrop( imageName: string, code: string )
   {
-    const renderer = new this( image )
-    renderer.drawImage( [0, 0], image, image )
+    const image = this._resolveImage( imageName )
 
-    const ctx = renderer._context
+    this.drawImage( [0, 0], image, image )
+
+    const ctx = this._context
     const textSize = Math.round(.15 * image.height)
     ctx.font = `${textSize}px SourceSansPro-Semibold`
     const textDims = ctx.measureText(code)
@@ -124,9 +124,7 @@ export class Renderer
     ctx.fillRect(0, 0, boxWidth, boxHeight)
     ctx.fillStyle = 'white'
     ctx.fillText(code, paddingWidth, boxHeight - textDims.actualBoundingBoxDescent - paddingHeight)
-    return renderer
   }
-*/
 
   public static registerFont( filepath: string, name: string )
   {
