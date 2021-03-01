@@ -5,6 +5,7 @@ import { ClientCredentialsAuthProvider } from 'twitch-auth'
 import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webhooks'
 
 import { debug, log } from '../globals'
+import { GuildModel } from '../models'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 import * as Models from '../models'
@@ -328,7 +329,7 @@ null>
     const host = this.module.host
     const backend = this.module.backend
 
-    let guild: any // TODO: how do I get the model type
+    let guild: GuildModel
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
