@@ -6,6 +6,7 @@ import { datetimeNow, debug, logSprintf } from '../globals'
 import { Parser } from '../lib/parser'
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
 
+import * as Models from '../models'
 
 class NewClubCommand extends Commando.Command
 {
@@ -29,8 +30,7 @@ class NewClubCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const host = this._service.host
-    const models = this._service.backend._models
-    const existing = await models.Club.findAll({
+    const existing = await Models.Club.findAll({
       where: Sequelize.where(
         Sequelize.fn('lower', Sequelize.col('name')),
         Sequelize.fn('lower', args.name)
@@ -40,7 +40,7 @@ class NewClubCommand extends Commando.Command
       return host.respondTo( message, 'club_create_exists' )
 
     const user = await this._service.backend.getUserBySnowflake( message.author.id )
-    const currentClubs = await models.ClubUser.count({
+    const currentClubs = await Models.ClubUser.count({
       where: { userID: user.id }
     })
     if ( currentClubs > 0 )
@@ -51,7 +51,7 @@ class NewClubCommand extends Commando.Command
       owner: user.id,
       created: datetimeNow()
     }
-    const club: any = await models.Club.create( clubData )
+    const club: any = await Models.Club.create( clubData )
     if ( !club )
       return host.respondTo( message, 'club_create_fail' )
 
@@ -60,7 +60,7 @@ class NewClubCommand extends Commando.Command
       clubID: club.id,
       joined: datetimeNow()
     }
-    await models.ClubUser.create( clubUserData )
+    await Models.ClubUser.create( clubUserData )
     return host.respondTo( message, 'club_create_success' )
   }
 }
@@ -87,8 +87,7 @@ class JoinClubCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const backend = this._service.backend
-    const models = backend._models
-    const clubs = await models.Club.findAll({
+    const clubs = await Models.Club.findAll({
       where: Sequelize.where(
         Sequelize.fn( 'lower', Sequelize.col( 'name' ) ),
         Sequelize.fn( 'lower', args.name )
@@ -101,7 +100,7 @@ class JoinClubCommand extends Commando.Command
       return host.respondTo( message, 'club_join_multiple' )
     const [club] = clubs
     const user = await backend.getUserBySnowflake( message.author.id )
-    const currentClubs = await models.ClubUser.count({
+    const currentClubs = await Models.ClubUser.count({
       where: { userID: user.id }
     })
     if ( currentClubs > 0 )
@@ -111,7 +110,7 @@ class JoinClubCommand extends Commando.Command
       clubID: club.id,
       joined: datetimeNow()
     }
-    await models.ClubUser.create( clubUserData )
+    await Models.ClubUser.create( clubUserData )
     return host.respondTo( message, 'club_join_success', user.name, club.name )
   }
 }
@@ -134,15 +133,14 @@ class LeaveClubCommand extends Commando.Command
   {
     const host = this._service.host
     const backend = this._service.backend
-    const models = backend._models
 
     const user = await backend.getUserBySnowflake( message.author.id )
-    let currentClubs = await models.ClubUser.findAll( { where: { userID: user.id } } )
+    let currentClubs = await Models.ClubUser.findAll( { where: { userID: user.id } } )
     if ( currentClubs.length === 0 )
       return host.respondTo( message, 'club_leave_not_in_club' )
     const clubNames = []
     for ( const clubUser of currentClubs ) {
-      const club = await models.Club.findOne( {
+      const club = await Models.Club.findOne( {
         where: { id: clubUser.clubID },
         attributes: ['name']
       } )
@@ -150,7 +148,7 @@ class LeaveClubCommand extends Commando.Command
       clubNames.push( club.name )
     }
 
-    await models.ClubUser.destroy( { where: { userID: user.id } } )
+    await Models.ClubUser.destroy( { where: { userID: user.id } } )
     return host.respondTo( message, 'club_leave_success', user.name, clubNames )
   }
 }
@@ -171,10 +169,9 @@ class ListClubsCommand extends Commando.Command
 
   async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
-    const models = this._service.backend._models
-    const clubs = await models.Club.findAll({
+    const clubs = await Models.Club.findAll({
       attributes: ['name'],
-      include: [models.ClubUser]
+      include: [Models.ClubUser]
     })
     if ( !clubs.length )
       return this._service.host.respondTo( message, 'club_list_empty' )

@@ -7,6 +7,7 @@ import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webho
 import { debug, log } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
+import * as Models from '../models'
 
 class TwitchChannelCommand extends Commando.Command
 {

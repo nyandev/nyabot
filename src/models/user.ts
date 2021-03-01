@@ -15,16 +15,16 @@ interface UserAttributes {
   discriminator: string | null
   avatar: string | null
   bot: boolean
-  created: Date | null
-  updated: Date | null
+  created: Date | string | null
+  updated: Date | string | null
   level: number
-  lastLeveled: Date | null
+  lastLeveled: Date | string | null
   experience: number
   totalExperience: number
   access: string
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'name' | 'discriminator' | 'avatar' | 'bot' | 'created' | 'updated' | 'level' | 'lastLeveled' | 'experience' | 'totalExperience' | 'access'> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes
 {
@@ -34,10 +34,10 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public discriminator!: string | null
   public avatar!: string | null
   public bot: boolean
-  public created!: Date | null
-  public updated!: Date | null
+  public created!: Date | string | null
+  public updated!: Date | string | null
   public level: number
-  public lastLeveled!: Date | null
+  public lastLeveled!: Date | string | null
   public experience: number
   public totalExperience: number
   public access: string

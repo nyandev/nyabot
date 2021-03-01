@@ -15,11 +15,11 @@ interface GuildAttributes {
   icon: string | null
   region: string | null
   available: boolean
-  joined: Date | null
-  updated: Date | null
+  joined: Date | string | null
+  updated: Date | string | null
 }
 
-interface GuildCreationAttributes extends Optional<GuildAttributes, 'id'> {}
+interface GuildCreationAttributes extends Optional<GuildAttributes, 'id' | 'name' | 'icon' | 'region' | 'updated'> {}
 
 export class Guild extends Model<GuildAttributes, GuildCreationAttributes> implements GuildAttributes
 {
@@ -29,8 +29,8 @@ export class Guild extends Model<GuildAttributes, GuildCreationAttributes> imple
   public icon!: string | null
   public region!: string | null
   public available!: boolean
-  public joined!: Date | null
-  public updated!: Date | null
+  public joined!: Date | string | null
+  public updated!: Date | string | null
 }
 
 export function initialize( sequelize: Sequelize ): void

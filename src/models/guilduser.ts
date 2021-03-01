@@ -8,12 +8,12 @@ interface GuildUserAttributes {
   deleted: boolean
   currency: number
   level: number
-  lastLeveled: Date | null
+  lastLeveled: Date | string | null
   experience: number
   totalExperience: number
 }
 
-interface GuildUserCreationAttributes extends Optional<GuildUserAttributes, 'id'> {}
+interface GuildUserCreationAttributes extends Optional<GuildUserAttributes, 'id' | 'nickname' | 'deleted' | 'currency' | 'level' | 'lastLeveled' | 'experience' | 'totalExperience'> {}
 
 export class GuildUser extends Model<GuildUserAttributes, GuildUserCreationAttributes> implements GuildUserAttributes
 {
@@ -24,7 +24,7 @@ export class GuildUser extends Model<GuildUserAttributes, GuildUserCreationAttri
   public deleted!: boolean
   public currency!: number
   public level!: number
-  public lastLeveled!: Date | null
+  public lastLeveled!: Date | string | null
   public experience!: number
   public totalExperience!: number
 }

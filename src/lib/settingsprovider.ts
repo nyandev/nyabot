@@ -26,7 +26,7 @@ export class SettingsProvider extends SettingProviderBase
       let settings
       try
       {
-        settings = JSON.parse( row.value )
+        settings = ( row.value ? JSON.parse( row.value ) : {} )
       }
       catch ( err )
       {

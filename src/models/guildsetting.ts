@@ -5,10 +5,10 @@ interface GuildSettingAttributes {
   guildID: number | null
   key: string
   value: string | null
-  lastChanged: Date | null
+  lastChanged: Date | string | null
 }
 
-interface GuildSettingCreationAttributes extends Optional<GuildSetting, 'id'> {}
+interface GuildSettingCreationAttributes extends Optional<GuildSettingAttributes, 'id' | 'guildID' | 'value' | 'lastChanged'> {}
 
 export class GuildSetting extends Model<GuildSettingAttributes, GuildSettingCreationAttributes> implements GuildSettingAttributes
 {
@@ -16,7 +16,7 @@ export class GuildSetting extends Model<GuildSettingAttributes, GuildSettingCrea
   public guildID!: number | null
   public key!: string
   public value!: string | null
-  public lastChanged!: Date | null
+  public lastChanged!: Date | string | null
 }
 
 export function initialize( sequelize: Sequelize ): void

@@ -5,6 +5,7 @@ import { Message, User } from 'discord.js'
 import { Parser } from '../lib/parser'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
+import * as Models from '../models'
 
 class XPCommand extends Commando.Command
 {

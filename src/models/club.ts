@@ -13,8 +13,8 @@ interface ClubAttributes {
   name: string
   icon: string | null
   owner: number
-  created: Date
-  updated: Date | null
+  created: Date | string
+  updated: Date | string | null
   totalExperience: number
 }
 
@@ -26,8 +26,8 @@ export class Club extends Model<ClubAttributes, ClubCreationAttributes> implemen
   public name!: string
   public icon!: string | null
   public owner!: number
-  public created!: Date
-  public updated!: Date | null
+  public created!: Date | string
+  public updated!: Date | string | null
   public totalExperience!: number
 }
 

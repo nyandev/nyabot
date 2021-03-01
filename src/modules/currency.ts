@@ -19,6 +19,7 @@ import { Dimensions, Renderer } from '../lib/renderer'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
+import * as Models from '../models'
 
 const duration = ( ms: number ) => prettyMs( ms, { secondsDecimalDigits: 0 } )
 const formatDecimal = formatNumber( ',~r' )
@@ -57,7 +58,7 @@ class AwardCurrencyCommand extends Commando.Command
     const host = this._service.host
 
     // why the fuck is a type declaration needed here but not elsewhere
-    let guild: typeof backend._models.Guild
+    let guild: any
     let currencySymbol = 'currency'
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )

@@ -20,7 +20,6 @@ export class Backend
   _config: any
   _db: Sequelize
   _redis: Redis
-  _models: any
   _settingCache = new Map()
 
   constructor( config: any )
@@ -64,7 +63,7 @@ export class Backend
   {
     const where = { channelID: channel, key: settingKey }
     try {
-      const result = await this._models.ChannelSetting.findOne( { where, transaction } )
+      const result = await Models.ChannelSetting.findOne( { where, transaction } )
       return result ? result.value : null
     } catch ( error ) {
       errorSprintf( error, "Backend#getChannelSetting(%s, %s) failed", channel, settingKey )
@@ -81,7 +80,7 @@ export class Backend
       lastChanged: datetimeNow()
     }
     try {
-      await this._models.ChannelSetting.upsert( values, { transaction } )
+      await Models.ChannelSetting.upsert( values, { transaction } )
     } catch ( error ) {
       errorSprintf( error, "Backend#setChannelSetting(%s, %s, %s) failed", channel, settingKey, settingValue )
       throw error
@@ -91,19 +90,19 @@ export class Backend
   async getAllGuildsSettings( settingKey: string )
   {
     const cond = { key: settingKey }
-    return this._models.GuildSetting.findAll({ where: cond })
+    return Models.GuildSetting.findAll({ where: cond })
   }
 
   async getGuildSettings( guild: number | null )
   {
     const cond = { guildID: guild }
-    return this._models.GuildSetting.findAll({ where: cond })
+    return Models.GuildSetting.findAll({ where: cond })
   }
 
   async getGuildSetting( guild: number | null, settingKey: string, transaction?: Transaction )
   {
     const where = { guildID: guild, key: settingKey }
-    return this._models.GuildSetting.findOne({ where, transaction })
+    return Models.GuildSetting.findOne({ where, transaction })
   }
 
   async setGuildSetting( guild: number | null, settingKey: string, settingValue: string )
@@ -115,24 +114,24 @@ export class Backend
       value: settingValue,
       lastChanged: datetimeNow()
     }
-    return this._models.GuildSetting.findOne({ where: cond })
+    return Models.GuildSetting.findOne({ where: cond })
       .then( ( obj: any ) => {
         if ( obj )
           return obj.update( vals )
-        return this._models.GuildSetting.create( vals )
+        return Models.GuildSetting.create( vals )
       })
   }
 
   async removeGuildSetting( guild: number | null, settingKey: string )
   {
     const cond = { guildID: guild, key: settingKey }
-    return this._models.GuildSetting.destroy({ where: cond })
+    return Models.GuildSetting.destroy({ where: cond })
   }
 
   async clearGuildSettings( guild: number | null )
   {
     const cond = { guildID: guild }
-    return this._models.GuildSetting.destroy({ where: cond })
+    return Models.GuildSetting.destroy({ where: cond })
   }
 
   async getGlobalSettingSetDefault( settingKey: string, defaultValue: any ): Promise<any>
@@ -141,7 +140,7 @@ export class Backend
     if ( value !== undefined )
       return value
     const cond: any = { guildID: null, key: settingKey }
-    const row = await this._models.GuildSetting.findOne({ where: cond })
+    const row = await Models.GuildSetting.findOne({ where: cond })
     if ( row )
     {
       this._settingCache.set( settingKey, row.value )
@@ -155,7 +154,7 @@ export class Backend
         value: defaultValue,
         lastChanged: datetimeNow()
       }
-      await this._models.GuildSetting.create( vals )
+      await Models.GuildSetting.create( vals )
       this._settingCache.set( settingKey, defaultValue )
     }
     return defaultValue
@@ -167,7 +166,7 @@ export class Backend
     if ( value !== undefined )
       return value
     const where = { guildID: null, key: settingKey }
-    const row = await this._models.GuildSetting.findOne({ where, transaction })
+    const row = await Models.GuildSetting.findOne({ where, transaction })
     if ( row )
     {
       this._settingCache.set( settingKey, row.value )
@@ -205,11 +204,11 @@ export class Backend
       lastChanged: datetimeNow()
     }
     this._settingCache.set( settingKey, settingValue )
-    return this._models.GuildSetting.findOne({ where: cond })
+    return Models.GuildSetting.findOne({ where: cond })
       .then( ( obj: any ) => {
         if ( obj )
           return obj.update( vals )
-        return this._models.GuildSetting.create( vals )
+        return Models.GuildSetting.create( vals )
       })
   }
 
@@ -239,22 +238,22 @@ export class Backend
       created: created,
       updated: datetimeNow()
     }
-    return this._models.User.findOne({ where: cond })
+    return Models.User.findOne({ where: cond })
       .then( ( obj: any ) => {
         if ( obj )
           return obj.update( vals )
-        return this._models.User.create( vals )
+        return Models.User.create( vals )
       })
   }
 
   async ensureOwners( owners: string[] ): Promise<string[]>
   {
     const cond = { snowflake: owners }
-    await this._models.User.update(
+    await Models.User.update(
       { access: 'owner' },
       { where: cond }
     )
-    const rows = await this._models.User.findAll({ where: { access: 'owner' } })
+    const rows = await Models.User.findAll({ where: { access: 'owner' } })
     rows.forEach( ( row: any ) => {
       if ( row && row.snowflake && !owners.includes( row.snowflake ) )
         owners.push( row.snowflake )
@@ -265,14 +264,14 @@ export class Backend
   async getChannelByID( id: number )
   {
     const cond = { id }
-    return this._models.Channel.findOne( { where: cond } )
+    return Models.Channel.findOne( { where: cond } )
   }
 
   async getChannelBySnowflake( snowflake: string, transaction?: Transaction )
   {
     const where = { snowflake }
     try {
-      const channel = await this._models.Channel.findOne( { where, transaction } )
+      const channel = await Models.Channel.findOne( { where, transaction } )
       if ( !channel )
         throw new Error( "No such channel in database" )
       return channel
@@ -285,14 +284,14 @@ export class Backend
   async getGuildByID( id: number )
   {
     const cond = { id }
-    return this._models.Guild.findOne( { where: cond } )
+    return Models.Guild.findOne( { where: cond } )
   }
 
   async getGuildBySnowflake( snowflake: string, transaction?: Transaction )
   {
     const where = { snowflake }
     try {
-      const guild = await this._models.Guild.findOne( { where, transaction } )
+      const guild = await Models.Guild.findOne( { where, transaction } )
       if ( !guild )
         throw new Error( "No such guild in database" )
       return guild
@@ -319,20 +318,20 @@ export class Backend
   async getSnowflakeByGuildID( id: number )
   {
     let cond = { id }
-    const guild = await this._models.Guild.findOne({ where: cond })
+    const guild = await Models.Guild.findOne({ where: cond })
     return ( guild ? guild.snowflake : undefined )
   }
 
   async getUserBySnowflake( flake: string, transaction?: Transaction )
   {
     let cond = { snowflake: flake }
-    return this._models.User.findOne({ where: cond, transaction })
+    return Models.User.findOne({ where: cond, transaction })
   }
 
   async getGuildUserByIDs( guildId: number, userId: number, transaction?: Transaction )
   {
     let cond = { guildID: guildId, userID: userId }
-    return this._models.GuildUser.findOne({ where: cond, transaction })
+    return Models.GuildUser.findOne({ where: cond, transaction })
   }
 
   async upsertGuildUser( guildmember: any )
@@ -349,11 +348,11 @@ export class Backend
         nickname: guildmember.nickname ? guildmember.nickname : null,
         deleted: guildmember.deleted
       }
-      return this._models.GuildUser.findOne({ where: cond })
+      return Models.GuildUser.findOne({ where: cond })
         .then( ( obj: any ) => {
           if ( obj )
             return obj.update( vals )
-          return this._models.GuildUser.create( vals )
+          return Models.GuildUser.create( vals )
         })
     }
     return null
@@ -371,7 +370,7 @@ export class Backend
   {
     const user = await this.getUserBySnowflake( dsuser.id )
     const guild = await this.getGuildBySnowflake( dsguild.id )
-    const guilduser = await this.getGuildUserByIDs( guild.id, user.id )
+    const guilduser = user ? await this.getGuildUserByIDs( guild.id, user.id ) : null
     return {
       globalXP: user ? user.experience : null,
       serverXP: guilduser ? guilduser.experience : null
@@ -449,11 +448,11 @@ export class Backend
         topic: topic,
         updated: datetimeNow()
       }
-      return this._models.Channel.findOne({ where: cond })
+      return Models.Channel.findOne({ where: cond })
         .then( ( obj: any ) => {
           if ( obj )
             return obj.update( vals )
-          return this._models.Channel.create( vals )
+          return Models.Channel.create( vals )
         })
     }
   }
@@ -470,11 +469,11 @@ export class Backend
       joined: moment( guild.joinedTimestamp, 'x' ).format( 'YYYY-MM-DD HH:mm:ss.SSSSSS'),
       updated: datetimeNow()
     }
-    return this._models.Guild.findOne({ where: cond })
+    return Models.Guild.findOne({ where: cond })
       .then( ( obj: any ) => {
         if ( obj )
           return obj.update( vals )
-        return this._models.Guild.create( vals )
+        return Models.Guild.create( vals )
       })
   }
 

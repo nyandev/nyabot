@@ -8,6 +8,7 @@ import { Backend } from '../lib/backend'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
 import { NyaInterface, ModuleBase } from './module'
 
+import * as Models from '../models'
 
 // TODO: move this to Backend#getGuildByMessage?
 async function fetchGuild( message: CommandoMessage, backend: Backend )

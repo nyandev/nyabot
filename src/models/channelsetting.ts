@@ -4,7 +4,7 @@ interface ChannelSettingAttributes {
   channelID: number
   key: string
   value: string | null
-  lastChanged: Date | null
+  lastChanged: Date | string | null
 }
 
 export class ChannelSetting extends Model<ChannelSettingAttributes> implements ChannelSettingAttributes
@@ -12,7 +12,7 @@ export class ChannelSetting extends Model<ChannelSettingAttributes> implements C
   public channelID!: number
   public key!: string
   public value!: string | null
-  public lastChanged!: Date | null
+  public lastChanged!: Date | string | null
 }
 
 export function initialize( sequelize: Sequelize ): void

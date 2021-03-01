@@ -6,6 +6,7 @@ import { sprintf } from 'sprintf-js'
 import { debug, log } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
+import * as Models from '../models'
 
 function usersQuery( users: string[] ) {
   return users.map( (username: string) => `from:${username}` ).join(' OR ')

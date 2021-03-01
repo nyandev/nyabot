@@ -3,17 +3,17 @@ import { Sequelize, Model, DataTypes, Optional } from 'sequelize'
 interface ClubUserAttributes {
   id: number
   userID: number
-  joined: Date
+  joined: Date | string
   experience: number
 }
 
-interface ClubUserCreationAttributes extends Optional<ClubUserAttributes, 'id'> {}
+interface ClubUserCreationAttributes extends Optional<ClubUserAttributes, 'id' | 'experience'> {}
 
 export class ClubUser extends Model<ClubUserAttributes, ClubUserCreationAttributes> implements ClubUserAttributes
 {
   public id!: number
   public userID!: number
-  public joined!: Date
+  public joined!: Date | string
   public experience!: number
 }
 

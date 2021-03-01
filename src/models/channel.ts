@@ -17,7 +17,7 @@ interface ChannelAttributes {
   deleted: boolean
   nsfw: boolean
   topic: string
-  updated: Date | null
+  updated: Date | string | null
 }
 
 interface ChannelCreationAttributes extends Optional<ChannelAttributes, 'id'> {}
@@ -32,7 +32,7 @@ export class Channel extends Model<ChannelAttributes, ChannelCreationAttributes>
   public deleted!: boolean
   public nsfw!: boolean
   public topic!: string
-  public updated!: Date | null
+  public updated!: Date | string | null
 }
 
 export function initialize( sequelize: Sequelize ): void
