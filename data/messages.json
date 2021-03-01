@@ -39,6 +39,10 @@
   "speedtyping_start": "Speed typing contest started! Time limit is %d seconds. The text is\n%s",
   "speedtyping_exists": "A speed typing contest is already running on this channel.",
 
+  "error_user_resolve_failed": "User resolve failed",
+  "error_guilduser_resolve_failed": "GuildUser resolve failed",
+  "error_channel_resolve_failed": "Channel resolve failed",
+
   "timely_success": "You\u2019ve claimed your %s. You can claim again in %s.",
   "timely_too_soon": "You\u2019ve already claimed your timely reward. You can get it again in %s.",
 

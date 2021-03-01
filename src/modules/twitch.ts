@@ -5,7 +5,6 @@ import { ClientCredentialsAuthProvider } from 'twitch-auth'
 import { ReverseProxyAdapter, Subscription, WebHookListener } from 'twitch-webhooks'
 
 import { debug, log } from '../globals'
-import { GuildModel } from '../models'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 import * as Models from '../models'
@@ -329,7 +328,7 @@ null>
     const host = this.module.host
     const backend = this.module.backend
 
-    let guild: GuildModel
+    let guild: Models.Guild
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
     } catch ( error ) {
@@ -433,7 +432,7 @@ export class TwitchModule extends ModuleBase
     } ) )
 
     this.listener.listen().then( async () => {
-      await this.backend._models.Guild.findAll( { attributes: ['id'] } )
+      await Models.Guild.findAll( { attributes: ['id'] } )
       .then( async ( guilds: any[] ) => {
         for ( const guild of guilds ) {
           let channelSetting

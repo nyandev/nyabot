@@ -16,7 +16,6 @@ import { Backend } from '../lib/backend'
 import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
 import { Dimensions, Renderer } from '../lib/renderer'
-import { GuildModel } from '../models'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
@@ -58,7 +57,7 @@ class AwardCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
 
-    let guild: GuildModel // why the fuck is a type declaration needed here but not elsewhere
+    let guild: Models.Guild // why the fuck is a type declaration needed here but not elsewhere
     let currencySymbol = 'currency'
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )
@@ -68,9 +67,14 @@ class AwardCurrencyCommand extends Commando.Command
       return null
     }
 
-    async function awardUser( userID: string, amount: number ) {
+    async function awardUser( userID: string, amount: number )
+    {
       const user = await backend.getUserBySnowflake( userID )
+      if ( !user )
+        throw new Error( 'User resolve failed' )
       const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+      if ( !guildUser )
+        throw new Error( 'Guild user resolve failed' )
       await guildUser.increment( { currency: amount } )
     }
 
@@ -148,8 +152,14 @@ class PickCommand extends NyaBaseCommand
         ).catch( error => { debug("fuck", error) } )
 
         const user = await backend.getUserBySnowflake( message.author.id, t )
+        if ( !user )
+          return null
+  
         const guildUser = await backend.getGuildUserByIDs( channel.guildID, user.id, t )
-        await guildUser.increment( { currency: data.amount }, { transaction: t } )
+        if ( !guildUser )
+          return null
+
+        await guildUser.increment( { currency: parseInt( data.amount ) }, { transaction: t } )
         const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <:nepSmug:730447513647317083>`] )
         timeout( picktime ).then( () => {
           ackMessage.delete()
@@ -187,6 +197,8 @@ class ShowCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
     const user = await backend.getUserBySnowflake( args.target.id )
+    if ( !user )
+      return host.respondTo( message, 'error_user_resolve_failed' )
 
     let guildUser
     let currencySymbol = 'currency'
@@ -197,7 +209,7 @@ class ShowCurrencyCommand extends Commando.Command
     } catch ( error ) {
       log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
     }
-    return host.talk.sendText( message, 'currency_show', user.name, guildUser.currency, currencySymbol )
+    return guildUser ? host.talk.sendText( message, 'currency_show', user.name || '', guildUser.currency.toString(), currencySymbol ) : host.respondTo( message, 'error_guilduser_resolve_failed' )
   }
 }
 
@@ -239,7 +251,12 @@ class SlotCommand extends Commando.Command
 
     const guild = await backend.getGuildBySnowflake( message.guild.id )
     const user = await backend.getUserBySnowflake( message.author.id )
+    if ( !user )
+      return host.respondTo( message, 'error_user_resolve_failed' )
+
     const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+    if ( !guildUser )
+      return host.respondTo( message, 'error_guilduser_resolve_failed' )
 
     if ( guildUser.currency < args.amount )
       return host.respondTo( message, 'slot_insufficient_funds' )

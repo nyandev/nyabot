@@ -18,7 +18,7 @@ interface ClubAttributes {
   totalExperience: number
 }
 
-interface ClubCreationAttributes extends Optional<ClubAttributes, 'id'> {}
+interface ClubCreationAttributes extends Optional<ClubAttributes, 'id' | 'icon' | 'updated' | 'totalExperience'> {}
 
 export class Club extends Model<ClubAttributes, ClubCreationAttributes> implements ClubAttributes
 {
@@ -43,11 +43,12 @@ export function initialize( sequelize: Sequelize ): void
       },
       name: {
         type: DataTypes.TEXT,
-        allowNull: false,
+        allowNull: false
       },
       icon: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: true,
+        defaultValue: null
       },
       owner: {
         type: DataTypes.INTEGER.UNSIGNED,
@@ -60,7 +61,8 @@ export function initialize( sequelize: Sequelize ): void
       },
       updated: {
         type: DataTypes.DATE,
-        allowNull: true
+        allowNull: true,
+        defaultValue: null
       },
       totalExperience: {
         type: DataTypes.VIRTUAL,

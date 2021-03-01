@@ -5,6 +5,7 @@ interface ClubUserAttributes {
   userID: number
   joined: Date | string
   experience: number
+  clubID: number
 }
 
 interface ClubUserCreationAttributes extends Optional<ClubUserAttributes, 'id' | 'experience'> {}
@@ -15,6 +16,7 @@ export class ClubUser extends Model<ClubUserAttributes, ClubUserCreationAttribut
   public userID!: number
   public joined!: Date | string
   public experience!: number
+  public clubID!: number
 }
 
 export function initialize( sequelize: Sequelize ): void
@@ -40,6 +42,11 @@ export function initialize( sequelize: Sequelize ): void
         type: DataTypes.INTEGER.UNSIGNED,
         allowNull: false,
         defaultValue: 0
+      },
+      clubID: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        references: { model: 'club', key: 'id' }
       }
     },
     {

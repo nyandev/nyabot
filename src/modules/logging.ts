@@ -18,7 +18,7 @@ export class LoggingModule extends ModuleBase
     if ( !dbGuild )
       return null
     const logChannelSetting = await this.backend.getGuildSetting( dbGuild.id, "LogChannel" )
-    if ( !logChannelSetting )
+    if ( !logChannelSetting || !logChannelSetting.value )
       return null
     const channel = await this.client.channels.fetch( logChannelSetting.value )
     if ( !( channel instanceof TextChannel ) || channel.guild.id !== guild.id )

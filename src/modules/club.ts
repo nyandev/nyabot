@@ -40,6 +40,9 @@ class NewClubCommand extends Commando.Command
       return host.respondTo( message, 'club_create_exists' )
 
     const user = await this._service.backend.getUserBySnowflake( message.author.id )
+    if ( !user )
+      return host.respondTo( message, 'error_user_resolve_failed' )
+
     const currentClubs = await Models.ClubUser.count({
       where: { userID: user.id }
     })
@@ -98,8 +101,13 @@ class JoinClubCommand extends Commando.Command
       return host.respondTo( message, 'club_join_nonexistent' )
     else if ( clubs.length > 1 )
       return host.respondTo( message, 'club_join_multiple' )
+      
     const [club] = clubs
+
     const user = await backend.getUserBySnowflake( message.author.id )
+    if ( !user )
+      return host.respondTo( message, 'error_user_resolve_failed' )
+
     const currentClubs = await Models.ClubUser.count({
       where: { userID: user.id }
     })
@@ -135,15 +143,20 @@ class LeaveClubCommand extends Commando.Command
     const backend = this._service.backend
 
     const user = await backend.getUserBySnowflake( message.author.id )
+    if ( !user )
+      return host.respondTo( message, 'error_user_resolve_failed' )
+
     let currentClubs = await Models.ClubUser.findAll( { where: { userID: user.id } } )
     if ( currentClubs.length === 0 )
       return host.respondTo( message, 'club_leave_not_in_club' )
     const clubNames = []
     for ( const clubUser of currentClubs ) {
-      const club = await Models.Club.findOne( {
+      const club = await Models.Club.findOne({
         where: { id: clubUser.clubID },
         attributes: ['name']
-      } )
+      })
+      if ( !club )
+        continue
       debug( club )
       clubNames.push( club.name )
     }
