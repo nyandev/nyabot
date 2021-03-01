@@ -857,12 +857,14 @@ export class TwitterModule extends ModuleBase
         if ( channelID == null ) {
           let defaultChannelID
           try {
-            defaultChannelID = ( await this.backend.getGuildSetting( guildID, this.settingKeys.defaultChannel ) ).value
+            const defaultChannelSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.defaultChannel )
+            if ( defaultChannelSetting && defaultChannelSetting.value != null )
+              defaultChannelID = defaultChannelSetting.value
           } catch ( error ) {
             continue
           }
-          if ( !defaultChannelID != null )
-            channelID = defaultChannelID
+          if ( defaultChannelID && Number.isInteger( Number( defaultChannelID ) ) )
+            channelID = Number( defaultChannelID )
         }
         if ( channelID == null )
           continue
