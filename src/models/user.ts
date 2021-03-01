@@ -70,11 +70,6 @@ export function init( sequelize: Sequelize )
       type: DataTypes.ENUM( 'owner', 'admin', 'user' ),
       allowNull: false,
       defaultValue: 'user'
-    },
-    currency: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0
     }
   }, { timestamps: false })
 }
