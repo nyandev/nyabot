@@ -96,7 +96,7 @@ class ConfigCommand extends NyaBaseCommand
     super( module,
     {
       name: 'config',
-      group: 'config',
+      group: 'admin',
       description: 'Get or set configuration options.',
       guildOnly: false,
       subcommands: {
