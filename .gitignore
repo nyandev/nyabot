@@ -111,6 +111,7 @@ dist/
 built/
 build/
 junk/
+backup/
 
 # Our config, local
 config.json
