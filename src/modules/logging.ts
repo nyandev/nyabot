@@ -11,7 +11,7 @@ export class LoggingModule extends ModuleBase
     super( id, host, client )
   }
 
-  async resolveGuildLogChannel( guild: Guild ): Promise<any>
+  async resolveGuildLogChannel( guild: Guild )
   {
     // yes obviously all of this should be cached, or better yet, received from events
     const dbGuild = await this.backend.getGuildBySnowflake( guild.id )
@@ -27,18 +27,18 @@ export class LoggingModule extends ModuleBase
   async onGuildMemberAdd( member: GuildMember ): Promise<void>
   {
     const channel = await this.resolveGuildLogChannel( member.guild )
-    if ( channel && channel.isText() )
+    if ( channel instanceof TextChannel )
     {
-      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_user_add', [member.user.tag || member.user.id] )
+      this.host.talk.sendLogEvent( channel, 'logging_guild_user_add', [member.user.tag || member.user.id] )
     }
   }
 
   async onGuildMemberRemove( member: GuildMember ): Promise<void>
   {
     const channel = await this.resolveGuildLogChannel( member.guild )
-    if ( channel && channel.isText() )
+    if ( channel instanceof TextChannel )
     {
-      this.host.talk.sendLogEvent( ( channel as TextChannel ), 'logging_guild_user_remove', [member.user.tag || member.user.id] )
+      this.host.talk.sendLogEvent( channel, 'logging_guild_user_remove', [member.user.tag || member.user.id] )
     }
   }
 
@@ -46,12 +46,12 @@ export class LoggingModule extends ModuleBase
   {
     if ( !newMessage.guild )
       return
-    const channel = await this.resolveGuildLogChannel( newMessage.guild )
-    if ( channel && channel.isText() )
+    const logChannel = await this.resolveGuildLogChannel( newMessage.guild )
+    if ( logChannel instanceof TextChannel )
     {
-      const textChannel: TextChannel = channel
-      this.host.talk.sendLogEvent( textChannel, 'logging_guild_message_update', [
-        newMessage.id, newMessage.author.tag || newMessage.author.id, textChannel.name, oldMessage.cleanContent, newMessage.cleanContent
+      const msgChannelName = 'name' in newMessage.channel ? newMessage.channel.name : 'unknown'
+      this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
+        newMessage.id, newMessage.author.tag || newMessage.author.id, msgChannelName, oldMessage.cleanContent, newMessage.cleanContent
       ])
     }
   }
@@ -60,12 +60,12 @@ export class LoggingModule extends ModuleBase
   {
     if ( !message.guild )
       return
-    const channel = await this.resolveGuildLogChannel( message.guild )
-    if ( channel && channel.isText() )
+    const logChannel = await this.resolveGuildLogChannel( message.guild )
+    if ( logChannel instanceof TextChannel )
     {
-      const textChannel: TextChannel = channel
-      this.host.talk.sendLogEvent( textChannel, 'logging_guild_message_remove', [
-        message.id, message.author.tag || message.author.id, textChannel.name, message.cleanContent
+      const msgChannelName = 'name' in message.channel ? message.channel.name : 'unknown'
+      this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_remove', [
+        message.id, message.author.tag || message.author.id, msgChannelName, message.cleanContent
       ])
     }
   }
@@ -83,8 +83,9 @@ export class LoggingModule extends ModuleBase
   registerStuff( id: number, host: NyaInterface ): boolean
   {
     this.id = id
-    host.getEmitter().on( 'messageUpdated', this.onMessageUpdated.bind( this ) )
-    host.getEmitter().on( 'messageDeleted', this.onMessageDeleted.bind( this ) )
+    host.getEmitter()
+      .on( 'messageUpdated', this.onMessageUpdated.bind( this ) )
+      .on( 'messageDeleted', this.onMessageDeleted.bind( this ) )
     return true
   }
 }
