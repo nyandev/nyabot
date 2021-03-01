@@ -8,6 +8,8 @@ import {
   HasManyCreateAssociationMixin,
   Optional } from 'sequelize'
 
+import { ClubUser } from './clubuser'
+
 interface ClubAttributes {
   id: number
   name: string
@@ -29,6 +31,19 @@ export class Club extends Model<ClubAttributes, ClubCreationAttributes> implemen
   public created!: Date | string
   public updated!: Date | string | null
   public totalExperience!: number
+
+  public getClubUsers!: HasManyGetAssociationsMixin<ClubUser>
+  public addClubUser!: HasManyAddAssociationMixin<ClubUser, number>
+  public hasClubUser!: HasManyHasAssociationMixin<ClubUser, number>
+  public countClubUsers!: HasManyCountAssociationsMixin
+  public createClubUser!: HasManyCreateAssociationMixin<ClubUser>
+
+
+  public readonly clubusers?: ClubUser[]
+
+  public static associations: {
+    clubusers: Association<Club, ClubUser>
+  }
 }
 
 export function initialize( sequelize: Sequelize ): void

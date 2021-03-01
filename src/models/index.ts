@@ -20,8 +20,14 @@ export function initialize( sequelize: Sequelize )
   GuildUserModel.initialize( sequelize )
   UserModel.initialize( sequelize )
 
-  ClubModel.Club.hasMany( ClubUserModel.ClubUser, { foreignKey: 'clubID' } )
-  ClubUserModel.ClubUser.belongsTo( ClubModel.Club, { foreignKey: 'clubID' } )
+  ClubModel.Club.hasMany( ClubUserModel.ClubUser, {
+    foreignKey: 'clubID',
+    as: 'clubusers'
+  })
+
+  ClubUserModel.ClubUser.belongsTo( ClubModel.Club, {
+    foreignKey: 'clubID'
+  })
 }
 
 export { Channel } from './channel'
