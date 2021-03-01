@@ -16,6 +16,7 @@ import { Backend } from '../lib/backend'
 import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
 import { Dimensions, Renderer } from '../lib/renderer'
+import { GuildModel } from '../models'
 
 import { CommandCallbackType, NyaInterface, ModuleBase } from './module'
 
@@ -56,8 +57,7 @@ class AwardCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
 
-    // why the fuck is a type declaration needed here but not elsewhere
-    let guild: typeof backend._models.Guild
+    let guild: GuildModel // why the fuck is a type declaration needed here but not elsewhere
     let currencySymbol = 'currency'
     try {
       guild = await backend.getGuildBySnowflake( message.guild.id )

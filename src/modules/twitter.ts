@@ -6,6 +6,7 @@ import { sprintf } from 'sprintf-js'
 import { apos, debug, log } from '../globals'
 import { Backend } from '../lib/backend'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
+import { ChannelModel } from '../models'
 import { NyaInterface, ModuleBase } from './module'
 
 
@@ -214,7 +215,7 @@ class TwitterChannelDefaultSetCommand extends NyaCommand
     }
 
     // TODO: how do I specify a DB model type
-    let oldChannel: any = null
+    let oldChannel: ChannelModel | null = null
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
       if ( channelSetting && channelSetting.value != null ) {

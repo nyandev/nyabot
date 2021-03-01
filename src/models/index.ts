@@ -23,3 +23,7 @@ export function initialize( sequelize: Sequelize )
   ClubModel.Club.hasMany( ClubUserModel.ClubUser, { foreignKey: 'clubID' } )
   ClubUserModel.ClubUser.belongsTo( ClubModel.Club, { foreignKey: 'clubID' } )
 }
+
+// Add re-exports for the others as needed I guess
+export { Channel as ChannelModel } from './channel'
+export { Guild as GuildModel } from './guild'
