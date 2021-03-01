@@ -31,6 +31,11 @@ export function init( sequelize: Sequelize )
       allowNull: false,
       defaultValue: false
     },
+    currency: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     level: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,

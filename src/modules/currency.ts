@@ -56,17 +56,21 @@ class AwardCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
 
+    // why the fuck is a type declaration needed here but not elsewhere
+    let guild: typeof backend._models.Guild
     let currencySymbol = 'currency'
     try {
-      const guild = await backend.getGuildBySnowflake( message.guild.id )
+      guild = await backend.getGuildBySnowflake( message.guild.id )
       currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
     } catch ( error ) {
       log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
+      return null
     }
 
     async function awardUser( userID: string, amount: number ) {
       const user = await backend.getUserBySnowflake( userID )
-      await user.increment( { currency: amount } )
+      const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+      await guildUser.increment( { currency: amount } )
     }
 
     if ( args.target instanceof Role ) {
@@ -142,8 +146,9 @@ class PickCommand extends NyaBaseCommand
           origMessage => origMessage.delete().catch( error => { debug( "fuck", error ) } )
         ).catch( error => { debug("fuck", error) } )
 
-        const user = await backend.getUserBySnowflake( message.author.id )
-        await user.increment( { currency: data.amount }, { transaction: t } )
+        const user = await backend.getUserBySnowflake( message.author.id, t )
+        const guildUser = await backend.getGuildUserByIDs( channel.guildID, user.id, t )
+        await guildUser.increment( { currency: data.amount }, { transaction: t } )
         const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <a:painom:785024104163704862>`] )
         timeout( picktime ).then( () => {
           ackMessage.delete()
@@ -182,14 +187,16 @@ class ShowCurrencyCommand extends Commando.Command
     const host = this._service.host
     const user = await backend.getUserBySnowflake( args.target.id )
 
+    let guildUser
     let currencySymbol = 'currency'
     try {
       const guild = await backend.getGuildBySnowflake( message.guild.id )
+      guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
       currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
     } catch ( error ) {
       log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
     }
-    return host.talk.sendText( message, 'currency_show', user.name, user.currency, currencySymbol )
+    return host.talk.sendText( message, 'currency_show', user.name, guildUser.currency, currencySymbol )
   }
 }
 
@@ -229,11 +236,14 @@ class SlotCommand extends Commando.Command
       ...config.globalDefaults.SlotsImages
     ]
 
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
     const user = await backend.getUserBySnowflake( message.author.id )
-    if ( user.currency < args.amount )
+    const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+
+    if ( guildUser.currency < args.amount )
       return host.respondTo( message, 'slot_insufficient_funds' )
 
-    await user.decrement( { currency: args.amount } )
+    await guildUser.decrement( { currency: args.amount } )
 
     const slots = []
     for (let i = 0; i < 3; i++)
@@ -252,7 +262,7 @@ class SlotCommand extends Commando.Command
     }
     const winAmount = args.amount * multiplier
     if ( winAmount > 0 ) {
-      await user.increment( { currency: winAmount } )
+      await guildUser.increment( { currency: winAmount } )
       let currencySymbol = 'currency'
       try {
         const guild = await backend.getGuildBySnowflake( message.guild.id )
@@ -305,6 +315,16 @@ class TimelyCommand extends NyaBaseCommand
         throw new Error( `Backend#getGuildBySnowflake returned ${guild}` )
     } catch ( error ) {
       log( `Failed to fetch guild ${message.guild.id}: ${error}` )
+      return null
+    }
+
+    let guildUser
+    try {
+      guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+      if ( !guildUser )
+        throw new Error( "no such guilduser" )
+    } catch ( error ) {
+      log( `Failed to fetch guilduser: ${error}` )
       return null
     }
 
@@ -363,7 +383,7 @@ class TimelyCommand extends NyaBaseCommand
     }
 
     try {
-      await user.increment( { currency: reward } )
+      await guildUser.increment( { currency: reward } )
     } catch ( error ) {
       log( `Failed to give currency to user ${user.id}: ${error}` )
       return null

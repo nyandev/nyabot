@@ -336,16 +336,16 @@ export class Backend
     return ( guild ? guild.snowflake : undefined )
   }
 
-  async getUserBySnowflake( flake: string )
+  async getUserBySnowflake( flake: string, transaction?: Transaction )
   {
     let cond = { snowflake: flake }
-    return this._models.User.findOne({ where: cond })
+    return this._models.User.findOne({ where: cond, transaction })
   }
 
-  async getGuildUserByIDs( guildId: number, userId: number )
+  async getGuildUserByIDs( guildId: number, userId: number, transaction?: Transaction )
   {
     let cond = { guildID: guildId, userID: userId }
-    return this._models.GuildUser.findOne({ where: cond })
+    return this._models.GuildUser.findOne({ where: cond, transaction })
   }
 
   async upsertGuildUser( guildmember: any )
