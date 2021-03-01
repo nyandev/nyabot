@@ -1,6 +1,6 @@
 import { logSprintf } from '../globals'
 import * as Commando from 'discord.js-commando'
-import { Message, User, Guild, GuildMember, TextChannel } from 'discord.js'
+import { Message, User, Guild, GuildChannel, GuildMember, TextChannel } from 'discord.js'
 
 import { NyaInterface, ModuleBase } from '../modules/module'
 
@@ -51,7 +51,7 @@ export class LoggingModule extends ModuleBase
     const logChannel = await this.resolveGuildLogChannel( newMessage.guild )
     if ( logChannel )
     {
-      const msgChannelName = 'name' in newMessage.channel ? newMessage.channel.name : 'unknown'
+      const msgChannelName = ( newMessage.channel as GuildChannel ).name
       this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
         newMessage.id, newMessage.author.tag || newMessage.author.id, msgChannelName, oldMessage.cleanContent, newMessage.cleanContent
       ])
@@ -65,7 +65,7 @@ export class LoggingModule extends ModuleBase
     const logChannel = await this.resolveGuildLogChannel( message.guild )
     if ( logChannel )
     {
-      const msgChannelName = 'name' in message.channel ? message.channel.name : 'unknown'
+      const msgChannelName = ( message.channel as GuildChannel ).name
       this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_remove', [
         message.id, message.author.tag || message.author.id, msgChannelName, message.cleanContent
       ])
