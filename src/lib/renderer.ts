@@ -98,7 +98,7 @@ export class Renderer
     this._context.antialias = 'gray'
   }
 
-  constructor( dimensions: DimensionsLike, alpha = true )
+  constructor( dimensions: DimensionsLike, alpha = false )
   {
     this._dimensions = new Dimensions( dimensions )
     this.recreate( alpha )
@@ -107,8 +107,9 @@ export class Renderer
   drawCurrencyDrop( imageName: string, code: string )
   {
     const image = this._resolveImage( imageName )
-
     this.drawImage( [0, 0], image, image )
+    if ( !code )
+      return
 
     const ctx = this._context
     const textSize = Math.round(.15 * image.height)
