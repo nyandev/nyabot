@@ -50,7 +50,9 @@
       "CurrencyGenerationAmountMin": 100,
       "CurrencyGenerationChance": 0.05,
       "CurrencyGenerationCode": true,
+      "CurrencyGenerationEnabledDefault": false,
       "CurrencySymbol": ":cherry_blossom:",
+      "LoggingEnabledDefault": true,
       "SlotsJoker": "nepSmug.png",
       "SlotsImages": [
         "nepBlue.png",

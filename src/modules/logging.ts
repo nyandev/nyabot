@@ -1,14 +1,52 @@
 import { logSprintf } from '../globals'
 import * as Commando from 'discord.js-commando'
-import { Message, User, Guild, GuildChannel, GuildMember, TextChannel } from 'discord.js'
+import { Channel, Guild, GuildChannel, GuildMember, Message, TextChannel, User } from 'discord.js'
 
+import { settingBoolean } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
+
 
 export class LoggingModule extends ModuleBase
 {
+  channelSettings = {
+    loggingEnabled: 'LoggingEnabled'
+  }
+
+  settingKeys = {
+    loggingEnabledDefault: 'LoggingEnabledDefault'
+  }
+
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
+  }
+
+  async loggingEnabledForChannel( dsChannel: Channel ): Promise<boolean>
+  {
+    if ( !( dsChannel instanceof GuildChannel ) )
+      return false
+
+    try {
+      return await this.backend._db.transaction( async t => {
+        const channel = await this.backend.getChannelBySnowflake( dsChannel.id, t )
+        if ( channel ) {
+          const channelSetting = settingBoolean( await this.backend.getChannelSetting( channel.id, this.channelSettings.loggingEnabled, t ) )
+          if ( channelSetting != null )
+            return channelSetting
+        }
+
+        let guildID
+        const guild = await this.backend.getGuildBySnowflake( dsChannel.guild.id, t )
+        if ( guild )
+          guildID = guild.id
+        const guildOrGlobalSetting = settingBoolean( await this.backend.getSetting( this.settingKeys.loggingEnabledDefault, guildID, t ) )
+        if ( guildOrGlobalSetting != null )
+          return guildOrGlobalSetting
+        throw new Error( "no setting of any kind found. that's kinda weird." )
+      } )
+    } catch ( error ) {
+      return this.host._config.globalDefaults.LoggingEnabledDefault
+    }
   }
 
   async resolveGuildLogChannel( guild: Guild ): Promise<TextChannel | null>
@@ -46,7 +84,7 @@ export class LoggingModule extends ModuleBase
 
   async onMessageUpdated( oldMessage: Message, newMessage: Message )
   {
-    if ( !newMessage.guild )
+    if ( !newMessage.guild || !await this.loggingEnabledForChannel( newMessage.channel ) )
       return
     const logChannel = await this.resolveGuildLogChannel( newMessage.guild )
     if ( logChannel )
@@ -60,8 +98,9 @@ export class LoggingModule extends ModuleBase
  
   async onMessageDeleted( message: Message )
   {
-    if ( !message.guild )
+    if ( !message.guild || !await this.loggingEnabledForChannel( message.channel ) )
       return
+
     const logChannel = await this.resolveGuildLogChannel( message.guild )
     if ( logChannel )
     {
@@ -70,6 +109,11 @@ export class LoggingModule extends ModuleBase
         message.id, message.author.tag || message.author.id, msgChannelName, message.cleanContent
       ])
     }
+  }
+
+  getGlobalSettingKeys()
+  {
+    return Object.values( this.settingKeys )
   }
 
   getGroups(): Commando.CommandGroup[]

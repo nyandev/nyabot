@@ -72,7 +72,11 @@ export function logThrow( error: string ): never
   throw new Error( error )
 }
 
-export function settingBoolean( setting: string | null )
+export function settingBoolean( setting: string | null ): boolean | null
 {
-  return setting === '1' || setting === 't' || setting === 'true'
+  if ( setting === '1' || setting === 't' || setting === 'true' )
+    return true
+  if ( setting === '0' || setting === 'f' || setting === 'false' )
+    return false
+  return null
 }

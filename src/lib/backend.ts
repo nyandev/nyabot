@@ -228,7 +228,7 @@ export class Backend
   /*  Returns a setting primarily from guild settings, if it it set there,
    *  and secondarily from global settings.
    */
-  async getSetting( settingKey: string, guild?: number, transaction?: Transaction )
+  async getSetting( settingKey: string, guild?: number | null, transaction?: Transaction )
   {
     let guildSetting
     if ( guild != null )
