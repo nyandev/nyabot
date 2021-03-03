@@ -264,10 +264,11 @@ class SlotCommand extends Commando.Command
     await guildUser.decrement( { currency: args.amount } )
 
     const slots = []
-    for (let i = 0; i < 3; i++)
+    for ( let i = 0; i < 3; i++ )
       slots.push( Math.floor( Math.random() * images.length ) )
 
-    const slotString = slots.map( index => images[index] ).join(' ')
+    const slotImages = slots.map( index => images[index] )
+
     let multiplier = 0
     if ( slots.every( slot => slot === 0 ) ) {
       multiplier = MULTIPLIERS.threeJokers
@@ -281,9 +282,8 @@ class SlotCommand extends Commando.Command
     const winAmount = args.amount * multiplier
 
     const renderer = this._service.slotsRenderer
-    renderer.drawSlots( Array( 3 ).fill( 'nepSmug.png' ), args.amount, winAmount.toString() )
-    const imgBuffer = await renderer.toPNGBuffer()
-    await message.channel.send( new MessageAttachment( imgBuffer, 'slots.png' ) )
+    renderer.drawSlots( slotImages, args.amount, winAmount.toString() )
+    const attachment = new MessageAttachment( await renderer.toPNGBuffer(), 'slots.png' )
 
     if ( winAmount > 0 ) {
       await guildUser.increment( { currency: winAmount } )
@@ -295,9 +295,10 @@ class SlotCommand extends Commando.Command
         log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
       }
       const formattedAmount = formatDecimal( winAmount )
-      return host.talk.sendText( message, 'slot_win', slotString, formattedAmount, currencySymbol )
+
+      return message.channel.send( host.talk.format( ['slot_win', formattedAmount, currencySymbol] ), attachment )
     } else {
-      return host.talk.sendText( message, 'slot_no_win', slotString )
+      return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
     }
   }
 }
@@ -440,14 +441,17 @@ export class CurrencyModule extends ModuleBase
   currencyDropRenderer: Renderer
 
   slotsImageDimensions = new Dimensions( 553, 552 )
-  slotsImages = ['bg.png', 'nepSmug.png']
+  slotsImages = ['bg.png']
   slotsRenderer: Renderer
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
     super( id, host, client )
 
+    this.slotsImages.push( host._config.globalDefaults.SlotsJoker, ...host._config.globalDefaults.SlotsImages )
+
     const rootPath = this.backend._config.rootPath
+    Renderer.registerFont( path.join( rootPath, 'gfx', 'slots', '7seg.ttf' ), '7seg' )
     Renderer.registerFont( path.join( rootPath, 'gfx', 'SourceSansPro-Semibold.otf' ), 'SourceSansPro-Semibold' )
   }
 

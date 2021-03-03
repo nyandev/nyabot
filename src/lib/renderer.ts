@@ -136,6 +136,22 @@ export class Renderer
     this.drawImage( [0, 0], bg, bg )
     for ( let i = 0; i < rolls.length; i++ )
       this.drawImage( [89 + 142 * i, 315], rolls[i], rolls[i] )
+
+    const yPos = 481
+    const winningPos = [247, yPos]
+    const betPos = [414, yPos]
+    const unlitColor = '#300000'
+    const litColor = 'red'
+    const winningMaxLength = 11
+    const betMaxLength = 5
+
+    const unlitText = ( length: number ) => Array( length ).fill( '8' ).join( '' )
+
+    this.drawText( winningPos, '7seg', 22, 'right', unlitColor, unlitText( winningMaxLength ) )
+    this.drawText( winningPos, '7seg', 22, 'right', litColor, winning )
+
+    this.drawText( betPos, '7seg', 22, 'right', unlitColor, unlitText( betMaxLength ) )
+    this.drawText( betPos, '7seg', 22, 'right', litColor, bet )
   }
 
   public static registerFont( filepath: string, name: string )

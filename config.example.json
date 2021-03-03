@@ -51,13 +51,13 @@
       "CurrencyGenerationChance": 0.05,
       "CurrencyGenerationCode": true,
       "CurrencySymbol": ":cherry_blossom:",
-      "SlotsJoker": ":cherry_blossom:",
+      "SlotsJoker": "nepSmug.png",
       "SlotsImages": [
-        ":hearts:",
-        ":butterfly:",
-        ":sun_with_face:",
-        ":green_apple:",
-        ":dolphin:"
+        "nepBlue.png",
+        "nepGreen.png",
+        "nepRed.png",
+        "nepYellow.png",
+        "nepEggplant.png"
       ],
       "TimelyInterval": 36000,
       "TimelyReward": 300,
