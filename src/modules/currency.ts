@@ -88,13 +88,13 @@ class AwardCurrencyCommand extends Commando.Command
             }
           )
         }
-
+        const formattedAmount = formatDecimal( args.amount )
         if ( args.target instanceof Role ) {
           await awardUsers( guild.id, args.target.members.keys(), args.amount )
-          return host.talk.sendSuccess( message, ['currency_award_role', message.author.username, args.amount, currencySymbol, args.target.name] )
+          return host.talk.sendSuccess( message, ['currency_award_role', message.author.username, formattedAmount, currencySymbol, args.target.name] )
         } else if ( args.target instanceof User ) {
           await awardUsers( guild.id, [args.target.id], args.amount )
-          return host.talk.sendSuccess( message, ['currency_award_user', message.author.username, args.amount, currencySymbol, args.target.username] )
+          return host.talk.sendSuccess( message, ['currency_award_user', message.author.username, formattedAmount, currencySymbol, args.target.username] )
         } else {
           logThrow( "The 'target' argument to /award was not of type User or Role" )
         }
@@ -217,7 +217,7 @@ class ShowCurrencyCommand extends Commando.Command
         if ( !guildUser )
           throw new Error( "no such guilduser" )
         const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id ) || defaultCurrency
-        return talk.sendText( message, 'currency_show', user.toString(), formatDecimal( guildUser.currency ), currencySymbol )
+        return talk.sendText( message, 'currency_show', args.target.toString(), formatDecimal( guildUser.currency ), currencySymbol )
       } )
     } catch ( error ) {
       return talk.unexpectedError( message )
