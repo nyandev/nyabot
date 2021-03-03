@@ -15,6 +15,11 @@ import * as Formulas from './formulas'
 
 import * as Models from '../models'
 
+interface UserXP {
+  globalXP?: number,
+  serverXP?: number
+}
+
 const xpUpdateMinDelta = 10 // 10 seconds between xp updates to mariadb (from redis)
 
 export class Backend
@@ -101,26 +106,32 @@ export class Backend
     return Models.GuildSetting.findAll({ where: cond })
   }
 
-  async getGuildSetting( guild: number | null, settingKey: string, transaction?: Transaction )
+  async getGuildSetting( guildID: number, settingKey: string, transaction?: Transaction )
   {
-    const where = { guildID: guild, key: settingKey }
-    return Models.GuildSetting.findOne({ where, transaction })
+    const where = { guildID, key: settingKey }
+    try {
+      const setting = await Models.GuildSetting.findOne({ where, transaction })
+      return setting ? setting.value : null
+    } catch ( error ) {
+      errorSprintf( error, "Backend#getGuildSetting(%s, %s) failed", guildID, settingKey )
+      throw error
+    }
   }
 
-  async setGuildSetting( guild: number | null, settingKey: string, settingValue: string )
+  async setGuildSetting( guildID: number, settingKey: string, settingValue: string, transaction?: Transaction )
   {
-    const cond = { guildID: guild, key: settingKey }
+    const cond = { guildID, key: settingKey }
     const vals = {
-      guildID: guild,
+      guildID,
       key: settingKey,
       value: settingValue,
       lastChanged: datetimeNow()
     }
-    return Models.GuildSetting.findOne({ where: cond })
+    return Models.GuildSetting.findOne({ where: cond, transaction })
       .then( ( obj: any ) => {
         if ( obj )
           return obj.update( vals )
-        return Models.GuildSetting.create( vals )
+        return Models.GuildSetting.create( vals, { transaction } )
       })
   }
 
@@ -222,8 +233,8 @@ export class Backend
     let guildSetting
     if ( guild != null )
       guildSetting = await this.getGuildSetting( guild, settingKey, transaction )
-    if ( guildSetting )
-      return guildSetting.value
+    if ( guildSetting !== null )
+      return guildSetting
     return await this.getGlobalSetting( settingKey, transaction )
   }
 
@@ -273,10 +284,7 @@ export class Backend
   {
     const where = { snowflake }
     try {
-      const channel = await Models.Channel.findOne( { where, transaction } )
-      if ( !channel )
-        throw new Error( "No such channel in database" )
-      return channel
+      return await Models.Channel.findOne( { where, transaction } )
     } catch ( error ) {
       errorSprintf( error, "Backend#getChannelBySnowflake(%s) failed", snowflake )
       throw error
@@ -293,10 +301,7 @@ export class Backend
   {
     const where = { snowflake }
     try {
-      const guild = await Models.Guild.findOne( { where, transaction } )
-      if ( !guild )
-        throw new Error( "No such guild in database" )
-      return guild
+      return await Models.Guild.findOne( { where, transaction } )
     } catch ( error ) {
       errorSprintf( error, "Backend#getGuildBySnowflake(%s) failed", snowflake )
       throw error
@@ -324,16 +329,26 @@ export class Backend
     return ( guild ? guild.snowflake : undefined )
   }
 
-  async getUserBySnowflake( flake: string, transaction?: Transaction )
+  async getUserBySnowflake( snowflake: string, transaction?: Transaction ): Promise<Models.User | null>
   {
-    let cond = { snowflake: flake }
-    return Models.User.findOne({ where: cond, transaction })
+    const where = { snowflake }
+    try {
+      return await Models.User.findOne({ where, transaction })
+    } catch ( error ) {
+      errorSprintf( "Backend#getUserBySnowflake(%s) failed", snowflake )
+      throw error
+    }
   }
 
-  async getGuildUserByIDs( guildId: number, userId: number, transaction?: Transaction )
+  async getGuildUserByIDs( guildID: number, userID: number, transaction?: Transaction )
   {
-    let cond = { guildID: guildId, userID: userId }
-    return Models.GuildUser.findOne({ where: cond, transaction })
+    const where = { guildID, userID }
+    try {
+      return await Models.GuildUser.findOne({ where, transaction })
+    } catch ( error ) {
+      errorSprintf( error, "Backend#getGuildUserByIDs(%d, %d) failed", guildID, userID )
+      throw error
+    }
   }
 
   async upsertGuildUser( guildmember: any )
@@ -368,15 +383,30 @@ export class Backend
     return ( delta > xpUpdateMinDelta )
   }
 
-  async getUserXP( dsuser: User, dsguild: Guild ): Promise<any>
+  async getUserXP( dsUser: User, dsGuild?: Guild ): Promise<UserXP>
   {
-    const user = await this.getUserBySnowflake( dsuser.id )
-    const guild = await this.getGuildBySnowflake( dsguild.id )
-    const guilduser = user ? await this.getGuildUserByIDs( guild.id, user.id ) : null
-    return {
-      globalXP: user ? user.experience : null,
-      serverXP: guilduser ? guilduser.experience : null
+    const result: UserXP = {}
+    try {
+      await this._db.transaction( async t => {
+        const user = await this.getUserBySnowflake( dsUser.id )
+        if ( !user )
+          return
+        result.globalXP = user.experience
+
+        if ( !dsGuild )
+          return
+        const guild = await this.getGuildBySnowflake( dsGuild.id )
+        if ( !guild )
+          return
+
+        const guilduser = await this.getGuildUserByIDs( guild.id, user.id )
+        if ( guilduser )
+          result.serverXP = guilduser.experience
+      } )
+    } catch ( error ) {
+      // meh
     }
+    return result
   }
 
   async userAddXP( dsUser: any, dsGuildMember: any, xp: number )
@@ -391,8 +421,13 @@ export class Backend
     let guild = null
     if ( dsGuildMember && dsGuildMember.guild.available )
     {
-      guild = await this.getGuildBySnowflake( dsGuildMember.guild.id )
-      skey = ['usersrvcxp', user.id, guild.id].join( '_' )
+      try {
+        guild = await this.getGuildBySnowflake( dsGuildMember.guild.id )
+      } catch ( error ) {
+        // meh
+      }
+      if ( guild )
+        skey = ['usersrvcxp', user.id, guild.id].join( '_' )
     }
     const shouldUpdateDB = await this.userShouldUpdateXP( user )
     const gxp: number = +await this._redis.incrementFloat( gkey, xp )

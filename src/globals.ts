@@ -71,3 +71,8 @@ export function logThrow( error: string ): never
   log( error )
   throw new Error( error )
 }
+
+export function settingBoolean( setting: string | null )
+{
+  return setting === '1' || setting === 't' || setting === 'true'
+}

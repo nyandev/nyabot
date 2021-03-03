@@ -96,7 +96,7 @@ export class SettingsProvider extends SettingProviderBase
           this._idCache.set( flake, ( id as number ) )
       }
     }
-    return ( id ? id : null )
+    return id || null
   }
 
   async idToSnowflake( gid: any ): Promise<string | null>
@@ -133,13 +133,16 @@ export class SettingsProvider extends SettingProviderBase
     let settings = this.settings.get( gid )
     if ( !settings )
     {
-      settings = {};
+      settings = {}
       this.settings.set( gid, settings )
     }
     settings[key] = val
-    await this._backend.setGuildSetting( gid !== 'global' ? ( gid as number ) : null, 'commando', JSON.stringify( settings ) )
-    if ( gid === 'global' )
+    if ( gid === 'global' ) {
+      await this._backend.setGlobalSetting( 'commando', JSON.stringify( settings ) )
       this.updateOtherShards( key, val )
+    } else {
+      await this._backend.setGuildSetting( gid as number, 'commando', JSON.stringify( settings ) )
+    }
     return val
   }
 
@@ -151,9 +154,12 @@ export class SettingsProvider extends SettingProviderBase
       return undefined
     const val = settings[key]
     settings[key] = undefined
-    await this._backend.setGuildSetting( gid !== 'global' ? ( gid as number ) : null, 'commando', JSON.stringify( settings ) )
-    if ( guild === 'global' )
+    if ( gid === 'global' ) {
+      await this._backend.setGlobalSetting( 'commando', JSON.stringify( settings ) )
       this.updateOtherShards( key, undefined )
+    } else {
+      await this._backend.setGuildSetting( gid as number, 'commando', JSON.stringify( settings ) )
+    }
     return val
   }
 

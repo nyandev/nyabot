@@ -66,11 +66,12 @@ class TwitterListCommand extends NyaCommand
     let subscriptions
     try {
       const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.subscriptions )
-      subscriptions = JSON.parse( setting ? ( setting.value || '{}' ) : '{}' )
+      subscriptions = JSON.parse( setting || '{}' )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
       return talk.unexpectedError( message )
     }
+
     const sortedSubscriptions: [string, TwitterSubscriptionOptions][] = Object.entries( subscriptions )
     sortedSubscriptions.sort( ( a, b ) => {
       if ( a[0].toLowerCase() < b[0].toLowerCase() ) return -1
@@ -83,12 +84,12 @@ class TwitterListCommand extends NyaCommand
     let defaultChannel = null
     try {
       const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.defaultChannel )
-      if ( setting && setting.value != null ) {
-        const channel = await backend.getChannelByID( parseInt( setting.value ) )
+      if ( setting ) {
+        const channel = await backend.getChannelByID( parseInt( setting ) )
         if ( channel )
           defaultChannel = channel.snowflake
         else
-          throw new Error( `getChannelByID(${setting.value}) returned ${channel}` )
+          throw new Error( `getChannelByID(${setting}) returned ${channel}` )
       }
     } catch ( error ) {
       log( `Couldn't fetch ${this.module.settingKeys.defaultChannel} setting for guild ${guild.id}:`, error )
@@ -168,8 +169,8 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
     let oldChannel = null
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( channelSetting && channelSetting.value != null ) {
-        oldChannel = await backend.getChannelByID( parseInt( channelSetting.value ) )
+      if ( channelSetting ) {
+        oldChannel = await backend.getChannelByID( parseInt( channelSetting ) )
       }
     } catch ( error ) {
       log( `Couldn't fetch default Twitter channel of guild ${guild.id}:`, error )
@@ -218,10 +219,10 @@ class TwitterChannelDefaultSetCommand extends NyaCommand
     let oldChannel: Models.Channel | null = null
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( channelSetting && channelSetting.value != null ) {
-        oldChannel = await backend.getChannelByID( parseInt( channelSetting.value ) )
+      if ( channelSetting ) {
+        oldChannel = await backend.getChannelByID( parseInt( channelSetting ) )
         if ( !oldChannel ) 
-          throw new Error( `Backend#getChannelByID(${channelSetting.value}) returned ${oldChannel}` )
+          throw new Error( `Backend#getChannelByID(${channelSetting}) returned ${oldChannel}` )
         }
     } catch ( error ) {
       log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
@@ -294,10 +295,10 @@ class TwitterChannelDefaultCommand extends NyaCommand
     let channel
     try {
       const channelSetting = await backend.getGuildSetting( guild.id, settingKey )
-      if ( channelSetting && channelSetting.value != null ) {
-        channel = await backend.getChannelByID( parseInt( channelSetting.value ) )
+      if ( channelSetting ) {
+        channel = await backend.getChannelByID( parseInt( channelSetting ) )
         if ( !channel )
-          throw new Error( `Backend#getChannelByID(${channelSetting.value}) returned ${channel}` )
+          throw new Error( `Backend#getChannelByID(${channelSetting}) returned ${channel}` )
       }
     } catch ( error ) {
       log( `Couldn't fetch ${settingKey} setting for guild ${guild.id}:`, error )
@@ -336,7 +337,7 @@ class TwitterChannelGetCommand extends NyaCommand
     let subscriptions
     try {
       const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.subscriptions )
-      subscriptions = Object.entries( JSON.parse( setting ? ( setting.value || '{}' ) : '{}' ) )
+      subscriptions = Object.entries( JSON.parse( setting || '{}' ) )
     } catch ( error ) {
       log( `Couldn't fetch Twitter subscriptions for guild ${guild.id}:`, error )
       return host.talk.unexpectedError( message )
@@ -386,8 +387,8 @@ class TwitterChannelGetCommand extends NyaCommand
     let validDefaultChannelSetting = true
     try {
       const setting = await backend.getGuildSetting( guild.id, this.module.settingKeys.defaultChannel )
-      if ( setting && setting.value != null ) {
-        defaultChannel = await backend.getChannelByID( parseInt( setting.value ) )
+      if ( setting ) {
+        defaultChannel = await backend.getChannelByID( parseInt( setting ) )
         if ( !defaultChannel )
           validDefaultChannelSetting = false
       }
@@ -519,16 +520,18 @@ class TwitterCommand extends NyaBaseCommand
   async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
+    const talk = this.module.host.talk
+
     let setting
     try {
       const guild = await backend.getGuildBySnowflake( message.guild.id )
-      setting = await this.module.backend.getSetting(
-        this.module.settingKeys.defaultMessage, guild.id )
+      if ( !guild )
+        throw new Error( "no such guild" )
+      setting = await this.module.backend.getSetting( this.module.settingKeys.defaultMessage, guild.id )
       if ( setting == null )
         throw new Error( `getSetting(...) == null` )
     } catch ( error ) {
-      log( `Couldn't fetch ${this.module.settingKeys.defaultMessage} setting, globally or for guild ${message.guild.id}:`, error )
-      return message.say( "Unexpected error." )
+      return talk.unexpectedError( message )
     }
 
     // An empty string is fine, but we can't send that
@@ -671,12 +674,12 @@ export class TwitterModule extends ModuleBase
     for ( const guild of guilds ) {
       const redisKey = `latesttweet_${guild.id}`
       const subscriptionsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
-      if ( !subscriptionsSetting || !subscriptionsSetting.value )
+      if ( !subscriptionsSetting )
         continue
 
       let channels
       try {
-        channels = JSON.parse( subscriptionsSetting.value )
+        channels = JSON.parse( subscriptionsSetting )
         if ( typeof channels !== 'object' )
           throw new Error( `The ${this.settingKeys.subscriptions} setting for guild ${guild.id} was not a JSON object.` )
       } catch ( error ) {
@@ -858,8 +861,8 @@ export class TwitterModule extends ModuleBase
           let defaultChannelID
           try {
             const defaultChannelSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.defaultChannel )
-            if ( defaultChannelSetting && defaultChannelSetting.value != null )
-              defaultChannelID = defaultChannelSetting.value
+            if ( defaultChannelSetting )
+              defaultChannelID = defaultChannelSetting
           } catch ( error ) {
             continue
           }

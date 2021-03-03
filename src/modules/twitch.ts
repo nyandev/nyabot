@@ -41,44 +41,35 @@ class TwitchChannelCommand extends Commando.Command
     const backend = this.module.backend
     const client = this.module.client
 
-    const guild = await backend.getGuildBySnowflake( message.guild.id )
-
-    if ( !args.channel ) {
-      let setting
-      try {
-        setting = await backend.getGuildSetting( guild.id, settingKey )
-      } catch ( error ) {
-        log( `Failed to fetch Twitch channel setting for guild ${guild.id}:`, error )
-        return host.respondTo( message, 'unexpected_error' )
-      }
-      if ( !setting || !setting.value )
-        return host.respondTo( message, 'twitchchannel_unset' )
-
-      let channel
-      try {
-        channel = await client.channels.fetch( setting.value )
-      } catch ( error ) { 
-        log( `Failed to fetch channel ${setting.value}:`, error )
-        return host.respondTo( message, 'unexpected_error' )
-      }
-      if ( !channel || channel.type !== 'text' )
-        return host.respondTo( message, 'twitchchannel_unset' )
-
-      return host.respondTo( message, 'twitchchannel_show', channel.id )
-    }
-
-    const channel = args.channel
-    if ( channel.type !== 'text' )
-      return host.respondTo( message, 'twitchchannel_fail' )
-
     try {
-      await backend.setGuildSetting( guild.id, settingKey, channel.id )
+      return await backend._db.transaction( async t => {
+        const guild = await backend.getGuildBySnowflake( message.guild.id, t )
+        if ( !guild )
+          throw new Error( "no such guild" )
+
+        if ( !args.channel ) {
+          const channelID = await backend.getGuildSetting( guild.id, settingKey, t )
+          if ( !channelID )
+            return host.talk.sendText( message, 'twitch_channel_unset' )
+
+          const channel = await client.channels.fetch( channelID )
+          if ( !channel || !( channel instanceof TextChannel ) )
+            return host.talk.sendText( message, 'twitch_channel_unset' )
+
+          return host.respondTo( message, 'twitch_channel_show', channel.id )
+        }
+
+        const channel = args.channel
+        if ( !( channel instanceof TextChannel ) )
+          return host.respondTo( message, 'twitch_channel_fail' )
+
+        await backend.setGuildSetting( guild.id, settingKey, channel.id, t )
+        this.module.channels.set( guild.id, channel.id )
+        return host.talk.sendSuccess( message, ['twitch_channel_set', channel.id] )
+      } )
     } catch ( error ) {
-      log( `Failed to set Twitch channel to ${channel.id} in guild ${guild.id}:`, error )
-      return host.respondTo( message, 'unexpected_error' )
+      return host.talk.unexpectedError( message )
     }
-    this.module.channels.set( guild.id, channel.id )
-    return host.respondTo( message, 'twitchchannel_set', channel.id )
   }
 }
 
@@ -119,26 +110,16 @@ class TwitchImageCommand extends Commando.Command
     const host = this.module.host
     const backend = this.module.backend
 
-    let guild
-    try {
-      guild = await backend.getGuildBySnowflake( message.guild.id )
-    } catch ( error ) {
-      log( `Failed to fetch guild ${message.guild.id}:`, error )
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+    if ( !guild )
       return host.respondTo( message, 'unexpected_error' )
-    }
 
-    let setting
-    try {
-      setting = await backend.getGuildSetting( guild.id, settingKey )
-    } catch ( error ) {
-      log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
-      setting = null
-    }
+    const setting = await backend.getGuildSetting( guild.id, settingKey )
 
     let images
-    if ( setting && setting.value ) {
+    if ( setting ) {
       try {
-        images = JSON.parse( setting.value )
+        images = JSON.parse( setting )
         if ( typeof images !== 'object' )
           throw new Error( `The ${settingKey} setting must be a JSON object.` )
       } catch ( _ ) {
@@ -226,26 +207,16 @@ class TwitchFollowCommand extends Commando.Command
     const host = this.module.host
     const backend = this.module.backend
 
-    let guild
-    try {
-      guild = await backend.getGuildBySnowflake( message.guild.id )
-    } catch ( error ) {
-      log( `Failed to fetch guild ${message.guild.id}:`, error )
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+    if ( !guild )
       return host.respondTo( message, 'unexpected_error' )
-    }
 
-    let setting
-    try {
-      setting = await backend.getGuildSetting( guild.id, settingKey )
-    } catch ( error ) {
-      log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
-      setting = null
-    }
+    const setting = await backend.getGuildSetting( guild.id, settingKey )
 
     let subs: string[]
-    if ( setting && setting.value ) {
+    if ( setting ) {
       try {
-        subs = JSON.parse( setting.value )
+        subs = JSON.parse( setting )
         if ( !Array.isArray( subs ) )
           throw new Error( `${settingKey} must be a JSON array.` )
       } catch ( _ ) {
@@ -328,29 +299,19 @@ null>
     const host = this.module.host
     const backend = this.module.backend
 
-    let guild: Models.Guild
-    try {
-      guild = await backend.getGuildBySnowflake( message.guild.id )
-    } catch ( error ) {
-      log( `Failed to fetch guild ${message.guild.id}:`, error )
+    const guild = await backend.getGuildBySnowflake( message.guild.id )
+    if ( !guild )
       return host.respondTo( message, 'unexpected_error' )
-    }
 
-    let setting
-    try {
-      setting = await backend.getGuildSetting( guild.id, settingKey )
-    } catch ( error ) {
-      log( `Failed to fetch ${settingKey} setting for guild ${guild.id}:`, error )
-      setting = null
-    }
+    const setting = await backend.getGuildSetting( guild.id, settingKey )
 
     const username = args.username
-    if ( !setting || !setting.value )
+    if ( !setting )
       return host.respondTo( message, 'twitchunfollow_not_following', username )
 
     let subs: string[]
     try {
-      subs = JSON.parse( setting.value )
+      subs = JSON.parse( setting )
       if ( !Array.isArray( subs ) )
         throw new Error( `The ${settingKey} setting must be a JSON array.` )
     } catch ( _ ) {
@@ -435,31 +396,18 @@ export class TwitchModule extends ModuleBase
       await Models.Guild.findAll( { attributes: ['id'] } )
       .then( async ( guilds: any[] ) => {
         for ( const guild of guilds ) {
-          let channelSetting
-          try {
-            channelSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.channel )
-          } catch ( error ) {
-            log( `Failed to fetch ${this.settingKeys.channel} setting for guild ${guild.id}:`, error )
-            continue
+          const channelSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.channel )
+          if ( channelSetting ) {
+            this.channels.set( guild.id, channelSetting )
           }
 
-          if ( channelSetting && channelSetting.value ) {
-            this.channels.set( guild.id, channelSetting.value )
-          }
-
-          let subsSetting
-          try {
-            subsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
-          } catch ( error ) {
-            log( `Failed to fetch ${this.settingKeys.subscriptions} setting for guild ${guild.id}:`, error )
-            continue
-          }
-          if ( !subsSetting || !subsSetting.value )
+          const subsSetting = await this.backend.getGuildSetting( guild.id, this.settingKeys.subscriptions )
+          if ( !subsSetting )
             continue
 
           let subs: string[]
           try {
-            subs = JSON.parse( subsSetting.value )
+            subs = JSON.parse( subsSetting )
             if ( !Array.isArray ( subs ) )
               throw new Error( `The ${this.settingKeys.subscriptions} setting must be a JSON array.` )
           } catch ( error ) {
@@ -579,14 +527,10 @@ export class TwitchModule extends ModuleBase
             .setTimestamp( stream.startDate )
 
           let imageURL = null
-          let imagesSetting
-          try {
-            imagesSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.images )
-          } catch ( error ) {
-            log( `Failed to fetch ${this.settingKeys.images} setting for guild ${guildID}:`, error )
-          }
-          if ( imagesSetting && imagesSetting.value ) {
-            const images = JSON.parse( imagesSetting.value )
+
+          const imagesSetting = await this.backend.getGuildSetting( guildID, this.settingKeys.images )
+          if ( imagesSetting ) {
+            const images = JSON.parse( imagesSetting )
             imageURL = images[user.name] || null
           }
 

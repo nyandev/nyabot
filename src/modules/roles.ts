@@ -106,10 +106,9 @@ class RoleAutoCommand extends NyaCommand
 
     let roleID
     try {
-      const setting = await backend.getGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole )
-      if ( !setting || !setting.value )
+      roleID = await backend.getGuildSetting( dbGuild.id, this.module.settingKeys.autoAssignedRole )
+      if ( !roleID )
         return host.talk.sendText( message, 'role_auto_unset' )
-      roleID = setting.value
     } catch ( error ) {
       log( `Couldn't fetch ${this.module.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
       return host.talk.unexpectedError( message )
@@ -362,10 +361,9 @@ export class RolesModule extends ModuleBase
 
     let roleID
     try {
-      const setting = await this.backend.getGuildSetting( dbGuild.id, this.settingKeys.autoAssignedRole )
-      if ( !setting || !setting.value )
+      roleID = await this.backend.getGuildSetting( dbGuild.id, this.settingKeys.autoAssignedRole )
+      if ( !roleID )
         return
-      roleID = setting.value
     } catch ( error ) {
       log( `Couldn't fetch ${this.settingKeys.autoAssignedRole} setting for guild ${dbGuild.id}:`, error )
       return

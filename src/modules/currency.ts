@@ -9,9 +9,10 @@ import { format as formatNumber } from 'd3-format'
 import * as moment from 'moment'
 import * as prettyMs from 'pretty-ms'
 import randomInt = require( 'random-int' )
+import { Op } from 'sequelize'
 import { sprintf } from 'sprintf-js'
 
-import { debug, log, logSprintf, logThrow, timeout } from '../globals'
+import { debug, log, logSprintf, logThrow, settingBoolean, timeout } from '../globals'
 import { Backend } from '../lib/backend'
 import { Arguments, NyaBaseCommand } from '../lib/command'
 import { Parser } from '../lib/parser'
@@ -23,7 +24,7 @@ import * as Models from '../models'
 
 const duration = ( ms: number ) => prettyMs( ms, { secondsDecimalDigits: 0 } )
 const formatDecimal = formatNumber( ',~r' )
-
+const defaultCurrency = 'currency'
 
 class AwardCurrencyCommand extends Commando.Command
 {
@@ -57,45 +58,49 @@ class AwardCurrencyCommand extends Commando.Command
     const backend = this._service.backend
     const host = this._service.host
 
-    let guild: Models.Guild // why the fuck is a type declaration needed here but not elsewhere
-    let currencySymbol = 'currency'
     try {
-      guild = await backend.getGuildBySnowflake( message.guild.id )
-      currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
-    } catch ( error ) {
-      log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
-      return null
-    }
+      return await backend._db.transaction( async t => {
+        const guild = await backend.getGuildBySnowflake( message.guild.id, t )
+        if ( !guild )
+          throw new Error( "no such guild" )
+        const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id, t ) || defaultCurrency
 
-    async function awardUser( userID: string, amount: number )
-    {
-      const user = await backend.getUserBySnowflake( userID )
-      if ( !user )
-        throw new Error( 'User resolve failed' )
-      const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
-      if ( !guildUser )
-        throw new Error( 'Guild user resolve failed' )
-      await guildUser.increment( { currency: amount } )
-    }
-
-    if ( args.target instanceof Role ) {
-      for ( const userID of args.target.members.keys() ) {
-        try {
-          await awardUser( userID, args.amount )
-        } catch ( error ) {
-          log( `Failed to award currency to user ${userID} of role ${args.target.name}:`, error )
-          return host.talk.sendError( message, 'unexpected_error' )
+        async function awardUsers( guildID: number, snowflakes: string[], amount: number )
+        {
+          const userIDs = new Set()
+          for ( const snowflake of snowflakes ) {
+            try {
+              const user = await backend.getUserBySnowflake( snowflake, t )
+              if ( user )
+                userIDs.add( user.id )
+            } catch ( error ) {
+              // meh
+            }
+          }
+          await Models.GuildUser.increment(
+            { currency: amount },
+            {
+              where: {
+                guildID: guildID,
+                userID: { [Op.in]: [...userIDs] }
+              },
+              transaction: t
+            }
+          )
         }
-      }
-      return host.talk.sendText( message, 'currency_award_role', message.author.username, args.amount, currencySymbol, args.target.name )
-    } else {
-      try {
-        await awardUser( args.target.id, args.amount )
-      } catch ( error ) {
-        log( `Failed to award currency to user ${args.target.id}:`, error )
-        return host.talk.sendError( message, 'unexpected_error' )
-      }
-      return host.talk.sendText( message, 'currency_award_user', message.author.username, args.amount, currencySymbol, args.target.username )
+
+        if ( args.target instanceof Role ) {
+          await awardUsers( guild.id, args.target.members.keys(), args.amount )
+          return host.talk.sendSuccess( message, ['currency_award_role', message.author.username, args.amount, currencySymbol, args.target.name] )
+        } else if ( args.target instanceof User ) {
+          await awardUsers( guild.id, [args.target.id], args.amount )
+          return host.talk.sendSuccess( message, ['currency_award_user', message.author.username, args.amount, currencySymbol, args.target.username] )
+        } else {
+          logThrow( "The 'target' argument to /award was not of type User or Role" )
+        }
+      } )
+    } catch ( error ) {
+      return host.talk.unexpectedError( message )
     }
   }
 }
@@ -109,7 +114,7 @@ class PickCommand extends NyaBaseCommand
     {
       name: 'pick',
       group: 'currency',
-      description: "Pick up that currency just lying around.",
+      description: "Pick up that sweet currency just lying around.",
       guildOnly: true,
       args: [
         { key: 'code', type: 'string', optional: true }
@@ -131,6 +136,8 @@ class PickCommand extends NyaBaseCommand
     try {
       return await backend._db.transaction( async t => {
         const channel = await backend.getChannelBySnowflake( message.channel.id )
+        if ( !channel )
+          throw new Error( "no such channel" )
 
         const redis = backend._redis
         const redisKey = `currencygeneration:${channel.id}`
@@ -140,7 +147,8 @@ class PickCommand extends NyaBaseCommand
           return null
 
         if ( data.code && args.code !== data.code ) {
-          talk.sendError( message, ['%s', "Wrong code friendo"] ).then( message => {
+          const messageID = args.code ? 'currency_pick_wrong_code' : 'currency_pick_missing_code'
+          talk.sendError( message, messageID ).then( message => {
             timeout( picktime ).then( () => { message.delete() } )
           } )
           return null
@@ -195,21 +203,25 @@ class ShowCurrencyCommand extends Commando.Command
   async run( message: Commando.CommandoMessage, args: any, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
   {
     const backend = this._service.backend
-    const host = this._service.host
-    const user = await backend.getUserBySnowflake( args.target.id )
-    if ( !user )
-      return host.respondTo( message, 'error_user_resolve_failed' )
+    const talk = this._service.host.talk
 
-    let guildUser
-    let currencySymbol = 'currency'
     try {
-      const guild = await backend.getGuildBySnowflake( message.guild.id )
-      guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
-      currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
+      return await backend._db.transaction( async t => {
+        const user = await backend.getUserBySnowflake( args.target.id )
+        if ( !user )
+          throw new Error( "no such user" )
+        const guild = await backend.getGuildBySnowflake( message.guild.id )
+        if ( !guild )
+          throw new Error( "no such guild" )
+        const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
+        if ( !guildUser )
+          throw new Error( "no such guilduser" )
+        const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id ) || defaultCurrency
+        return talk.sendText( message, 'currency_show', user.toString(), formatDecimal( guildUser.currency ), currencySymbol )
+      } )
     } catch ( error ) {
-      log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
+      return talk.unexpectedError( message )
     }
-    return guildUser ? host.talk.sendText( message, 'currency_show', user.name || '', guildUser.currency.toString(), currencySymbol ) : host.respondTo( message, 'error_guilduser_resolve_failed' )
   }
 }
 
@@ -249,56 +261,57 @@ class SlotCommand extends Commando.Command
       ...config.globalDefaults.SlotsImages
     ]
 
-    const guild = await backend.getGuildBySnowflake( message.guild.id )
-    const user = await backend.getUserBySnowflake( message.author.id )
-    if ( !user )
-      return host.respondTo( message, 'error_user_resolve_failed' )
+    try {
+      return await backend._db.transaction( async t => {
+        const guild = await backend.getGuildBySnowflake( message.guild.id, t )
+        if ( !guild )
+          throw new Error( "no such guild" )
 
-    const guildUser = await backend.getGuildUserByIDs( guild.id, user.id )
-    if ( !guildUser )
-      return host.respondTo( message, 'error_guilduser_resolve_failed' )
+        const user = await backend.getUserBySnowflake( message.author.id, t )
+        if ( !user )
+          throw new Error( "no such user" )
 
-    if ( guildUser.currency < args.amount )
-      return host.respondTo( message, 'slot_insufficient_funds' )
+        const guildUser = await backend.getGuildUserByIDs( guild.id, user.id, t )
+        if ( !guildUser )
+          throw new Error( "no such guilduser" )
 
-    await guildUser.decrement( { currency: args.amount } )
+        if ( guildUser.currency < args.amount )
+          return host.respondTo( message, 'slot_insufficient_funds' )
 
-    const slots = []
-    for ( let i = 0; i < 3; i++ )
-      slots.push( Math.floor( Math.random() * images.length ) )
+        const slots = []
+        for ( let i = 0; i < 3; i++ )
+          slots.push( Math.floor( Math.random() * images.length ) )
 
-    const slotImages = slots.map( index => images[index] )
+        const slotImages = slots.map( index => images[index] )
 
-    let multiplier = 0
-    if ( slots.every( slot => slot === 0 ) ) {
-      multiplier = MULTIPLIERS.threeJokers
-    } else if ( slots[0] === slots[1] && slots[1] === slots[2] ) {
-      multiplier = MULTIPLIERS.threeSame
-    } else if ( slots.filter( slot => slot === 0 ).length === 2 ) {
-      multiplier = MULTIPLIERS.twoJokers
-    } else if ( slots.indexOf( 0 ) !== -1 ) {
-      multiplier = MULTIPLIERS.oneJoker
-    }
-    const winAmount = args.amount * multiplier
+        let multiplier = 0
+        if ( slots.every( slot => slot === 0 ) ) {
+          multiplier = MULTIPLIERS.threeJokers
+        } else if ( slots[0] === slots[1] && slots[1] === slots[2] ) {
+          multiplier = MULTIPLIERS.threeSame
+        } else if ( slots.filter( slot => slot === 0 ).length === 2 ) {
+          multiplier = MULTIPLIERS.twoJokers
+        } else if ( slots.indexOf( 0 ) !== -1 ) {
+          multiplier = MULTIPLIERS.oneJoker
+        }
+        const winAmount = args.amount * multiplier
 
-    const renderer = this._service.slotsRenderer
-    renderer.drawSlots( slotImages, args.amount, winAmount.toString() )
-    const attachment = new MessageAttachment( await renderer.toPNGBuffer(), 'slots.png' )
+        const renderer = this._service.slotsRenderer
+        renderer.drawSlots( slotImages, args.amount, winAmount.toString() )
+        const attachment = new MessageAttachment( await renderer.toPNGBuffer(), this._service.slotsFilename )
 
-    if ( winAmount > 0 ) {
-      await guildUser.increment( { currency: winAmount } )
-      let currencySymbol = 'currency'
-      try {
-        const guild = await backend.getGuildBySnowflake( message.guild.id )
-        currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id )
-      } catch ( error ) {
-        log( `Failed to fetch ${this._service.settingKeys.currencySymbol} setting for guild ${message.guild.id} or globally:`, error )
-      }
-      const formattedAmount = formatDecimal( winAmount )
+        await guildUser.increment( { currency: winAmount - args.amount }, { transaction: t } )
 
-      return message.channel.send( host.talk.format( ['slot_win', formattedAmount, currencySymbol] ), attachment )
-    } else {
-      return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
+        if ( winAmount > 0 ) {
+          const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id ) || defaultCurrency
+          const formattedAmount = formatDecimal( winAmount )
+          return message.channel.send( host.talk.format( ['slot_win', formattedAmount, currencySymbol] ), attachment )
+        } else {
+          return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
+        }
+      } )
+    } catch ( error ) {
+      return host.talk.unexpectedError( message )
     }
   }
 }
@@ -440,6 +453,7 @@ export class CurrencyModule extends ModuleBase
   currencyGenerationImages = ['top-nep.png']
   currencyDropRenderer: Renderer
 
+  slotsFilename = 'slots.png'
   slotsImageDimensions = new Dimensions( 553, 552 )
   slotsImages = ['bg.png']
   slotsRenderer: Renderer
@@ -479,9 +493,11 @@ export class CurrencyModule extends ModuleBase
         if ( message.content && ['.', '!', '?'].includes( message.content[0] ) )
           return
         const channel = await this.backend.getChannelBySnowflake( message.channel.id, t )
+        if ( !channel )
+          throw new Error( "no such channel" )
 
         const enabled = await this.backend.getChannelSetting( channel.id, this.channelSettings.currencyGenerationEnabled, t )
-        if ( enabled !== '1' )
+        if ( !settingBoolean( enabled ) )
           return
 
         const redisKey = `currencygeneration:${channel.id}`
@@ -490,6 +506,9 @@ export class CurrencyModule extends ModuleBase
           return
 
         const guild = await this.backend.getGuildBySnowflake( message.guild.id, t )
+        if ( !guild )
+          throw new Error( "no such guild" )
+
         const chanceString = await this.backend.getSetting( this.settingKeys.currencyGenerationChance, guild.id, t )
         const chance = Number( chanceString )
         if ( Number.isNaN( chance ) || chance < 0 || chance > 1 )
@@ -511,7 +530,7 @@ export class CurrencyModule extends ModuleBase
         const amount = randomInt( amountMin, amountMax )
 
         let code = ''
-        if ( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) === '1' )
+        if ( settingBoolean( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) ) )
           code = randomInt( 1000, 9999 ).toString()
 
         this.currencyDropRenderer.drawCurrencyDrop( 'top-nep.png', code )

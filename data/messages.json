@@ -57,10 +57,10 @@
     "body": "Message `%s` was updated.\n**Author**: `%s`\n**Channel**: `%s`\n**Old**:  ```%s```\n**New**:  ```%s```"
   },
 
-  "twitchchannel_fail": "Failed to change the channel for Twitch notifications.",
-  "twitchchannel_set": "Twitch notifications will be posted to <#%s>.",
-  "twitchchannel_show": "Twitch notifications are currently being posted to <#%s>.",
-  "twitchchannel_unset": "No channel has been set for Twitch notifications.",
+  "twitch_channel_fail": "Failed to change the channel for Twitch notifications.",
+  "twitch_channel_set": "Twitch notifications will be posted to <#%s>.",
+  "twitch_channel_show": "Twitch notifications are currently being posted to <#%s>.",
+  "twitch_channel_unset": "No channel has been set for Twitch notifications.",
   "twitchfollow_already_following": "%s is already being followed.",
   "twitchfollow_list": "Currently following: %s",
   "twitchfollow_list_empty": "Currently following no one.",
@@ -74,6 +74,7 @@
   "twitchimage_value": "Custom image URL for %s is currently %s.",
   "twitchunfollow_not_following": "%s wasn\u2019t being followed.",
   "twitchunfollow_success": "Stopped following %s.",
+
   "twitterchannel_fail": "Failed to change the channel for Twitter notifications.",
   "twitterchannel_set": "Twitter notifications will be posted to <#%s>.",
   "twitterchannel_show": "Twitter notifications are currently being posted to <#%s>.",
