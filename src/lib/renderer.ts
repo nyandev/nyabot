@@ -81,14 +81,14 @@ export class Renderer
   protected _context: CanvasRenderingContext2D
   protected _images: Map<string, Image> = new Map()
 
-  private recreate(): void
+  private recreate( alpha: boolean ): void
   {
     this._canvas = createCanvas( this._dimensions.width, this._dimensions.height )
     g_canvasesCreated = true
 
     const opts: NodeCanvasRenderingContext2DSettings = {
-      alpha: false,
-      pixelFormat: 'RGB24'
+      alpha: alpha ? true : false,
+      pixelFormat: alpha ? 'RGBA32' : 'RGB24'
     }
 
     this._context = this._canvas.getContext( '2d', opts )
@@ -98,10 +98,10 @@ export class Renderer
     this._context.antialias = 'gray'
   }
 
-  constructor( dimensions: DimensionsLike )
+  constructor( dimensions: DimensionsLike, alpha = true )
   {
     this._dimensions = new Dimensions( dimensions )
-    this.recreate()
+    this.recreate( alpha )
   }
 
   drawCurrencyDrop( imageName: string, code: string )
@@ -124,6 +124,17 @@ export class Renderer
     ctx.fillRect(0, 0, boxWidth, boxHeight)
     ctx.fillStyle = 'white'
     ctx.fillText(code, paddingWidth, boxHeight - textDims.actualBoundingBoxDescent - paddingHeight)
+  }
+
+  drawSlots( images: string[], bet: string, winning: string )
+  {
+    this.recreate( true )
+    const bg = this._resolveImage( 'bg.png' )
+    const rolls = images.map( imgName => this._resolveImage( imgName ) )
+
+    this.drawImage( [0, 0], bg, bg )
+    for ( let i = 0; i < rolls.length; i++ )
+      this.drawImage( [89 + 142 * i, 315], rolls[i], rolls[i] )
   }
 
   public static registerFont( filepath: string, name: string )

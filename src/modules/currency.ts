@@ -216,7 +216,7 @@ class ShowCurrencyCommand extends Commando.Command
 
 class SlotCommand extends Commando.Command
 {
-  constructor( protected _service: ModuleBase )
+  constructor( protected _service: CurrencyModule )
   {
     super( _service.client,
     {
@@ -228,7 +228,7 @@ class SlotCommand extends Commando.Command
         key: 'amount',
         prompt: "How much?",
         type: 'integer',
-        min: 1,
+        min: 1
       }]
     })
   }
@@ -279,6 +279,12 @@ class SlotCommand extends Commando.Command
       multiplier = MULTIPLIERS.oneJoker
     }
     const winAmount = args.amount * multiplier
+
+    const renderer = this._service.slotsRenderer
+    renderer.drawSlots( Array( 3 ).fill( 'nepSmug.png' ), args.amount, winAmount.toString() )
+    const imgBuffer = await renderer.toPNGBuffer()
+    await message.channel.send( new MessageAttachment( imgBuffer, 'slots.png' ) )
+
     if ( winAmount > 0 ) {
       await guildUser.increment( { currency: winAmount } )
       let currencySymbol = 'currency'
@@ -431,7 +437,11 @@ export class CurrencyModule extends ModuleBase
 
   currencyGenerationImageDimensions = new Dimensions( 796, 632 )
   currencyGenerationImages = ['top-nep.png']
-  renderer: Renderer
+  currencyDropRenderer: Renderer
+
+  slotsImageDimensions = new Dimensions( 553, 552 )
+  slotsImages = ['bg.png', 'nepSmug.png']
+  slotsRenderer: Renderer
 
   constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
   {
@@ -443,10 +453,15 @@ export class CurrencyModule extends ModuleBase
 
   async initialize() {
     const rootPath = this.backend._config.rootPath
-    this.renderer = new Renderer( this.currencyGenerationImageDimensions )
 
+    this.currencyDropRenderer = new Renderer( this.currencyGenerationImageDimensions )
     await Promise.all( this.currencyGenerationImages.map(
-      img => this.renderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'currency-drops', img ), img )
+      img => this.currencyDropRenderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'currency-drops', img ), img )
+    ) )
+
+    this.slotsRenderer = new Renderer( this.slotsImageDimensions, true )
+    await Promise.all( this.slotsImages.map(
+      img => this.slotsRenderer.loadImageLocalCached( path.join( rootPath, 'gfx', 'slots', img ), img )
     ) )
   }
 
@@ -495,8 +510,8 @@ export class CurrencyModule extends ModuleBase
         if ( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) === '1' )
           code = randomInt( 1000, 9999 ).toString()
 
-        this.renderer.drawCurrencyDrop( 'top-nep.png', code )
-        const imgBuffer = await this.renderer.toPNGBuffer()
+        this.currencyDropRenderer.drawCurrencyDrop( 'top-nep.png', code )
+        const imgBuffer = await this.currencyDropRenderer.toPNGBuffer()
 
         const attachment = new MessageAttachment( imgBuffer, 'free-tendies.png' )
         const content = `Oh look, ${amount} <:nepSmug:730447513647317083> appeared! Ain't this your lucky day`
