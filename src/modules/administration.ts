@@ -1,4 +1,4 @@
-import { Message, MessageAttachment } from 'discord.js'
+import { Message, MessageAttachment, MessageEmbed, TextChannel } from 'discord.js'
 import { ArgumentCollectorResult, Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
 
@@ -107,6 +107,34 @@ class ConfigCommand extends NyaBaseCommand
   }
 }
 
+class DebugCommand extends Command
+{
+  constructor( protected _service: ModuleBase )
+  {
+    super( _service.client,
+    {
+      name: 'debug',
+      group: 'admin',
+      memberName: 'debug',
+      description: 'Tests some random shit',
+      args: [
+      ]
+    } )
+  }
+  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
+  {
+    const user = message.author
+    const channel = ( message.channel as TextChannel )
+    const embed = new MessageEmbed()
+      .setTitle( "This is the title" )
+      .setDescription( "This is the description" )
+      .setColor( '#d83668' )
+      .setFooter( user.tag, user.displayAvatarURL() )
+
+    return channel.send( embed )
+  }
+}
+
 class StatusCommand extends Command
 {
   constructor( protected _service: ModuleBase )
@@ -165,7 +193,8 @@ export class AdministrationModule extends ModuleBase
   {
     return [
       new ConfigCommand( this ),
-      new StatusCommand( this )
+      new StatusCommand( this ),
+      new DebugCommand( this )
     ]
   }
 
