@@ -7,24 +7,41 @@ import { ModuleBase } from '../modules/module'
 interface ArgumentSpec {
   key: string
   helpKey?: string
-  type: ArgumentType
+  type: keyof ArgumentTypes
   optional?: boolean
   catchAll?: boolean
 }
 
-type ArgumentType = 'string' | 'number' | 'role' | 'text-channel'
-type Argument = string | number | Role | TextChannel | null
+export type ArgumentSpecs = readonly ArgumentSpec[]
 
-export interface Arguments {
-  [key: string]: Argument | Argument[]
+type ArgumentTypes = {
+  string: string,
+  integer: number,
+  number: number,
+  role: Role | null,
+  'text-channel': TextChannel | string | null
 }
+
+type Argument = ArgumentTypes[keyof ArgumentTypes]
+
+type Intersection<Union> = (Union extends any ? (k: Union) => void : never) extends ((k: infer Intersection) => void) ? Intersection : never
+
+export type Arguments<T extends ArgumentSpecs = []> = Intersection<{
+  readonly [K in keyof T]: T[K] extends ArgumentSpec
+    ? ( { [_ in T[K]['key']]: T[K]['catchAll'] extends true
+      ? Array<ArgumentTypes[T[K]['type']]>
+      : T[K]['optional'] extends true
+        ? ArgumentTypes[T[K]['type']] | undefined
+        : ArgumentTypes[T[K]['type']] } )
+    : never
+}[number]>
 
 export interface CommandOptions {
   description: string
   dummy?: boolean
   guildOnly?: boolean
   ownerOnly?: boolean
-  args?: ArgumentSpec[]
+  args?: ArgumentSpecs
   usageNotes?: string
 }
 
@@ -34,7 +51,7 @@ interface CommandInstanceOptions {
   guildOnly: boolean
   ownerOnly: boolean
   dummy: boolean
-  args: ArgumentSpec[]
+  args: ArgumentSpecs
   usageNotes?: string
 }
 
@@ -57,7 +74,7 @@ interface BaseCommandInfo {
   group: string
   description: string
   dummy?: boolean
-  args?: ArgumentSpec[]
+  args?: ArgumentSpecs
   guildOnly?: boolean
   ownerOnly?: boolean
   subcommands?: Subcommands
@@ -65,20 +82,6 @@ interface BaseCommandInfo {
 
 const mixins =
 {
-  delegate: async function( message: CommandoMessage, args: string[] )
-  {
-    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
-      return this.subcommands[args[0]].delegate( message, args.slice( 1 ) )
-
-    const usageMsg = async () => message.say( await this.help( message ) )
-    if ( this.options.dummy )
-      return await usageMsg()
-
-    const parsedArgs = await parseArgs( args, this.options.args || [], message )
-    if ( !parsedArgs )
-      return await usageMsg()
-    return this.execute( message, parsedArgs )
-  },
   help: async function( message: CommandoMessage ): Promise<string>
   {
     const subcommands = Object.keys( this.subcommands )
@@ -163,7 +166,22 @@ export abstract class NyaBaseCommand extends Command
       } )
   }
 
-  delegate = mixins.delegate
+  async delegate( message: CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
+  {
+    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
+      return this.subcommands[args[0]].delegate( message, args.slice( 1 ) )
+
+    const usageMsg = async () => message.say( await this.help( message ) )
+    if ( this.options.dummy )
+      return await usageMsg()
+
+    const argSpec = this.options.args || []
+    const parsedArgs = await parseArgs<typeof argSpec>( args, argSpec, message )
+    if ( !parsedArgs )
+      return await usageMsg()
+    return this.execute( message, parsedArgs )
+  }
+
   help = mixins.help
 
   async run( message: CommandoMessage, args: string[], fromPattern: boolean, result?: ArgumentCollectorResult<object>): Promise<Message | Message[] | null>
@@ -172,7 +190,7 @@ export abstract class NyaBaseCommand extends Command
   }
 
   // I'd prefer to call this `run` but Commando uses that method name
-  async execute( message: CommandoMessage, args: Arguments): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Record<string, any> /* TODO */ ): Promise<Message | Message[] | null>
   {
     return null
   }
@@ -180,7 +198,7 @@ export abstract class NyaBaseCommand extends Command
 
 export abstract class NyaCommand
 {
-  protected options: CommandInstanceOptions
+  options: CommandInstanceOptions
   private subcommands: SubcommandInstances
 
   constructor( public module: ModuleBase, options: { name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean } )
@@ -206,10 +224,25 @@ export abstract class NyaCommand
     this.subcommands = buildSubcommands( module, cls.subcommands, this.options )
   }
 
-  delegate = mixins.delegate
+  async delegate( message: CommandoMessage, args: string[] ): Promise<Message | Message[] | null>
+  {
+    if ( args[0] && this.subcommands.hasOwnProperty( args[0] ) )
+      return this.subcommands[args[0]].delegate( message, args.slice( 1 ) )
+
+    const usageMsg = async () => message.say( await this.help( message ) )
+    if ( this.options.dummy )
+      return await usageMsg()
+
+    const argSpec = this.options.args || []
+    const parsedArgs = await parseArgs<typeof argSpec>( args, argSpec, message )
+    if ( !parsedArgs )
+      return await usageMsg()
+    return this.execute( message, parsedArgs )
+  }
+
   help = mixins.help
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Record<string, any> /* TODO */ ): Promise<Message | Message[] | null>
   {
     return null
   }
@@ -268,7 +301,11 @@ export async function parseTextChannel( arg: string, message: CommandoMessage ):
   return 'multiple_channels_same_name'
 }
 
-async function parseArgs( values: string[], args: ArgumentSpec[], message: CommandoMessage ): Promise<Arguments | false>
+
+async function parseArgs<T extends ArgumentSpecs>(
+  values: string[],
+  args: T,
+  message: CommandoMessage ): Promise<Arguments<T> | false>
 {
   const requiredArgs = args.map( ( arg, i ) => [arg, i] ).filter( ([arg, i]) => !( arg as ArgumentSpec ).optional )
   if ( requiredArgs.length && requiredArgs.length <= requiredArgs[requiredArgs.length - 1][1] )
@@ -281,7 +318,7 @@ async function parseArgs( values: string[], args: ArgumentSpec[], message: Comma
   const catchAllKey = catchAll ? args[args.length - 1].key : ''
   const catchAllType = catchAll ? args[args.length - 1].type : null
   const catchAllList: Argument[] = []
-  const parsed: Arguments = {}
+  const parsed: Record<string, any> = {}
 
   for ( const [i, val] of values.entries() ) {
     const spec = args[i]
@@ -320,7 +357,7 @@ async function parseArgs( values: string[], args: ArgumentSpec[], message: Comma
 
   if ( catchAll )
     parsed[catchAllKey] = catchAllList
-  return parsed
+  return parsed as Arguments<T>
 }
 
 function textChannelFilter( search: string )

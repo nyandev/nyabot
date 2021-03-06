@@ -6,21 +6,23 @@ import { apos } from '../globals'
 import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
+
+const ConfigGlobalGetArgs = [
+  { key: 'option', type: 'string' }
+] as const
 class ConfigGlobalGetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Get a bot global configuration option value.",
     ownerOnly: true,
-    args: [
-      { key: 'option', type: 'string' }
-    ]
+    args: ConfigGlobalGetArgs
   }
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof ConfigGlobalGetArgs> ): Promise<Message | Message[] | null>
   {
     const host: NyaInterface = this.module.host
     const backend: Backend = this.module.backend
 
-    const key = ( args.option as string )
+    const key = args.option
 
     const gkeys: string[] = host.getGlobalSettingKeys()
 
@@ -32,36 +34,37 @@ class ConfigGlobalGetCommand extends NyaCommand
   }
 }
 
+const ConfigGlobalSetArgs = [
+  { key: 'option', type: 'string' },
+  { key: 'value', type: 'string' }
+] as const
 class ConfigGlobalSetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Set a bot global configuration option.",
     ownerOnly: true,
-    args: [
-      { key: 'option', type: 'string' },
-      { key: 'value', type: 'string' }
-    ]
+    args: ConfigGlobalSetArgs
   }
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof ConfigGlobalSetArgs> ): Promise<Message | Message[] | null>
   {
     const host: NyaInterface = this.module.host
     const backend: Backend = this.module.backend
-    
-    const key = ( args.option as string )
-    let value = ( args.value as string )
+
+    const key = args.option
+    let value = args.value
 
     const gkeys: string[] = host.getGlobalSettingKeys()
 
     if ( !gkeys.includes( key ) )
-      return host.respondTo( message, 'config_badkey', gkeys )
+      return host.talk.sendError( message, ['config_badkey', host.talk.joinList['en']( gkeys )] )
 
     await backend.setGlobalSetting( key, value )
     value = await backend.getGlobalSetting( key )
 
-    if ( key === 'Prefix')
+    if ( key === 'Prefix' )
       host.getClient().commandPrefix = value
 
-    return host.respondTo( message, 'config_set', key, value )
+    return host.talk.sendSuccess( message, ['config_set', key, value] )
   }
 }
 
@@ -85,7 +88,7 @@ class ConfigGlobalCommand extends NyaCommand
   }
   static subcommands = {
     get: ConfigGlobalGetCommand,
-    set: ConfigGlobalGetCommand
+    set: ConfigGlobalSetCommand
   }
 }*/
 
@@ -98,6 +101,7 @@ class ConfigCommand extends NyaBaseCommand
       name: 'config',
       group: 'admin',
       description: 'Get or set configuration options.',
+      dummy: true,
       guildOnly: false,
       subcommands: {
         global: ConfigGlobalCommand
