@@ -85,10 +85,8 @@ export class TalkModule
   }
 
   joinList = {
-    de: this.joinListFactory( 'und' ),
     en: this.joinListFactory( 'and' ),
-    fi: this.joinListFactory( 'ja' ),
-    sv: this.joinListFactory( 'och' )
+    fi: this.joinListFactory( 'ja' )
   }
 
   async sendEmbed( message: MessageLike, data: EmbedData ): Promise<Message>

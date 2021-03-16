@@ -10,6 +10,7 @@ import { NyaInterface, ModuleBase } from './module'
 
 import * as Models from '../models'
 
+
 // TODO: move this to Backend#getGuildByMessage?
 async function fetchGuild( message: CommandoMessage, backend: Backend )
 {
@@ -192,17 +193,18 @@ class TwitterChannelDefaultClearCommand extends NyaCommand
 }
 
 
+const TwitterChannelDefaultSetArgs = [
+  { key: 'channel', type: 'text-channel' }
+] as const
 class TwitterChannelDefaultSetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Set the default channel for posting Twitter notifications.",
     ownerOnly: true,
-    args: [
-      { key: 'channel', type: 'text-channel' }
-    ]
+    args: TwitterChannelDefaultSetArgs
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof TwitterChannelDefaultSetArgs> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const host = this.module.host
@@ -311,16 +313,17 @@ class TwitterChannelDefaultCommand extends NyaCommand
 }
 
 
+const TwitterChannelGetArgs = [
+  { key: 'account', type: 'string' }
+] as const
 class TwitterChannelGetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: `Show which channel a Twitter account${apos}s notifications are being posted to.`,
-    args: [
-      { key: 'account', type: 'string' }
-    ]
+    args: TwitterChannelGetArgs
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof TwitterChannelGetArgs> ): Promise<Message | Message[] | null>
   {
     let accountArg = args.account as string
 
@@ -410,21 +413,20 @@ class TwitterChannelGetCommand extends NyaCommand
 }
 
 
+const TwitterChannelSetArgs = [
+  { key: 'account', type: 'string' },
+  { key: 'channel', type: 'text-channel' }
+] as const
 class TwitterChannelSetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Set a channel for posting notifications from a Twitter account.",
     ownerOnly: true,
-    args: [
-      { key: 'account', type: 'string' },
-      { key: 'channel', type: 'text-channel' }
-    ]
+    args: TwitterChannelSetArgs
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof TwitterChannelSetArgs> ): Promise<Message | Message[] | null>
   {
-    let accountArg = args.account as string
-
     const host = this.module.host
 
     // If args.channel is a string, it contains an error message ID
@@ -432,7 +434,7 @@ class TwitterChannelSetCommand extends NyaCommand
       return host.talk.sendError( message, args.channel )
 
     if ( args.channel instanceof TextChannel )
-      return host.respondTo( message, 'twitter_channel_set', accountArg, profileURL( accountArg ), args.channel.id )
+      return host.respondTo( message, 'twitter_channel_set', args.account, profileURL( args.account ), args.channel.id )
     return null
   }
 }
@@ -452,15 +454,16 @@ class TwitterChannelCommand extends NyaCommand
 }
 
 
+const TwitterFollowArgs = [
+  { key: 'account', type: 'string' },
+  { key: 'tweetTypes', helpKey: 'tweet type', catchAll: true, optional: true, type: 'string' }
+] as const
 class TwitterFollowCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Follow a Twitter account or change which types of tweets are posted.",
     ownerOnly: true,
-    args: [
-      { key: 'account', type: 'string' },
-      { key: 'tweetTypes', helpKey: 'tweet type', catchAll: true, optional: true, type: 'string' }
-    ]
+    args: TwitterFollowArgs
   }
 
   constructor( public module: ModuleBase, options: { name: string, baseGuildOnly: boolean, baseOwnerOnly: boolean } )
@@ -470,7 +473,7 @@ class TwitterFollowCommand extends NyaCommand
     this.options.usageNotes = `\`<tweet type>\` can be one of: ${tweetTypes}`
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof TwitterFollowArgs> ): Promise<Message | Message[] | null>
   {
     const module = this.module as TwitterModule
     const backend = module.backend

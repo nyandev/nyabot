@@ -106,6 +106,9 @@ class AwardCurrencyCommand extends Commando.Command
 }
 
 
+const PickArgs = [
+  { key: 'code', type: 'string', optional: true }
+] as const
 class PickCommand extends NyaBaseCommand
 {
   constructor( protected module: CurrencyModule )
@@ -116,13 +119,11 @@ class PickCommand extends NyaBaseCommand
       group: 'currency',
       description: "Pick up that sweet currency just lying around.",
       guildOnly: true,
-      args: [
-        { key: 'code', type: 'string', optional: true }
-      ]
+      args: PickArgs
     } )
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof PickArgs> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const talk = this.module.host.talk
@@ -330,7 +331,7 @@ class TimelyCommand extends NyaBaseCommand
     } )
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<[]> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const host = this.module.host

@@ -22,7 +22,7 @@ class RoleAutoClearCommand extends NyaCommand
     description: "Clear the auto-assigned role."
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<[]> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const host = this.module.host
@@ -45,16 +45,17 @@ class RoleAutoClearCommand extends NyaCommand
 }
 
 
+const RoleAutoSetArgs = [
+  { key: 'role', type: 'role' }
+] as const
 class RoleAutoSetCommand extends NyaCommand
 {
   static options: CommandOptions = {
     description: "Set the auto-assigned role.",
-    args: [
-      { key: 'role', type: 'role' }
-    ]
+    args: RoleAutoSetArgs
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<typeof RoleAutoSetArgs> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const host = this.module.host
@@ -92,7 +93,7 @@ class RoleAutoCommand extends NyaCommand
     set: RoleAutoSetCommand
   }
 
-  async execute( message: CommandoMessage, args: Arguments ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: Arguments<[]> ): Promise<Message | Message[] | null>
   {
     const backend = this.module.backend
     const host = this.module.host
