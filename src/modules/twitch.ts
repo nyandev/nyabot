@@ -515,7 +515,7 @@ export class TwitchModule extends ModuleBase
             log( `Failed to fetch channel ${channelSnowflake}`, error )
             return
           }
-          if ( !channel || channel.type !== 'text' )
+          if ( !channel || !( channel instanceof TextChannel ) )
             return
 
           const embed = new MessageEmbed()

@@ -878,7 +878,7 @@ export class TwitterModule extends ModuleBase
           if ( !dbChannel )
             throw new Error( `getChannelByID returned ${dbChannel}` )
           channel = await this.client.channels.fetch( dbChannel.snowflake )
-          if ( channel.type !== 'text' )
+          if ( !( channel instanceof TextChannel ) )
             throw new Error( `Channel ${channelID} is not a text channel.` )
         } catch ( error ) {
           log( `Failed to fetch channel ${channelID}:`, error )
