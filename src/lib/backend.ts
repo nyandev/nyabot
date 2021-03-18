@@ -58,9 +58,10 @@ export class Backend
         timestamps: false
       },
       timezone: 'Etc/UTC',
-      logging: msg => {
+      logging: false
+      /*logging: msg => {
         logSprintf( 'db', 'Sequelize: %s', msg )
-      } // false
+      }*/
     })
 
     Models.initialize( this._db )
