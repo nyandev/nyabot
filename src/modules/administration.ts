@@ -140,6 +140,24 @@ class DebugCommand extends Command
   }
 }
 
+class FailCommand extends Command
+{
+  constructor( protected _service: ModuleBase )
+  {
+    super( _service.client,
+    {
+      name: 'fail',
+      group: 'admin',
+      memberName: 'fail',
+      description: 'Tests some random shit',
+    } )
+  }
+  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
+  {
+    throw new Error( "oh no we shouldn't let anyone see this" )
+  }
+}
+
 class StatusCommand extends Command
 {
   constructor( protected _service: ModuleBase )
@@ -199,7 +217,8 @@ export class AdministrationModule extends ModuleBase
     return [
       new ConfigCommand( this ),
       new StatusCommand( this ),
-      new DebugCommand( this )
+      new DebugCommand( this ),
+      new FailCommand( this )
     ]
   }
 
