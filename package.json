@@ -32,7 +32,7 @@
     "canvas": "^2.6.1",
     "d3-format": "^2.0.0",
     "discord.js": "github:discordjs/discord.js#d744e51c1bdb4c7a26c0faeea1f2f45baaf5fd3c",
-    "discord.js-commando": "github:nyandev/Commando#44c4720a2e754a404084d1c0d159cc86ed76be30",
+    "discord.js-commando": "github:nyandev/Commando#e98798c6614041faaa3f130f0cc9763abb522d81",
     "erlpack": "github:discord/erlpack",
     "ffmpeg": "0.0.4",
     "gemoji": "^6.1.0",
