@@ -436,7 +436,9 @@ export class Nya implements NyaInterface
         this._client.registry.registerGroups( module.getGroups() )
       })
 
-      this._client.registry.registerDefaultCommands()
+      this._client.registry.registerDefaultCommands({
+        unknownCommand: false
+      })
       this._modules.forEach( module => {
         this._client.registry.registerCommands( module.getCommands() )
       })
