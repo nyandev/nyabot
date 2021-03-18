@@ -55,11 +55,11 @@
       "LoggingEnabledDefault": true,
       "SlotsJoker": "nepSmug.png",
       "SlotsImages": [
-        "nepBlue.png",
-        "nepGreen.png",
-        "nepRed.png",
-        "nepYellow.png",
-        "nepEggplant.png"
+        "apple.png",
+        "butterfly.png",
+        "dolphin.png",
+        "heart.png",
+        "sun_with_face.png"
       ],
       "TimelyInterval": 36000,
       "TimelyReward": 300,
