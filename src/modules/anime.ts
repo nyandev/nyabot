@@ -5,7 +5,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios'
 import * as moment from 'moment'
 import { sprintf } from 'sprintf-js'
 
-import { apos, arrayOneOf } from '../globals'
+import { apos, arrayOneOf, markdownEscape } from '../globals'
 import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
@@ -116,8 +116,9 @@ class AnimeNextCommand extends NyaCommand
     const user = message.author
     const channel = ( message.channel as TextChannel )
     const embed = new MessageEmbed()
-      .setTitle( "Next airing trending anime" )
+      .setTitle( "__NEXT AIRING__" )
       .setColor( c_themeColor )
+      .setTimestamp()
 
     let i: number = 0
     for ( let entry of entries )
@@ -125,16 +126,17 @@ class AnimeNextCommand extends NyaCommand
       const timeUntil = moment.duration( entry.nextAiringEpisode.timeUntilAiring * 1000 )
       const hours = timeUntil.days() * 24 + timeUntil.hours()
       const intime: string = ( ( timeUntil.asDays() < 2 ) ? ( hours > 0 ? sprintf( "%i hours, %i minutes", hours, timeUntil.minutes() ) : sprintf( "%i minutes", timeUntil.asMinutes() ) ) : timeUntil.humanize() )
+      const enTitle = markdownEscape( entry.title.english ? entry.title.english : ( entry.title.romaji ? entry.title.romaji : entry.title.native ) )
       embed.addField(
-        sprintf( "%s", entry.title.native ),
+        sprintf( "%s", enTitle ),
         sprintf(
-          "**[%s](https://anilist.co/anime/%s/)**\nEpisode **%s/%s** airs in **%s**\n`%s`",
-          entry.title.english ? entry.title.english : ( entry.title.romaji ? entry.title.romaji : entry.title.native ),
+          "**[Anilist](https://anilist.co/anime/%s/)** | %s\nEpisode **%s/%s** airs in **%s**\n```fix\n%s```",
           entry.id,
+          markdownEscape( entry.title.native ),
           entry.nextAiringEpisode.episode ? entry.nextAiringEpisode.episode : '?',
           entry.episodes ? entry.episodes : '?',
           intime,
-          entry.genres ? entry.genres.join( ', ' ) : 'Genre unknown'
+          entry.genres ? entry.genres.slice( 0, 5 ).join( ', ' ) : 'Unknown genre'
         )
       )
       if ( ++i >= 10 )

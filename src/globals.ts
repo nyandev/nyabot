@@ -18,6 +18,12 @@ export function errorSprintf( error: any, ...args: any[] ): void
   console.log( error )
 }
 
+export function markdownEscape( text: string ): string
+{
+  const unescaped = text.replace(/\\(\*|_|`|~|\\)/g, '$1')
+  return unescaped.replace(/(\*|_|`|~|\\)/g, '\\$1')
+}
+
 export function logPrint( from: string, ...args: any[] ): void
 {
   if ( !args.length )
