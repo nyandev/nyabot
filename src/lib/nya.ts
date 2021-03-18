@@ -22,7 +22,7 @@ import { TwitterModule } from '../modules/twitter'
 import { XPModule } from '../modules/xp'
 import { LoggingModule } from '../modules/logging'
 import { ProfileModule } from '../modules/profile'
-
+import { AnimeModule } from '../modules/anime'
 
 // Nya is the bot main class.
 // Really needs some cleanup to refactor the random junk just crammed in here.
@@ -422,7 +422,8 @@ export class Nya implements NyaInterface
         TwitterModule,
         XPModule,
         LoggingModule,
-        ProfileModule
+        ProfileModule,
+        AnimeModule
       ])
         this.registerModule( new module( this._modules.length, this, this._client ) )
 

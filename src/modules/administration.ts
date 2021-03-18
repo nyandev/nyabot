@@ -6,10 +6,10 @@ import { apos } from '../globals'
 import { Backend } from '../lib/backend'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
-
 const ConfigGlobalGetArgs = [
   { key: 'option', type: 'string' }
 ] as const
+
 class ConfigGlobalGetCommand extends NyaCommand
 {
   static options: CommandOptions = {
@@ -38,6 +38,7 @@ const ConfigGlobalSetArgs = [
   { key: 'option', type: 'string' },
   { key: 'value', type: 'string' }
 ] as const
+
 class ConfigGlobalSetCommand extends NyaCommand
 {
   static options: CommandOptions = {
