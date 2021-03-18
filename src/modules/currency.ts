@@ -445,6 +445,7 @@ export class CurrencyModule extends ModuleBase
     currencyGenerationAmountMin: 'CurrencyGenerationAmountMin',
     currencyGenerationChance: 'CurrencyGenerationChance',
     currencyGenerationCode: 'CurrencyGenerationCode',
+    currencyGenerationEnabledDefault: 'CurrencyGenerationEnabledDefault',
     currencySymbol: 'CurrencySymbol',
     timelyInterval: 'TimelyInterval',
     timelyReward: 'TimelyReward'
