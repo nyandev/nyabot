@@ -268,6 +268,17 @@ class SlotCommand extends Commando.Command
         if ( !guild )
           throw new Error( "no such guild" )
 
+        const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id, t ) || defaultCurrency
+
+        const maxBetSetting = await backend.getGuildSetting( guild.id, 'MaxBet', t )
+        if ( maxBetSetting ) {
+          const maxBet = parseInt( maxBetSetting, 10 )
+          if ( !Number.isSafeInteger( maxBet ) || maxBet < 1 )
+            throw new Error( `Guild ${guild.id}'s MaxBet setting is not a positive integer` )
+          if ( args.amount > maxBet )
+            return host.talk.sendError( message, ['gambling_over_max_bet', formatDecimal( maxBet ), currencySymbol] )
+        }
+
         const user = await backend.getUserBySnowflake( message.author.id, t )
         if ( !user )
           throw new Error( "no such user" )
@@ -277,7 +288,7 @@ class SlotCommand extends Commando.Command
           throw new Error( "no such guilduser" )
 
         if ( guildUser.currency < args.amount )
-          return host.respondTo( message, 'slot_insufficient_funds' )
+          return host.respondTo( message, 'gambling_insufficient_funds' )
 
         const slots = []
         for ( let i = 0; i < 3; i++ )
@@ -303,13 +314,9 @@ class SlotCommand extends Commando.Command
 
         await guildUser.increment( { currency: winAmount - args.amount }, { transaction: t } )
 
-        if ( winAmount > 0 ) {
-          const currencySymbol = await backend.getSetting( this._service.settingKeys.currencySymbol, guild.id ) || defaultCurrency
-          const formattedAmount = formatDecimal( winAmount )
-          return message.channel.send( host.talk.format( ['slot_win', formattedAmount, currencySymbol] ), attachment )
-        } else {
-          return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
-        }
+        if ( winAmount > 0 )
+          return message.channel.send( host.talk.format( ['slot_win', formatDecimal( winAmount ), currencySymbol] ), attachment )
+        return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
       } )
     } catch ( error ) {
       return host.talk.unexpectedError( message )
