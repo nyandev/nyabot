@@ -239,6 +239,8 @@ export class Nya implements NyaInterface
 
   async onMessage( message: Message )
   {
+    if ( message.content === "test test" )
+      message.channel.send( "oon tää kissa" )
     if ( this.shouldHandle( message ) )
       for ( const module of this._modules )
         module.onMessage( message )
