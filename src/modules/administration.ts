@@ -140,6 +140,24 @@ class DebugCommand extends Command
   }
 }
 
+class WeirdCommand extends Command
+{
+  constructor( protected _service: ModuleBase )
+  {
+    super( _service.client,
+    {
+      name: '..',
+      group: 'admin',
+      memberName: '..',
+      description: 'Tests some random shit',
+    } )
+  }
+  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
+  {
+    return message.channel.send( "..." )
+  }
+}
+
 class FailCommand extends Command
 {
   constructor( protected _service: ModuleBase )
@@ -218,7 +236,8 @@ export class AdministrationModule extends ModuleBase
       new ConfigCommand( this ),
       new StatusCommand( this ),
       new DebugCommand( this ),
-      new FailCommand( this )
+      new FailCommand( this ),
+      new WeirdCommand( this )
     ]
   }
 
