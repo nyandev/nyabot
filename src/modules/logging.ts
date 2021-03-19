@@ -84,16 +84,21 @@ export class LoggingModule extends ModuleBase
 
   async onMessageUpdated( oldMessage: Message, newMessage: Message )
   {
-    if ( !newMessage.guild || !await this.loggingEnabledForChannel( newMessage.channel ) )
+    if ( !newMessage.guild
+         || !await this.loggingEnabledForChannel( newMessage.channel )
+         || oldMessage.cleanContent === newMessage.cleanContent )
       return
     const logChannel = await this.resolveGuildLogChannel( newMessage.guild )
-    if ( logChannel )
-    {
-      const msgChannelName = ( newMessage.channel as GuildChannel ).name
-      this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
-        newMessage.id, newMessage.author.tag || newMessage.author.id, msgChannelName, oldMessage.cleanContent, newMessage.cleanContent
-      ])
-    }
+    if ( !logChannel )
+      return
+    const msgChannelName = ( newMessage.channel as GuildChannel ).name
+    this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
+      newMessage.id,
+      newMessage.author.tag || newMessage.author.id,
+      msgChannelName,
+      oldMessage.cleanContent,
+      newMessage.cleanContent
+    ])
   }
  
   async onMessageDeleted( message: Message )
