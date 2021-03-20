@@ -288,7 +288,7 @@ class SlotCommand extends Commando.Command
           throw new Error( "no such guilduser" )
 
         if ( guildUser.currency < args.amount )
-          return host.respondTo( message, 'gambling_insufficient_funds' )
+          return host.talk.sendError( message, 'gambling_insufficient_funds' )
 
         const slots = []
         for ( let i = 0; i < 3; i++ )

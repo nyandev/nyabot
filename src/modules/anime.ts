@@ -116,7 +116,7 @@ class AnimeNextCommand extends NyaCommand
     const user = message.author
     const channel = ( message.channel as TextChannel )
     const embed = new MessageEmbed()
-      .setTitle( "__NEXT AIRING__" )
+      .setTitle( "__Next Airing Trending Anime__" )
       .setColor( c_themeColor )
       .setTimestamp()
 
@@ -128,13 +128,13 @@ class AnimeNextCommand extends NyaCommand
       const intime: string = ( ( timeUntil.asDays() < 2 ) ? ( hours > 0 ? sprintf( "%i hours, %i minutes", hours, timeUntil.minutes() ) : sprintf( "%i minutes", timeUntil.asMinutes() ) ) : timeUntil.humanize() )
       const enTitle = markdownEscape( entry.title.english ? entry.title.english : ( entry.title.romaji ? entry.title.romaji : entry.title.native ) )
       embed.addField(
-        sprintf( "%s", enTitle ),
+        sprintf( "**%s**", enTitle ),
         sprintf(
-          "**[Anilist](https://anilist.co/anime/%s/)** | %s\nEpisode **%s/%s** airs in **%s**\n```fix\n%s```",
-          entry.id,
+          "**[%s](https://anilist.co/anime/%s/)**\nEpisode **%s%s** airs in **%s**\n`%s`",
           markdownEscape( entry.title.native ),
+          entry.id,
           entry.nextAiringEpisode.episode ? entry.nextAiringEpisode.episode : '?',
-          entry.episodes ? entry.episodes : '?',
+          entry.episodes ? "/" + entry.episodes : '',
           intime,
           entry.genres ? entry.genres.slice( 0, 5 ).join( ', ' ) : 'Unknown genre'
         )
