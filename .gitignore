@@ -116,3 +116,6 @@ backup/
 # Our config, local
 config.json
 config-*.json
+
+# Editor swap files
+*.swp
