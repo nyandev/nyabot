@@ -147,6 +147,29 @@ class AnimeNextCommand extends NyaCommand
   }
 }
 
+class AnimeSuggestCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Suggest an anime",
+    usageNotes: "Usage notes for anime suggest.",
+    dummy: false,
+    guildOnly: false,
+    ownerOnly: false,
+    args: [{key: "query", type: "string", catchAll: true}]
+  }
+
+  async execute( message: CommandoMessage, args: any ): Promise<Message | Message[] | null>
+  {
+    const module = this.module as AnimeModule
+    const host: NyaInterface = module.host
+    const backend: Backend = module.backend
+    
+    // yeah whatever
+
+    return null
+  }
+}
+
 class AnimeCommand extends NyaBaseCommand
 {
   constructor( protected module: AnimeModule )
@@ -159,7 +182,8 @@ class AnimeCommand extends NyaBaseCommand
       dummy: true,
       guildOnly: false,
       subcommands: {
-        next: AnimeNextCommand
+        next: AnimeNextCommand,
+        suggest: AnimeSuggestCommand
       }
     })
   }
