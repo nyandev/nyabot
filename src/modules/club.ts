@@ -1,45 +1,40 @@
-import * as Commando from 'discord.js-commando'
+import { Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Message } from 'discord.js'
 import { Sequelize } from 'sequelize'
 
 import { datetimeNow, debug, logSprintf } from '../globals'
-import { Parser } from '../lib/parser'
+import { sprintf } from 'sprintf-js'
 import { CommandCallbackType, NyaInterface, ModuleBase } from '../modules/module'
+import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
 
 import * as Models from '../models'
 
-class NewClubCommand extends Commando.Command
+class ClubCreateCommand extends NyaCommand
 {
-  constructor( protected _service: ModuleBase )
-  {
-    super( _service.client,
-    {
-      name: 'newclub',
-      group: 'clubs',
-      memberName: 'newclub',
-      description: "Create a new club.",
-      args: [{
-        key: 'name',
-        prompt: "Enter a name for the club.",
-        type: 'string'
-      }],
-      argsPromptLimit: 1
-    })
+  static options: CommandOptions = {
+    description: "Create a new club.",
+    usageNotes: "Usage notes for club create.",
+    dummy: false,
+    guildOnly: false,
+    ownerOnly: false,
+    args: [{ key: "name", type: "string" }]
   }
 
-  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: any ): Promise<Message | Message[] | null>
   {
-    const host = this._service.host
+    const module = this.module as ClubModule
+    const host = module.host
+
     const existing = await Models.Club.findAll({
       where: Sequelize.where(
-        Sequelize.fn('lower', Sequelize.col('name')),
-        Sequelize.fn('lower', args.name)
+        Sequelize.fn( 'lower', Sequelize.col( 'name' ) ),
+        Sequelize.fn( 'lower', args.name )
       )
     })
     if ( existing.length )
       return host.respondTo( message, 'club_create_exists' )
 
-    const user = await this._service.backend.getUserBySnowflake( message.author.id )
+    const user = await module.backend.getUserBySnowflake( message.author.id )
     if ( !user )
       return host.respondTo( message, 'error_user_resolve_failed' )
 
@@ -54,7 +49,7 @@ class NewClubCommand extends Commando.Command
       owner: user.id,
       created: datetimeNow()
     }
-    const club: any = await Models.Club.create( clubData )
+    const club: Models.Club = await Models.Club.create( clubData )
     if ( !club )
       return host.respondTo( message, 'club_create_fail' )
 
@@ -63,40 +58,70 @@ class NewClubCommand extends Commando.Command
       clubID: club.id,
       joined: datetimeNow()
     }
+    // should probably have a transaction here
+    // if user add fails, roll back club creation
     await Models.ClubUser.create( clubUserData )
+
     return host.respondTo( message, 'club_create_success' )
   }
 }
 
-
-class JoinClubCommand extends Commando.Command
+class ClubListCommand extends NyaCommand
 {
-  constructor( protected _service: ModuleBase )
-  {
-    super( _service.client,
-    {
-      name: 'joinclub',
-      group: 'clubs',
-      memberName: 'joinclub',
-      description: "Join a club.",
-      args: [{
-        key: 'name',
-        prompt: "Which club?",
-        type: 'string'
-      }]
-    })
+  static options: CommandOptions = {
+    description: "List clubs.",
+    usageNotes: "Usage notes for club list.",
+    dummy: false,
+    guildOnly: false,
+    ownerOnly: false,
+    args: []
   }
 
-  async run( message: Commando.CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: any ): Promise<Message | Message[] | null>
   {
-    const backend = this._service.backend
+    const module = this.module as ClubModule
+
+    const clubs = await Models.Club.findAll({
+      attributes: ['name'],
+      include: [Models.Club.associations.clubusers]
+    })
+
+    if ( !clubs.length )
+      return module.host.respondTo( message, 'club_list_empty' )
+
+    const clubNames = clubs.map( ( club: any ) => {
+      const memberCount = club.clubusers.length
+      return sprintf( "%s (%i member%s)", club.name, memberCount > 1 ? 's' : '' )
+    } ).join( '\n' )
+
+    return module.host.respondTo( message, 'club_list', clubNames )
+  }
+}
+
+class ClubJoinCommand extends NyaCommand
+{
+  static options: CommandOptions = {
+    description: "Join an existing club.",
+    usageNotes: "Usage notes for club join.",
+    dummy: false,
+    guildOnly: false,
+    ownerOnly: false,
+    args: [{ key: "name", type: "string" }]
+  }
+
+  async execute( message: CommandoMessage, args: any ): Promise<Message | Message[] | null>
+  {
+    const module = this.module as ClubModule
+    const host = module.host
+    const backend = module.backend
+    
     const clubs = await Models.Club.findAll({
       where: Sequelize.where(
         Sequelize.fn( 'lower', Sequelize.col( 'name' ) ),
         Sequelize.fn( 'lower', args.name )
       )
     })
-    const host = this._service.host
+
     if ( !clubs.length )
       return host.respondTo( message, 'club_join_nonexistent' )
     else if ( clubs.length > 1 )
@@ -111,36 +136,38 @@ class JoinClubCommand extends Commando.Command
     const currentClubs = await Models.ClubUser.count({
       where: { userID: user.id }
     })
+  
     if ( currentClubs > 0 )
       return host.respondTo( message, 'club_already_in_club' )
+
     const clubUserData = {
       userID: user.id,
       clubID: club.id,
       joined: datetimeNow()
     }
+
     await Models.ClubUser.create( clubUserData )
+
     return host.respondTo( message, 'club_join_success', user.name, club.name )
   }
 }
 
-
-class LeaveClubCommand extends Commando.Command
+class ClubLeaveCommand extends NyaCommand
 {
-  constructor( protected _service: ModuleBase )
-  {
-    super( _service.client,
-    {
-      name: 'leaveclub',
-      group: 'clubs',
-      memberName: 'leaveclub',
-      description: "Leave your current club."
-    } )
+  static options: CommandOptions = {
+    description: "Leave an existing club.",
+    usageNotes: "Usage notes for club leave.",
+    dummy: false,
+    guildOnly: false,
+    ownerOnly: false,
+    args: [{ key: "name", type: "string" }]
   }
 
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
+  async execute( message: CommandoMessage, args: any ): Promise<Message | Message[] | null>
   {
-    const host = this._service.host
-    const backend = this._service.backend
+    const module = this.module as ClubModule
+    const host = module.host
+    const backend = module.backend
 
     const user = await backend.getUserBySnowflake( message.author.id )
     if ( !user )
@@ -149,8 +176,10 @@ class LeaveClubCommand extends Commando.Command
     let currentClubs = await Models.ClubUser.findAll( { where: { userID: user.id } } )
     if ( currentClubs.length === 0 )
       return host.respondTo( message, 'club_leave_not_in_club' )
+
     const clubNames = []
-    for ( const clubUser of currentClubs ) {
+    for ( const clubUser of currentClubs )
+    {
       const club = await Models.Club.findOne({
         where: { id: clubUser.clubID },
         attributes: ['name']
@@ -162,96 +191,50 @@ class LeaveClubCommand extends Commando.Command
     }
 
     await Models.ClubUser.destroy( { where: { userID: user.id } } )
+
     return host.respondTo( message, 'club_leave_success', user.name, clubNames )
   }
 }
 
-
-class ListClubsCommand extends Commando.Command
+class ClubCommand extends NyaBaseCommand
 {
-  constructor( protected _service: ModuleBase )
+  constructor( protected module: ClubModule )
   {
-    super( _service.client,
+    super( module,
     {
-      name: 'clubs',
+      name: 'club',
       group: 'clubs',
-      memberName: 'clubs',
-      description: "List all clubs.",
+      description: 'Club base command.',
+      dummy: true,
+      guildOnly: false,
+      subcommands: {
+        create: ClubCreateCommand,
+        list: ClubListCommand,
+        join: ClubJoinCommand,
+        leave: ClubLeaveCommand
+      }
     })
-  }
-
-  async run( message: Commando.CommandoMessage, args: object | string | string[], fromPattern: boolean, result?: Commando.ArgumentCollectorResult ): Promise<Message | Message[] | null>
-  {
-    const clubs = await Models.Club.findAll({
-      attributes: ['name'],
-      include: [Models.Club.associations.clubusers]
-    })
-    if ( !clubs.length )
-      return this._service.host.respondTo( message, 'club_list_empty' )
-
-    const clubNames = clubs.map( (club: any) => {
-      const memberCount = club.clubusers.length
-      const plural = memberCount === 1 ? '' : 's'
-      return `${club.name} (${memberCount} member${plural})`
-    } ).join( '\n' )
-    return this._service.host.respondTo( message, 'club_list', clubNames )
   }
 }
 
 export class ClubModule extends ModuleBase
 {
-  _parser: Parser
-
-  constructor( id: number, host: NyaInterface, client: Commando.CommandoClient )
+  constructor( id: number, host: NyaInterface, client: CommandoClient )
   {
     super( id, host, client )
   }
 
-  async onMessage( message: Message ): Promise<void>
-  {
-    const parsed = Parser.parseMessage( message.content )
-    if ( parsed.xp !== false )
-    {
-      const user = await this.backend.getUserBySnowflake( message.author.id )
-      if ( user )
-      {
-        // do things and stuff
-      }
-    }
-    /*const cmd = this._parser.parseCommand( parsed )
-    if ( cmd )
-    {
-      logSprintf( 'debug', 'Looks like a command: %s (%i args)', cmd.command, cmd.args.length )
-      if ( cmd.command === 'test' && msg.author )
-      {
-        const embed = this.buildEmbedWelcome( message.author )
-        message.channel.send( embed )
-        const guild = await this._backend.getGuildBySnowflake( message.guild.id )
-        if ( guild )
-        {
-          //this._backend.setGuildSetting( guild.id, 'testsetting', 'cool value bro!' )
-          //this._backend.setGuildSetting( guild.id, 'poop', 'yeehaw' )
-          let ftch = await this._backend.getGuildSettings( guild.id )
-          console.log( ftch )
-        }
-      }
-    }*/
-  }
-
-  getGroups(): Commando.CommandGroup[]
+  getGroups(): CommandGroup[]
   {
     return [
-      new Commando.CommandGroup( this.client, 'clubs', 'Clubs', false )
+      new CommandGroup( this.client, 'clubs', 'Clubs', false )
     ]
   }
 
-  getCommands(): Commando.Command[]
+  getCommands(): Command[]
   {
     return [
-      new JoinClubCommand( this ),
-      new LeaveClubCommand( this ),
-      new ListClubsCommand( this ),
-      new NewClubCommand( this )
+      new ClubCommand( this )
     ]
   }
 
