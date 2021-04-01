@@ -267,7 +267,7 @@ class CurrencyTopCommand extends NyaBaseCommand
         for ( const guildUser of users ) {
           let name = guildUser.nickname
           if ( !name ) {
-            const user = await Models.User.findOne( { where: { id: guildUser.id }, transaction: t } )
+            const user = await Models.User.findOne( { where: { id: guildUser.userID }, transaction: t } )
             if ( !user )
               continue
             name = user.name
