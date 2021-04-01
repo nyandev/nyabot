@@ -14,6 +14,7 @@
   "currency_award_user": "%s awarded %s %s to %s.",
   "currency_award_role": "%s awarded %s %s to everyone with the %s role.",
   "currency_show": "%s has %s %s.",
+  "currency_top_empty": "Nobody has any currency.",
   "slot_win": "You won %s %s!",
   "slot_no_win": "Better luck next time!",
   "gambling_insufficient_funds": "You don\u2019t have that much!",

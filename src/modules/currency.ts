@@ -227,6 +227,66 @@ class ShowCurrencyCommand extends Commando.Command
 }
 
 
+class CurrencyTopCommand extends NyaBaseCommand
+{
+  constructor( protected module: CurrencyModule )
+  {
+    super( module,
+    {
+      name: 'lb',
+      group: 'currency',
+      description: "Show who's boss.",
+      guildOnly: true
+    } )
+  }
+
+  async execute( message: CommandoMessage, args: Arguments<[]> ): Promise<Message | Message[] | null>
+  {
+    const backend = this.module.backend
+    const talk = this.module.host.talk
+
+    try {
+      return await backend._db.transaction( async t => {
+        const guild = await backend.getGuildBySnowflake( message.guild.id, t )
+        if ( !guild )
+          throw new Error( "couldn't find guild" )
+
+        const users = await Models.GuildUser.findAll({
+          where: {
+            guildID: guild.id,
+            currency: { [Op.gt]: 0 }
+          },
+          limit: 10,
+          order: [['currency', 'DESC']]
+        })
+
+        if ( users.length === 0 )
+          return talk.sendText( message, 'currency_top_empty' )
+
+        const fields = []
+        for ( const guildUser of users ) {
+          let name = guildUser.nickname
+          if ( !name ) {
+            const user = await Models.User.findOne( { where: { id: guildUser.id }, transaction: t } )
+            if ( !user )
+              continue
+            name = user.name
+          }
+          fields.push( { name, value: guildUser.currency } )
+        }
+
+        const embed = new MessageEmbed()
+          .setTitle( "Currency leaders" )
+          .addFields( fields )
+        return message.reply( embed )
+      } )
+    } catch ( error ) {
+      return talk.unexpectedError( message )
+    }
+  }
+}
+
+
 class SlotCommand extends Commando.Command
 {
   constructor( protected _service: CurrencyModule )
@@ -315,8 +375,8 @@ class SlotCommand extends Commando.Command
         await guildUser.increment( { currency: winAmount - args.amount }, { transaction: t } )
 
         if ( winAmount > 0 )
-          return message.channel.send( host.talk.format( ['slot_win', formatDecimal( winAmount ), currencySymbol] ), attachment )
-        return message.channel.send( host.talk.format( 'slot_no_win' ), attachment )
+          return message.reply( host.talk.format( ['slot_win', formatDecimal( winAmount ), currencySymbol] ), attachment )
+        return message.reply( host.talk.format( 'slot_no_win' ), attachment )
       } )
     } catch ( error ) {
       return host.talk.unexpectedError( message )
@@ -577,6 +637,7 @@ export class CurrencyModule extends ModuleBase
       new AwardCurrencyCommand( this ),
       new PickCommand( this ),
       new ShowCurrencyCommand( this ),
+      new CurrencyTopCommand( this ),
       new SlotCommand( this ),
       new TimelyCommand( this )
     ]
