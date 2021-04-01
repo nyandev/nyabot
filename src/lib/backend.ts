@@ -4,7 +4,7 @@ import sprintfjs = require( 'sprintf-js' )
 const sprintf = sprintfjs.sprintf
 
 import { datetimeNow, debug, logSprintf, errorSprintf } from '../globals'
-import { DataType, DataTypes, Model, Sequelize, Transaction } from 'sequelize'
+import { DataType, DataTypes, Model, Sequelize, SyncOptions, Transaction } from 'sequelize'
 import { Redis } from './redis'
 import { CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
@@ -34,7 +34,8 @@ export class Backend
     this._config = {
       rootPath: path.join( __dirname, '../..' ),
       twitch: config.twitch,
-      twitter: config.twitter
+      twitter: config.twitter,
+      db: config.db
     }
 
     this._redis = new Redis( config.redis )
@@ -58,10 +59,9 @@ export class Backend
         timestamps: false
       },
       timezone: 'Etc/UTC',
-      logging: false
-      /*logging: msg => {
+      logging: config.db.debug ? msg => {
         logSprintf( 'db', 'Sequelize: %s', msg )
-      }*/
+      } : false
     })
 
     Models.initialize( this._db )
@@ -538,12 +538,17 @@ export class Backend
 
   async initialize()
   {
-    return this._db.authenticate().then( () =>
+    return this._db.authenticate().then( async () =>
     {
-      this._db.sync({
-        force: false,
-        alter: false
-      })
+      logSprintf( 'db', 'Authenticated' )
+      if ( this._config.db )
+      {
+        logSprintf( 'db', 'Synchronizing' )
+        const syncOpts: SyncOptions = {
+          force: false
+        }
+        await this._db.sync( syncOpts )
+      }
     })
   }
 
