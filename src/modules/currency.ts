@@ -251,6 +251,7 @@ class CurrencyTopCommand extends NyaBaseCommand
         if ( !guild )
           throw new Error( "couldn't find guild" )
 
+        // should join with User here but meh
         const users = await Models.GuildUser.findAll({
           where: {
             guildID: guild.id,
@@ -265,14 +266,10 @@ class CurrencyTopCommand extends NyaBaseCommand
 
         const fields = []
         for ( const guildUser of users ) {
-          let name = guildUser.nickname
-          if ( !name ) {
-            const user = await Models.User.findOne( { where: { id: guildUser.userID }, transaction: t } )
-            if ( !user )
-              continue
-            name = user.name
-          }
-          fields.push( { name, value: guildUser.currency } )
+          const user = await Models.User.findByPk( guildUser.userID, { transaction: t } )
+          if ( !user || user.bot )
+            continue
+          fields.push( { name: guildUser.nickname || user.name, value: formatDecimal( guildUser.currency ) } )
         }
 
         const embed = new MessageEmbed()
