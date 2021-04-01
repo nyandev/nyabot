@@ -545,9 +545,7 @@ export class Backend
       {
         logSprintf( 'db', 'Synchronizing' )
         const syncOpts: SyncOptions = {
-          force: false,
-          alter: true
-          // match
+          force: false
         }
         await this._db.sync( syncOpts )
       }
