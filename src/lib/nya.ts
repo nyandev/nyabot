@@ -326,7 +326,8 @@ export class Nya implements NyaInterface
         messageCacheMaxSize: 200,
         messageCacheLifetime: 0,
         messageSweepInterval: 0,
-        // allowedMentions?, partials?
+        allowedMentions: { repliedUser: false },
+        // partials?
         restWsBridgeTimeout: 5000,
         restTimeOffset: 500,
         restRequestTimeout: 10000,
