@@ -173,7 +173,9 @@ export class Nya implements NyaInterface
   {
     const user = await member.user.fetch()
     await this._backend.upsertUser( user )
-    await this._backend.upsertGuildUser( member )
+    member = await this._backend.upsertGuildUser( member )
+    if ( !member )
+      return
 
     // Run module handlers after upsert so they have access to db id
     for ( const module of this._modules )
