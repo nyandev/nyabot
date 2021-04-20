@@ -2,7 +2,7 @@ import { logSprintf } from '../globals'
 import * as Commando from 'discord.js-commando'
 import { Channel, Guild, GuildChannel, GuildMember, Message, TextChannel, User } from 'discord.js'
 
-import { settingBoolean } from '../globals'
+import { errorSprintf, settingBoolean } from '../globals'
 import { NyaInterface, ModuleBase } from '../modules/module'
 
 
@@ -92,13 +92,17 @@ export class LoggingModule extends ModuleBase
     if ( !logChannel )
       return
     const msgChannelName = ( newMessage.channel as GuildChannel ).name
-    this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
-      newMessage.id,
-      newMessage.author.tag || newMessage.author.id,
-      msgChannelName,
-      oldMessage.cleanContent,
-      newMessage.cleanContent
-    ])
+    try {
+      await this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_update', [
+        newMessage.id,
+        newMessage.author.tag || newMessage.author.id,
+        msgChannelName,
+        oldMessage.cleanContent,
+        newMessage.cleanContent
+      ])
+    } catch ( error ) {
+      errorSprintf( error )
+    }
   }
  
   async onMessageDeleted( message: Message )
@@ -107,12 +111,16 @@ export class LoggingModule extends ModuleBase
       return
 
     const logChannel = await this.resolveGuildLogChannel( message.guild )
-    if ( logChannel )
-    {
-      const msgChannelName = ( message.channel as GuildChannel ).name
-      this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_remove', [
+    if ( !logChannel )
+      return
+
+    const msgChannelName = ( message.channel as GuildChannel ).name
+    try {
+      await this.host.talk.sendLogEvent( logChannel, 'logging_guild_message_remove', [
         message.id, message.author.tag || message.author.id, msgChannelName, message.cleanContent
       ])
+    } catch ( error ) {
+      errorSprintf( error )
     }
   }
 
