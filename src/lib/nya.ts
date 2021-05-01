@@ -169,15 +169,12 @@ export class Nya implements NyaInterface
     this._emitter.emit( 'guildDeleted', guild )
   }
 
-  async onGuildMemberAdd( member: GuildMember )
+  async onGuildMemberAdd( member: GuildMember ): Promise<void>
   {
     const user = await member.user.fetch()
     await this._backend.upsertUser( user )
-    member = await this._backend.upsertGuildUser( member )
-    if ( !member )
-      return
+    await this._backend.upsertGuildUser( member )
 
-    // Run module handlers after upsert so they have access to db id
     for ( const module of this._modules )
       module.onGuildMemberAdd( member )
   }
