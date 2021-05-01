@@ -603,7 +603,8 @@ export class CurrencyModule extends ModuleBase
         const imgBuffer = await this.currencyDropRenderer.toPNGBuffer()
 
         const attachment = new MessageAttachment( imgBuffer, 'free-tendies.png' )
-        const content = `Oh look, ${amount} <:nepSmug:730447513647317083> appeared! Ain't this your lucky day`
+        const codeHelp = code ? ' <numbers>' : ''
+        const content = `Oh look, ${amount} <:nepSmug:730447513647317083> appeared! Type \`.pick${codeHelp}\` to pick them up.`
         const pickMessage = await message.channel.send( content, attachment )
         try {
           await redis.hset( redisKey, { amount, code, created: Date.now(), messageID: pickMessage.id } )
