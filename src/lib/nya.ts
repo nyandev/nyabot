@@ -235,6 +235,8 @@ export class Nya implements NyaInterface
       return false
     if ( !this._client.user || message.author.id === this._client.user.id )
       return false
+    if ( ( message as Commando.CommandoMessage ).command )
+      return false
     return true
   }
 
