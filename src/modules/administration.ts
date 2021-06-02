@@ -207,7 +207,7 @@ class StatusCommand extends Command
   {
     const host: any = this._service.host
     if ( args.type === 'clear' )
-      host._client.user.setActivity()
+      host._client.user.setPresence( { activities: [] } )
     else if ( !args.thing )
       return host.respondTo( message, 'status_undefined' )
     else
