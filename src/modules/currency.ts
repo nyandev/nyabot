@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { randomInt } from 'crypto'
 
 import { EventEmitter } from 'events'
 import * as Commando from 'discord.js-commando'
@@ -8,7 +9,6 @@ import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, Gu
 import { format as formatNumber } from 'd3-format'
 import * as moment from 'moment'
 import * as prettyMs from 'pretty-ms'
-import randomInt = require( 'random-int' )
 import { Op } from 'sequelize'
 import { sprintf } from 'sprintf-js'
 
@@ -349,7 +349,7 @@ class SlotCommand extends Commando.Command
 
         const slots = []
         for ( let i = 0; i < 3; i++ )
-          slots.push( Math.floor( Math.random() * images.length ) )
+          slots.push( randomInt( images.length ) )
 
         const slotImages = slots.map( index => images[index] )
 
@@ -593,11 +593,11 @@ export class CurrencyModule extends ModuleBase
         if ( !Number.isSafeInteger( amountMax ) || amountMax < amountMin )
           logThrow( `${this.settingKeys.currencyGenerationAmountMax} must be an integer not less than ${this.settingKeys.currencyGenerationAmountMin}, not ${amountMaxString}` )
 
-        const amount = randomInt( amountMin, amountMax )
+        const amount = randomInt( amountMin, amountMax + 1 )
 
         let code = ''
         if ( settingBoolean( await this.backend.getSetting( this.settingKeys.currencyGenerationCode, guild.id, t ) ) )
-          code = randomInt( 1000, 9999 ).toString()
+          code = randomInt( 1000, 10000 ).toString()
 
         this.currencyDropRenderer.drawCurrencyDrop( 'top-nep.png', code )
         const imgBuffer = await this.currencyDropRenderer.toPNGBuffer()

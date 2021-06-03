@@ -1,5 +1,6 @@
 import path = require( 'path' )
 import fs = require( 'fs' )
+import { randomInt } from 'crypto'
 import { EventEmitter } from 'events'
 import Commando = require( 'discord.js-commando' )
 import { Channel, Client, ClientOptions, Collection, DMChannel, Emoji, Guild, GuildChannel, GuildMember, GuildResolvable, Message, MessageAttachment, MessageEmbed, MessageMentions, MessageOptions, MessageAdditions, MessageReaction, PermissionResolvable, PermissionString, ReactionEmoji, Role, Snowflake, StringResolvable, TextChannel, User, UserResolvable, VoiceState, Webhook } from 'discord.js'
@@ -40,7 +41,7 @@ class EightBallCommand extends Commando.Command
     const choices = ['yes', 'no']
 
     let data = {}
-    const index = Math.floor( Math.random() * choices.length )
+    const index = randomInt( choices.length )
     if ( choices[index] === 'yes' )
       data = {
         imageURL: 'https://i.pinimg.com/originals/ce/68/ac/ce68ac827852aec0f097e58d930c2032.gif'
@@ -170,7 +171,7 @@ class HangmanCommand extends Commando.Command
       return this._service.host.respondTo( message, 'hangman_invalid_wordlist', arg )
 
     const wordlist = Hangman.wordlists[arg]
-    const word = wordlist[Math.floor( Math.random() * wordlist.length )]
+    const word = wordlist[randomInt( wordlist.length )]
 
     const hangman = new Hangman( {
       word: word,
@@ -260,7 +261,7 @@ class SpeedTypingCommand extends Commando.Command
     if ( await redis.get( redisKey ) )
       return this._service.host.respondTo( message, 'speedtyping_exists' )
     const texts = Object.keys( SpeedTyping.texts )
-    const index = Math.floor( Math.random() * texts.length )
+    const index = randomInt( texts.length )
     const { time, text } = SpeedTyping.texts[texts[index]]
     const data = {
       text,
