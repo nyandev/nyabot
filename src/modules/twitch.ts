@@ -578,8 +578,8 @@ export class TwitchModule extends ModuleBase
       } catch ( error ) {
         log( `Failed to fetch Twitch stream for ${user.name}:`, error )
       }
-      this.currentStates.set( user.name, stream || null )
-      debug(`[twitch] set current state for ${user.name} to`, stream || null)
+      this.currentStates.set( user.name, stream ?? null )
+      debug(`[twitch] set current state for ${user.name} to`, stream ?? null)
       this.webhookSubscriptions.set( user.name, subscription )
     }
     return subscription
