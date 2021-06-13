@@ -178,6 +178,20 @@ class FailCommand extends Command
   }
 }
 
+interface SendCommandSchema {
+  message?: string
+  title?: string
+  description?: string
+  image?: string
+  thumbnail?: string
+  url?: string
+  color?: string | number | [number, number, number]
+  timestamp?: Date | number | 'now'
+  author?: { name: string; icon?: string; url?: string }
+  footer?: { text: string; icon?: string }
+  fields?: { name: string; value: string; inline?: boolean }[]
+}
+
 class SendCommand extends Command
 {
   constructor( protected _service: ModuleBase )
@@ -201,7 +215,7 @@ class SendCommand extends Command
     }
 
     try {
-      const data = toml.parse( match[1] ) as any
+      const data = toml.parse( match[1] ) as SendCommandSchema
       const embed = new MessageEmbed()
 
       const nonempty = /\S/u
@@ -221,8 +235,9 @@ class SendCommand extends Command
       if ( typeof data.url === 'string' && nonempty.exec( data.url ) )
         embed.setURL( data.url )
 
-      if ( typeof data.color === 'number' ) {
-        embed.setColor( data.color )
+      if ( Number.isInteger( data.color ) ) {
+        if ( data.color >= 0 && data.color <= 0xFFFFFF )
+          embed.setColor( data.color )
       } else if ( typeof data.color === 'string' ) {
         const reHex = /^#[0-9A-F]{6}$/iu
         const reName = /^(DEFAULT|WHITE|AQUA|GREEN|BLUE|YELLOW|PURPLE|LUMINOUS_VIVID_PINK|FUCHSIA|GOLD|ORANGE|RED|GREY|NAVY|DARK_AQUA|DARK_GREEN|DARK_BLUE|DARK_PURPLE|DARK_VIVID_PINK|DARK_GOLD|DARK_ORANGE|DARK_RED|DARK_GREY|DARKER_GREY|LIGHT_GREY|DARK_NAVY|BLURPLE|GREYPLE|DARK_BUT_NOT_BLACK|NOT_QUITE_BLACK|RANDOM)$/u
