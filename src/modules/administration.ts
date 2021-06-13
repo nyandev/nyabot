@@ -215,7 +215,7 @@ class SendCommand extends Command
     }
 
     try {
-      const data = toml.parse( match[1] ) as SendCommandSchema
+      const data: SendCommandSchema = toml.parse( match[1] )
       const embed = new MessageEmbed()
 
       const nonempty = /\S/u
@@ -235,7 +235,7 @@ class SendCommand extends Command
       if ( typeof data.url === 'string' && nonempty.exec( data.url ) )
         embed.setURL( data.url )
 
-      if ( Number.isInteger( data.color ) ) {
+      if ( typeof data.color === 'number' && Number.isInteger( data.color ) ) {
         if ( data.color >= 0 && data.color <= 0xFFFFFF )
           embed.setColor( data.color )
       } else if ( typeof data.color === 'string' ) {
