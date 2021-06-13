@@ -287,13 +287,11 @@ class SendCommand extends Command
         && !embed.thumbnail
         && !embed.title
       ) {
-        embed = undefined
+        if ( msg )
+          await message.channel.send( msg )
+      } else {
+        await message.channel.send( msg, embed )
       }
-
-      if ( !msg && !embed )
-        return
-
-      await message.channel.send( msg, embed )
       await message.delete()
     } catch ( error ) {
       console.log( error )
