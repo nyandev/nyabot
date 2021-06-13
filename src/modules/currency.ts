@@ -369,7 +369,17 @@ class SlotCommand extends Commando.Command
         renderer.drawSlots( slotImages, args.amount, winAmount.toString() )
         const attachment = new MessageAttachment( await renderer.toPNGBuffer(), this._service.slotsFilename )
 
-        await guildUser.increment( { currency: winAmount - args.amount }, { transaction: t } )
+        const net = winAmount - args.amount
+        await guildUser.increment( { currency: net }, { transaction: t } )
+
+        if ( this.client.user ) {
+          const botUser = await backend.getUserBySnowflake( this.client.user.id, t )
+          if ( botUser ) {
+            const botMember = await backend.getGuildUserByIDs( guild.id, botUser.id, t )
+            if ( botMember )
+              await botMember.decrement( { currency: net }, { transaction: t } )
+          }
+        }
 
         if ( winAmount > 0 )
           return message.reply( host.talk.format( ['slot_win', formatDecimal( winAmount ), currencySymbol] ), attachment )
