@@ -1,3 +1,5 @@
+import * as toml from '@iarna/toml'
+
 import { Message, MessageAttachment, MessageEmbed, TextChannel } from 'discord.js'
 import { ArgumentCollectorResult, Command, CommandGroup, CommandoClient, CommandoMessage } from 'discord.js-commando'
 import { Arguments, CommandOptions, NyaBaseCommand, NyaCommand, Subcommands } from '../lib/command'
@@ -176,6 +178,72 @@ class FailCommand extends Command
   }
 }
 
+class SendCommand extends Command
+{
+  constructor( protected _service: ModuleBase )
+  {
+    super( _service.client, {
+      name: 'send',
+      group: 'admin',
+      memberName: 'send',
+      description: "Make the bot send an embed.",
+      ownerOnly: true
+    } )
+  }
+
+  async run( message: CommandoMessage, args: Record<string, string>, fromPattern: boolean, result?: ArgumentCollectorResult ): Promise<Message | null>
+  {
+    const match = /^.send\s+```([^]+)```$/u.exec( message.content )
+
+    if ( !match || !match[1] ) {
+      console.log( "fug" )
+      return null
+    }
+
+    try {
+      const data = toml.parse( match[1] ) as any
+      const embed = new MessageEmbed()
+
+      if ( data.title )
+        embed.setTitle( data.title )
+      if ( data.description )
+        embed.setDescription( data.description )
+      if ( data.image )
+        embed.setImage( data.image )
+      if ( data.thumbnail )
+        embed.setThumbnail( data.thumbnail )
+      if ( data.url )
+        embed.setURL( data.url )
+      if ( data.color )
+        embed.setColor( data.color )
+
+      if ( data.timestamp ) {
+        if ( data.timestamp === 'now' )
+          embed.setTimestamp( new Date() )
+        else
+          embed.setTimestamp( data.timestamp )
+      }
+
+      if ( data.author )
+        embed.setAuthor( data.author.name, data.author.icon, data.author.url )
+
+      if ( data.footer )
+        embed.setFooter( data.footer.text, data.footer.icon )
+
+      if ( Array.isArray( data.fields ) ) {
+        for ( const field of data.fields )
+          embed.addField( field.name, field.value, field.inline ?? false )
+      }
+
+      await message.channel.send( embed )
+    } catch ( error ) {
+      console.log( error )
+    }
+
+    return null
+  }
+}
+
 class StatusCommand extends Command
 {
   constructor( protected _service: ModuleBase )
@@ -185,7 +253,7 @@ class StatusCommand extends Command
       name: 'status',
       group: 'admin',
       memberName: 'status',
-      description: 'Set the bot' + apos + 's activity.',
+      description: `Set the bot${apos}s activity.`,
       args: [
         {
           key: 'type',
@@ -233,12 +301,13 @@ export class AdministrationModule extends ModuleBase
   getCommands(): Command[]
   {
     return [
-      new ConfigCommand( this ),
-      new StatusCommand( this ),
-      new DebugCommand( this ),
-      new FailCommand( this ),
-      new WeirdCommand( this )
-    ]
+      ConfigCommand,
+      SendCommand,
+      StatusCommand,
+      DebugCommand,
+      FailCommand,
+      WeirdCommand
+    ].map( command => new command( this ) )
   }
 
   async onMessage( msg: Message ): Promise<void>
