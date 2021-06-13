@@ -204,19 +204,21 @@ class SendCommand extends Command
       const data = toml.parse( match[1] ) as any
       const embed = new MessageEmbed()
 
+      const nonempty = /\S/u
+
       let msg = ''
-      if ( typeof data.message === 'string' )
+      if ( typeof data.message === 'string' && nonempty.exec( data.message ) )
         msg = data.message
 
-      if ( data.title && typeof data.title === 'string' )
+      if ( typeof data.title === 'string' && nonempty.exec( data.title ) )
         embed.setTitle( data.title )
-      if ( data.description && typeof data.description === 'string' )
+      if ( typeof data.description === 'string' && nonempty.exec( data.description ) )
         embed.setDescription( data.description )
-      if ( data.image && typeof data.image === 'string' )
+      if ( typeof data.image === 'string' && nonempty.exec( data.image ) )
         embed.setImage( data.image )
-      if ( data.thumbnail && typeof data.thumbnail === 'string' )
+      if ( typeof data.thumbnail === 'string' && nonempty.exec( data.thumbnail ) )
         embed.setThumbnail( data.thumbnail )
-      if ( data.url && typeof data.url === 'string' )
+      if ( typeof data.url === 'string' && nonempty.exec( data.url ) )
         embed.setURL( data.url )
 
       if ( typeof data.color === 'number' ) {
@@ -244,23 +246,33 @@ class SendCommand extends Command
         embed.setTimestamp( data.timestamp )
 
       if ( typeof data.author?.name === 'string'
-        && ['string', 'undefined'].includes( typeof data.author?.icon )
-        && ['string', 'undefined'].includes( typeof data.author?.url )
+        && (
+          ( typeof data.author.icon === 'string' && nonempty.exec( data.author.icon ) )
+          || data.author.icon === undefined
+        )
+        && (
+          ( typeof data.author.url === 'string' && nonempty.exec( data.author.url ) )
+          || data.author.url === undefined
+        )
       ) {
         embed.setAuthor( data.author.name, data.author.icon, data.author.url )
       }
 
       if ( typeof data.footer?.text === 'string'
-        && ['string', 'undefined'].includes( typeof data.footer?.icon )
+        && nonempty.exec( data.footer.text )
+        && (
+          ( typeof data.footer.icon === 'string' && nonempty.exec( data.footer.icon ) )
+          || data.footer.icon === undefined
+        )
       ) {
         embed.setFooter( data.footer.text, data.footer.icon )
       }
 
       if ( Array.isArray( data.fields ) ) {
         for ( const field of data.fields ) {
-          if ( typeof field?.name === 'string'
-            && typeof field?.value === 'string'
-            && ['boolean', 'undefined'].includes( typeof field?.inline )
+          if ( typeof field?.name === 'string' && nonempty.exec( field.name )
+            && typeof field.value === 'string' && nonempty.exec( field.value )
+            && ['boolean', 'undefined'].includes( typeof field.inline )
           ) {
             embed.addField( field.name, field.value, field.inline ?? false )
           }
