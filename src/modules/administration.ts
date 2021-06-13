@@ -204,38 +204,71 @@ class SendCommand extends Command
       const data = toml.parse( match[1] ) as any
       const embed = new MessageEmbed()
 
-      if ( data.title )
-        embed.setTitle( data.title )
-      if ( data.description )
-        embed.setDescription( data.description )
-      if ( data.image )
-        embed.setImage( data.image )
-      if ( data.thumbnail )
-        embed.setThumbnail( data.thumbnail )
-      if ( data.url )
-        embed.setURL( data.url )
-      if ( data.color )
-        embed.setColor( data.color )
+      let msg = ''
+      if ( typeof data.message === 'string' )
+        msg = data.message
 
-      if ( data.timestamp ) {
-        if ( data.timestamp === 'now' )
-          embed.setTimestamp( new Date() )
-        else
-          embed.setTimestamp( data.timestamp )
+      if ( data.title && typeof data.title === 'string' )
+        embed.setTitle( data.title )
+      if ( data.description && typeof data.description === 'string' )
+        embed.setDescription( data.description )
+      if ( data.image && typeof data.image === 'string' )
+        embed.setImage( data.image )
+      if ( data.thumbnail && typeof data.thumbnail === 'string' )
+        embed.setThumbnail( data.thumbnail )
+      if ( data.url && typeof data.url === 'string' )
+        embed.setURL( data.url )
+
+      if ( typeof data.color === 'number' ) {
+        embed.setColor( data.color )
+      } else if ( typeof data.color === 'string' ) {
+        const reHex = /^#[0-9A-F]{6}$/iu
+        const reName = /^(DEFAULT|WHITE|AQUA|GREEN|BLUE|YELLOW|PURPLE|LUMINOUS_VIVID_PINK|FUCHSIA|GOLD|ORANGE|RED|GREY|NAVY|DARK_AQUA|DARK_GREEN|DARK_BLUE|DARK_PURPLE|DARK_VIVID_PINK|DARK_GOLD|DARK_ORANGE|DARK_RED|DARK_GREY|DARKER_GREY|LIGHT_GREY|DARK_NAVY|BLURPLE|GREYPLE|DARK_BUT_NOT_BLACK|NOT_QUITE_BLACK|RANDOM)$/u
+        if ( reHex.exec( data.color ) || reName.exec( data.color ) )
+          embed.setColor( data.color )
+      } else if ( Array.isArray( data.color ) && data.color.length === 3 ) {
+        let validColor = true
+        for ( const elem of data.color ) {
+          if ( !Number.isInteger( elem ) || elem < 0 || elem > 255 ) {
+            validColor = false
+            break
+          }
+        }
+        if ( validColor )
+          embed.setColor( data.color )
       }
 
-      if ( data.author )
-        embed.setAuthor( data.author.name, data.author.icon, data.author.url )
+      if ( data.timestamp === 'now' )
+        embed.setTimestamp( new Date() )
+      else if ( data.timestamp instanceof Date || typeof data.timestamp === 'number' )
+        embed.setTimestamp( data.timestamp )
 
-      if ( data.footer )
+      if ( typeof data.author?.name === 'string'
+        && ['string', 'undefined'].includes( typeof data.author?.icon )
+        && ['string', 'undefined'].includes( typeof data.author?.url )
+      ) {
+        embed.setAuthor( data.author.name, data.author.icon, data.author.url )
+      }
+
+      if ( typeof data.footer?.text === 'string'
+        && ['string', 'undefined'].includes( typeof data.footer?.icon )
+      ) {
         embed.setFooter( data.footer.text, data.footer.icon )
+      }
 
       if ( Array.isArray( data.fields ) ) {
-        for ( const field of data.fields )
-          embed.addField( field.name, field.value, field.inline ?? false )
+        for ( const field of data.fields ) {
+          if ( typeof field?.name === 'string'
+            && typeof field?.value === 'string'
+            && ['boolean', 'undefined'].includes( typeof field?.inline )
+          ) {
+            embed.addField( field.name, field.value, field.inline ?? false )
+          }
+        }
       }
 
-      await message.channel.send( embed )
+      await message.channel.send( msg, embed )
+      await message.delete()
     } catch ( error ) {
       console.log( error )
     }
