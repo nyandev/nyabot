@@ -279,6 +279,20 @@ class SendCommand extends Command
         }
       }
 
+      if ( embed.fields.length === 0
+        && !embed.author
+        && !embed.description
+        && !embed.footer
+        && !embed.image
+        && !embed.thumbnail
+        && !embed.title
+      ) {
+        embed = undefined
+      }
+
+      if ( !msg && !embed )
+        return
+
       await message.channel.send( msg, embed )
       await message.delete()
     } catch ( error ) {
