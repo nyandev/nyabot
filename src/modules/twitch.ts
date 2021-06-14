@@ -427,11 +427,6 @@ export class TwitchModule extends ModuleBase
         log( "Failed to fetch guilds' Twitch subscriptions:", error )
       } )
 
-      setInterval( () => {
-        // TODO: ideally we'd refresh in the case of auth failure but this should work
-        this.authProvider.refresh()
-      }, 24 * 3600 * 1000 )
-
       const subPromises = [...this.guildsFollowing.keys()].map( username => this.subscribe( username ) )
       Promise.allSettled( subPromises ).then( (outcomes: any[]) => {
         for ( const outcome of outcomes ) {
