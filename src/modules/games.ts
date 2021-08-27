@@ -95,8 +95,13 @@ class Hangman {
     }
     const wrongGuesses = this.wrongGuesses
     let result = resultArray.join( ' ' )
-    if ( this.misses )
-      result += `\n${Hangman.states[this.misses - 1]}`
+    if ( this.misses ) {
+      // 10 % chance of drawing the loss meme when losing
+      if ( this.misses === Hangman.states.length && Math.random() < 0.1 )
+        result += "\n |    | |\n | |  | _"
+      else
+        result += `\n${Hangman.states[this.misses - 1]}`
+    }
     if ( wrongGuesses )
       result += `\nGuesses: ${wrongGuesses}`
     return result

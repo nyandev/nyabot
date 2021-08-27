@@ -169,7 +169,7 @@ class PickCommand extends NyaBaseCommand
           return null
 
         await guildUser.increment( { currency: parseInt( data.amount ) }, { transaction: t } )
-        const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <:nepSmug:730447513647317083>`] )
+        const ackMessage = await talk.sendSuccess( message, ['%s', `${user.name} picked ${data.amount} <:nepSmug:865109004823822387>`] )
         timeout( picktime ).then( () => {
           ackMessage.delete()
         } )
@@ -614,7 +614,7 @@ export class CurrencyModule extends ModuleBase
 
         const attachment = new MessageAttachment( imgBuffer, 'free-tendies.png' )
         const codeHelp = code ? ' <numbers>' : ''
-        const content = `Oh look, ${amount} <:nepSmug:730447513647317083> appeared! Type \`.pick${codeHelp}\` to pick them up.`
+        const content = `Oh look, ${amount} <:nepSmug:865109004823822387> appeared! Type \`.pick${codeHelp}\` to pick them up.`
         const pickMessage = await message.channel.send( content, attachment )
         try {
           await redis.hset( redisKey, { amount, code, created: Date.now(), messageID: pickMessage.id } )
