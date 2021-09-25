@@ -54,7 +54,6 @@
       "CurrencyGenerationCode": true,
       "CurrencyGenerationEnabledDefault": false,
       "CurrencySymbol": ":cherry_blossom:",
-      "LoggingEnabledDefault": true,
       "SlotsJoker": "nepSmug.png",
       "SlotsImages": [
         "apple.png",

@@ -20,7 +20,6 @@ import { RolesModule } from '../modules/roles'
 import { TwitchModule } from '../modules/twitch'
 import { TwitterModule } from '../modules/twitter'
 import { XPModule } from '../modules/xp'
-import { LoggingModule } from '../modules/logging'
 import { ProfileModule } from '../modules/profile'
 
 // Nya is the bot main class.
@@ -426,7 +425,6 @@ export class Nya implements NyaInterface
         TwitchModule,
         TwitterModule,
         XPModule,
-        LoggingModule,
         ProfileModule
       ])
         this.registerModule( new module( this._modules.length, this, this._client ) )
