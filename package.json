@@ -42,7 +42,7 @@
     "minimist": "^1.2.5",
     "moment": "^2.29.1",
     "mysql2": "^2.1.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "node-graceful": "^3.0.0",
     "pretty-ms": "^7.0.1",
     "sequelize": "^6.3.3",
