@@ -28,7 +28,7 @@
     "@types/node-fetch": "^2.5.7",
     "@unicode/unicode-13.0.0": "^1.0.3",
     "anchorme": "^2.1.2",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "bufferutil": "^4.0.1",
     "canvas": "^2.6.1",
     "d3-format": "^2.0.0",
