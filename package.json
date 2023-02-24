@@ -45,7 +45,7 @@
     "node-fetch": "^2.6.1",
     "node-graceful": "^3.0.0",
     "pretty-ms": "^7.0.1",
-    "sequelize": "^6.3.3",
+    "sequelize": "^6.29.0",
     "sprintf-js": "^1.1.2",
     "twitch": "^4.2.6",
     "twitch-auth": "^4.2.6",
